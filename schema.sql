@@ -342,9 +342,9 @@ create policy "orders update managers" on public.orders
   using (public.has_role(array['dispatcher','management','admin']::public.ezop_role[]))
   with check (public.has_role(array['dispatcher','management','admin']::public.ezop_role[]));
 
-create policy "orders delete admin" on public.orders
+create policy "orders delete production managers" on public.orders
   for delete to authenticated
-  using (public.has_role(array['admin']::public.ezop_role[]));
+  using (public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[]));
 
 create policy "order child read" on public.order_documents
   for select to authenticated using (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));

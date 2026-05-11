@@ -620,6 +620,7 @@ function can(action) {
     edit_qty:       ['operator','tpv','dispatcher','management','admin'],
     change_status:  ['operator','tpv','dispatcher','management','admin'],
     create_order:   ['dispatcher','management','admin'],
+    delete_order:   ['tpv','dispatcher','management','admin'],
     manage_order_stations:['dispatcher','management','admin'],
     edit_order_info:['dispatcher','management','admin'],
     edit_product_memory:['operator','tpv','dispatcher','management','admin'],
@@ -1081,6 +1082,7 @@ function ordersListHtml(list) {
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
             <span style="font-size:13px;font-weight:600;color:var(--teal2)">${o.customer}</span>
             <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
+            ${can('delete_order') ? `<button class="btn btn-danger btn-sm" style="margin-left:auto;padding:5px 9px;font-size:11px" onclick="event.stopPropagation();deleteOrderModal('${o.id}')">🗑️</button>` : ''}
           </div>
           <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${o.name}</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)">
@@ -1135,7 +1137,10 @@ function openOrder(orderId, options = {}) {
           <div style="font-size:13px;font-weight:600;color:var(--teal2)">${selectedOrder.customer}</div>
           <div style="font-size:14px;font-weight:700;color:var(--text)">${selectedOrder.name}</div>
         </div>
-        <span class="badge badge-${selectedOrder.priority}">${priorityLabel(selectedOrder.priority)}</span>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <span class="badge badge-${selectedOrder.priority}">${priorityLabel(selectedOrder.priority)}</span>
+          ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${selectedOrder.id}')">🗑️ Smazat</button>` : ''}
+        </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
         <div style="text-align:center;background:var(--card2);border-radius:8px;padding:8px">
@@ -1228,6 +1233,72 @@ function orderInfoCardHtml(o) {
       </div>` : ''}
     </div>
   </div>`;
+}
+
+function deleteOrderModal(orderId) {
+  if (!can('delete_order')) {
+    showToast('🚫 Nemáte oprávnění smazat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  const noteCount = PROD_NOTES.filter(n => n.orderId === orderId).length;
+  const issueCount = ISSUES.filter(i => i.orderId === orderId).length;
+  const stationCount = order.stations?.length || 0;
+  openModal('Smazat zakázku', `
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--red);margin-bottom:6px">Tato akce je nevratná</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Smaže se zakázka <b style="color:var(--text)">${escapeHtml(order.number)} · ${escapeHtml(order.name)}</b>,
+        její stanoviště, poznámky a hlášené problémy.
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${stationCount}</div><div class="stat-lbl">Stanovišť</div></div>
+      <div class="stat-card"><div class="stat-val">${noteCount}</div><div class="stat-lbl">Poznámek</div></div>
+      <div class="stat-card"><div class="stat-val">${issueCount}</div><div class="stat-lbl">Problémů</div></div>
+    </div>
+  `, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'🗑️ Smazat zakázku', action:`deleteOrder('${orderId}')`, cls:'btn-danger' },
+  ]);
+}
+
+function deleteOrder(orderId) {
+  if (!can('delete_order')) {
+    showToast('🚫 Nemáte oprávnění smazat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  const before = cloneForAudit({
+    order,
+    notes: PROD_NOTES.filter(n => n.orderId === orderId),
+    issues: ISSUES.filter(i => i.orderId === orderId),
+  });
+  const removedNotes = before.notes.length;
+  const removedIssues = before.issues.length;
+  ORDERS = ORDERS.filter(o => o.id !== orderId);
+  PROD_NOTES = PROD_NOTES.filter(n => n.orderId !== orderId);
+  ISSUES = ISSUES.filter(i => i.orderId !== orderId);
+  if (selectedOrder?.id === orderId) {
+    selectedOrder = null;
+    selectedStation = null;
+    detailView = null;
+  }
+  writeAudit(
+    'order.deleted',
+    'order',
+    orderId,
+    `${order.number} · zakázka smazána`,
+    before,
+    { removedOrderId: orderId, removedNotes, removedIssues },
+  );
+  closeModal();
+  buildNav();
+  autoSave();
+  navigateTo('orders');
+  showToast(`🗑️ Zakázka ${order.number} smazána`);
 }
 
 function productPhotoCardHtml(order, compact = false) {
@@ -2553,6 +2624,7 @@ function auditLogHtml(row) {
     'station.status_changed': 'Stav změněn',
     'station.program_updated': 'Program upraven',
     'order.info_updated': 'Zakázka upravena',
+    'order.deleted': 'Zakázka smazána',
     'note.created': 'Poznámka přidána',
     'note.deleted': 'Poznámka smazána',
     'issue.created': 'Problém nahlášen',
@@ -3061,6 +3133,7 @@ function renderAdminOrders() {
       </div>
       <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
       <button class="btn btn-ghost btn-sm" onclick="editOrderModal('${o.id}')">✏️</button>
+      ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${o.id}')">🗑️</button>` : ''}
     </div>`).join('')}`;
 }
 
@@ -3083,6 +3156,7 @@ function renderProfile() {
         ['edit_qty','Zadávání počtů kusů'],
         ['change_status','Změna stavu stanoviště'],
         ['create_order','Vytváření zakázek'],
+        ['delete_order','Mazání zakázek'],
         ['manage_order_stations','Správa a pořadí stanovišť'],
         ['edit_order_info','Úprava údajů zakázky'],
         ['edit_product_memory','Programy a fotky výrobku'],
