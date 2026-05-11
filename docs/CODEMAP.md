@@ -16,6 +16,8 @@ Use this map before opening large files. It keeps future changes focused and che
 - Repository boundary for production data: `src/services/productionRepository.ts`
 - Supabase Auth boundary: `src/auth/supabaseAuth.ts`
 - Audit log storage/cloud writer: `src/services/auditLog.ts`
+- Lupa NET integration boundary: `src/services/lupaNetIntegration.ts`
+- Lupa NET vendor checklist: `docs/LUPANET_INTEGRATION.md`
 - Shared TypeScript data shapes: `src/state/types.ts`
 
 ## Current Runtime Boundary
@@ -28,6 +30,7 @@ Current bridges:
 - `window.EZOP4_TO_TABLES`: converts compatible app state to Ezop4 table rows.
 - `window.EZOP4_AUTH`: auth mode helpers and Supabase Auth adapter.
 - `window.EZOP4_AUDIT`: local audit log and optional Supabase `audit_logs` writer.
+- `window.EZOP4_LUPA_NET`: Lupa NET config, readiness checks and export package builder.
 
 ## Data Rule
 

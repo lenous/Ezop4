@@ -2381,6 +2381,7 @@ function renderAdmin() {
       <div class="admin-tab ${adminTab==='stations'?'active':''}" onclick="switchAdminTab('stations')">🏭 Stanoviště</div>
       <div class="admin-tab ${adminTab==='orders_mgmt'?'active':''}" onclick="switchAdminTab('orders_mgmt')">📋 Zakázky</div>
       <div class="admin-tab ${adminTab==='cloud'?'active':''}" onclick="switchAdminTab('cloud')">☁️ Cloud</div>
+      <div class="admin-tab ${adminTab==='lupanet'?'active':''}" onclick="switchAdminTab('lupanet')">🔌 Lupa NET</div>
       <div class="admin-tab ${adminTab==='ezop4'?'active':''}" onclick="switchAdminTab('ezop4')">🚀 Ezop4</div>
     </div>
 
@@ -2404,6 +2405,9 @@ function renderAdmin() {
     </div>
     <div class="admin-section ${adminTab==='cloud'?'active':''}" id="adm-cloud">
       ${renderAdminCloud()}
+    </div>
+    <div class="admin-section ${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
+      ${renderAdminLupaNet()}
     </div>
     <div class="admin-section ${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
       ${renderAdminEzop4()}
@@ -2569,6 +2573,115 @@ function auditLogHtml(row) {
   </div>`;
 }
 
+function renderAdminLupaNet() {
+  const api = window.EZOP4_LUPA_NET;
+  const config = api?.readLupaNetConfig?.() || {
+    enabled: false,
+    mode: 'disabled',
+    direction: 'export_progress',
+    apiBaseUrl: '',
+    companyCode: '',
+    orderNumberField: 'cislo_zakazky',
+    productCodeField: 'kod_vyrobku',
+  };
+  const readiness = api?.lupaNetReadiness?.(config) || [];
+  const readyCount = readiness.filter(item => item.ok).length;
+  const fieldMap = api?.LUPA_NET_FIELD_MAP || [];
+  return `
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🔌 Připravenost na Lupa NET</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.55">
+        Veřejná dokumentace Lupa NET nepopisuje konkrétní API endpointy, proto je EZOP4 připravený
+        přes oddělený konektor. Jakmile dodavatel předá API/CSV specifikaci, doplní se pouze adaptér,
+        ne výrobní obrazovky.
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${readyCount}/${readiness.length}</div><div class="stat-lbl">Kontrol připraveno</div></div>
+      <div class="stat-card"><div class="stat-val">${ORDERS.length}</div><div class="stat-lbl">Zakázek pro export</div></div>
+      <div class="stat-card"><div class="stat-val">${config.mode.toUpperCase()}</div><div class="stat-lbl">Režim</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚙️ Konfigurace propojení</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="ln-enabled" ${config.enabled ? 'checked' : ''}>
+        Integrace Lupa NET je připravená k testování
+      </label>
+      <div class="input-group">
+        <div class="input-label">Režim</div>
+        <select class="input" id="ln-mode">
+          <option value="disabled" ${config.mode === 'disabled' ? 'selected' : ''}>Vypnuto</option>
+          <option value="csv" ${config.mode === 'csv' ? 'selected' : ''}>CSV/JSON soubory</option>
+          <option value="api" ${config.mode === 'api' ? 'selected' : ''}>API konektor</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Směr toku dat</div>
+        <select class="input" id="ln-direction">
+          <option value="export_progress" ${config.direction === 'export_progress' ? 'selected' : ''}>EZOP4 → Lupa NET: průběh výroby</option>
+          <option value="import_orders" ${config.direction === 'import_orders' ? 'selected' : ''}>Lupa NET → EZOP4: zakázky</option>
+          <option value="bidirectional" ${config.direction === 'bidirectional' ? 'selected' : ''}>Obousměrně</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <div class="input-label">URL Lupa NET konektoru / middleware</div>
+        <input class="input" id="ln-api-url" placeholder="např. https://intranet/lupanet-bridge" value="${escapeHtml(config.apiBaseUrl || '')}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Kód firmy / střediska v Lupa NET</div>
+        <input class="input" id="ln-company-code" placeholder="doplní dodavatel Lupa NET" value="${escapeHtml(config.companyCode || '')}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="input-group">
+          <div class="input-label">Pole čísla zakázky</div>
+          <input class="input" id="ln-order-field" value="${escapeHtml(config.orderNumberField || 'cislo_zakazky')}">
+        </div>
+        <div class="input-group">
+          <div class="input-label">Pole kódu výrobku</div>
+          <input class="input" id="ln-product-field" value="${escapeHtml(config.productCodeField || 'kod_vyrobku')}">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveLupaNetConfig()">💾 Uložit konfiguraci</button>
+        <button class="btn btn-ghost" onclick="exportLupaNetPackage()">📤 Stáhnout export pro Lupa NET</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✅ Kontrola připravenosti</div>
+      ${readiness.map(item => ezop4ChecklistRow(item.label, item.detail, item.ok)).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧭 Mapování dat</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+        Toto je výchozí návrh polí pro dodavatele Lupa NET. Názvy lze změnit podle skutečné importní šablony/API.
+      </div>
+      <table class="tbl">
+        <thead><tr><th>EZOP4 pole</th><th>Lupa NET pole</th><th>Význam</th></tr></thead>
+        <tbody>
+          ${fieldMap.map(([source, target, label]) => `
+            <tr><td>${escapeHtml(source)}</td><td style="color:var(--gold)">${escapeHtml(target)}</td><td>${escapeHtml(label)}</td></tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25)">
+      <div class="card-title">📌 Co potřebujeme od dodavatele Lupa NET</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.55">
+        1. Zda je podporované API, nebo jen import/export soubory.<br>
+        2. Přesné názvy polí pro zakázku, výrobek, množství, stav a sklad.<br>
+        3. Identifikátor firmy/střediska/skladu.<br>
+        4. Autentizaci konektoru a doporučenou periodu synchronizace.<br>
+        5. Pravidlo, zda se do Lupa NET posílají průběžné stavy, nebo až hotové kusy.
+      </div>
+    </div>
+  `;
+}
+
 function renderAdminCloud() {
   const url = localStorage.getItem('vyrobais_supabase_url') || DEFAULT_SUPABASE_URL;
   const key = localStorage.getItem('vyrobais_supabase_key') || DEFAULT_SUPABASE_KEY;
@@ -2729,6 +2842,59 @@ window.setEzop4AuthModeFromAdmin = function(mode) {
   showToast(nextMode === 'supabase'
     ? 'Supabase Auth režim zapnutý, demo login zůstává fallback.'
     : 'Demo login režim zapnutý.');
+};
+
+window.saveLupaNetConfig = function() {
+  const api = window.EZOP4_LUPA_NET;
+  if (!api?.writeLupaNetConfig) {
+    showToast('⚠️ Modul Lupa NET není načtený');
+    return;
+  }
+  const config = {
+    enabled: Boolean(document.getElementById('ln-enabled')?.checked),
+    mode: document.getElementById('ln-mode')?.value || 'disabled',
+    direction: document.getElementById('ln-direction')?.value || 'export_progress',
+    apiBaseUrl: document.getElementById('ln-api-url')?.value.trim() || '',
+    companyCode: document.getElementById('ln-company-code')?.value.trim() || '',
+    orderNumberField: document.getElementById('ln-order-field')?.value.trim() || 'cislo_zakazky',
+    productCodeField: document.getElementById('ln-product-field')?.value.trim() || 'kod_vyrobku',
+    lastSyncAt: api.readLupaNetConfig?.().lastSyncAt,
+  };
+  api.writeLupaNetConfig(config);
+  writeAudit(
+    'integration.lupanet_config_saved',
+    'app_settings',
+    'lupanet',
+    `Konfigurace Lupa NET uložena: ${config.mode}`,
+    null,
+    { ...config, apiBaseUrl: config.apiBaseUrl ? '(nastaveno)' : '' },
+  );
+  renderAdmin();
+  showToast('Konfigurace Lupa NET uložena');
+};
+
+window.exportLupaNetPackage = function() {
+  const api = window.EZOP4_LUPA_NET;
+  if (!api?.buildLupaNetPackage) {
+    showToast('⚠️ Modul Lupa NET není načtený');
+    return;
+  }
+  const config = api.readLupaNetConfig?.();
+  const payload = api.buildLupaNetPackage(currentState(), config);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ezop4-lupanet-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  writeAudit(
+    'integration.lupanet_export_created',
+    'integration_export',
+    'lupanet',
+    `Export pro Lupa NET vytvořen: ${payload.orders.length} zakázek`,
+    null,
+    { orderCount: payload.orders.length, mode: payload.config.mode, direction: payload.config.direction },
+  );
+  showToast('✅ Export pro Lupa NET stažen');
 };
 
 window.cleanupAppMemoryFromAdmin = function() {

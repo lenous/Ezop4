@@ -190,6 +190,31 @@ create table if not exists public.audit_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.integration_settings (
+  system_key text primary key,
+  enabled boolean not null default false,
+  mode text not null default 'disabled',
+  direction text not null default 'export_progress',
+  config jsonb not null default '{}'::jsonb,
+  updated_by uuid references auth.users(id),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.integration_outbox (
+  id uuid primary key default gen_random_uuid(),
+  system_key text not null,
+  event_type text not null,
+  entity_type text not null,
+  entity_id text not null,
+  payload jsonb not null,
+  status text not null default 'pending' check (status in ('pending','sent','failed','skipped')),
+  attempts integer not null default 0 check (attempts >= 0),
+  last_error text,
+  created_by uuid references auth.users(id),
+  created_at timestamptz not null default now(),
+  sent_at timestamptz
+);
+
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
@@ -208,6 +233,10 @@ for each row execute function public.touch_updated_at();
 
 drop trigger if exists touch_order_stations_updated_at on public.order_stations;
 create trigger touch_order_stations_updated_at before update on public.order_stations
+for each row execute function public.touch_updated_at();
+
+drop trigger if exists touch_integration_settings_updated_at on public.integration_settings;
+create trigger touch_integration_settings_updated_at before update on public.integration_settings
 for each row execute function public.touch_updated_at();
 
 create or replace function public.current_user_role()
@@ -244,6 +273,8 @@ alter table public.issue_recipients enable row level security;
 alter table public.product_memory enable row level security;
 alter table public.login_events enable row level security;
 alter table public.audit_logs enable row level security;
+alter table public.integration_settings enable row level security;
+alter table public.integration_outbox enable row level security;
 
 -- Reset opakovatelnych policies.
 do $$
@@ -256,7 +287,7 @@ begin
       and tablename in (
         'app_state','profiles','app_settings','station_catalog','orders','order_documents',
         'order_stations','station_quantity_events','production_notes','issues','issue_recipients',
-        'product_memory','login_events','audit_logs'
+        'product_memory','login_events','audit_logs','integration_settings','integration_outbox'
       )
   loop
     execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
@@ -396,6 +427,20 @@ create policy "audit admin read" on public.audit_logs
 create policy "audit insert authenticated" on public.audit_logs
   for insert to authenticated with check (true);
 
+create policy "integration settings admin read" on public.integration_settings
+  for select to authenticated using (public.has_role(array['admin','management']::public.ezop_role[]));
+create policy "integration settings admin write" on public.integration_settings
+  for all to authenticated
+  using (public.has_role(array['admin']::public.ezop_role[]))
+  with check (public.has_role(array['admin']::public.ezop_role[]));
+
+create policy "integration outbox admin read" on public.integration_outbox
+  for select to authenticated using (public.has_role(array['admin','management']::public.ezop_role[]));
+create policy "integration outbox admin write" on public.integration_outbox
+  for all to authenticated
+  using (public.has_role(array['admin']::public.ezop_role[]))
+  with check (public.has_role(array['admin']::public.ezop_role[]));
+
 -- Realtime pro provozni tabulky. Blok je opakovatelny.
 do $$ begin
   alter publication supabase_realtime add table public.orders;
@@ -415,4 +460,8 @@ exception when duplicate_object then null; end $$;
 
 do $$ begin
   alter publication supabase_realtime add table public.issue_recipients;
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  alter publication supabase_realtime add table public.integration_outbox;
 exception when duplicate_object then null; end $$;

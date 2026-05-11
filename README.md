@@ -30,6 +30,7 @@ Hotovo v prvním milníku:
 - Auth port a helpery pro budoucí Supabase Auth přihlášení
 - přepínač Demo login / Supabase Auth v Admin → Ezop4
 - audit log základ v Admin → Audit pro počty, stavy, poznámky, problémy, programy a úpravy zakázek
+- integrační příprava pro Lupa NET v Admin → Lupa NET
 
 UI zatím běží přes kompatibilní runtime z Ezop3. To je záměr: Ezop4 se bude přepisovat po vrstvách, aby stabilní výroba nespadla kvůli velkému jednorázovému přepisu.
 
@@ -74,9 +75,21 @@ Tyto soubory odpovídají tabulkám v `schema.sql` a lze je použít jako seed/i
 
 V kompatibilním režimu se audit ukládá lokálně do prohlížeče. V Supabase Auth režimu se aplikace pokusí stejnou událost uložit také do tabulky `audit_logs`. Audit neukládá lokální hesla ani login logy.
 
+## Lupa NET
+
+EZOP4 má připravený integrační modul pro Lupa NET:
+
+- Admin → Lupa NET: konfigurace režimu, směru toku dat a výchozího mapování polí
+- JSON export zakázek, průběhu stanovišť a počtů pro ověření s dodavatelem
+- `integration_settings` a `integration_outbox` v `schema.sql` pro budoucí serverovou synchronizaci
+- dodavatelský checklist v `docs/LUPANET_INTEGRATION.md`
+
+Veřejná dokumentace Lupa NET neuvádí konkrétní API kontrakt, proto se zatím nepoužívají pevné endpointy ani ERP přihlašovací údaje v prohlížeči.
+
 ## Další doporučený milník
 
-1. Přepnout čtení zakázek z `app_state` na tabulky `orders` a `order_stations`.
-2. Zapisovat změny počtů do `station_quantity_events`.
-3. Přesunout problémy a poznámky z legacy runtime do feature modulů.
-4. Přidat automatické testy pro workflow kusů a oprávnění.
+1. Získat od dodavatele Lupa NET API/CSV kontrakt a potvrdit mapování polí.
+2. Přepnout čtení zakázek z `app_state` na tabulky `orders` a `order_stations`.
+3. Zapisovat změny počtů do `station_quantity_events` a `integration_outbox`.
+4. Přesunout problémy a poznámky z legacy runtime do feature modulů.
+5. Přidat automatické testy pro workflow kusů, oprávnění a integrační export.
