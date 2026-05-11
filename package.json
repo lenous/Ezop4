@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "migrate:app-state": "node scripts/app-state-to-table-json.mjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7"
+  },
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "name": "ezop4",
+  "description": "Produkčnější mobilní výrobní EZOP aplikace s tabulkovou Supabase architekturou, auditem a připraveným Auth základem."
+}

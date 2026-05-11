@@ -1,0 +1,53 @@
+:root {
+    --bg:        #07090b;
+    --bg2:       #101417;
+    --card:      #181b1d;
+    --card2:     #20262a;
+    --border:    #30373c;
+    --border2:   #45535a;
+    --gold:      #e2b820;
+    --gold2:     #f2cf4d;
+    --teal:      #1d5b66;
+    --teal2:     #36b0ae;
+    --cyan:      #7dd6d2;
+    --text:      #f1f5f4;
+    --text2:     #a8b4bd;
+    --text3:     #66727b;
+    --green:     #22c55e;
+    --amber:     #f59e0b;
+    --red:       #ef4444;
+    --blue:      #3b82f6;
+    --purple:    #a855f7;
+    --radius:    10px;
+    --radius-sm: 8px;
+    --shadow:    0 14px 44px rgba(0,0,0,.34);
+    --shadow-soft: 0 8px 24px rgba(0,0,0,.22);
+    --font:      'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+  body {
+    background:
+      linear-gradient(90deg, rgba(54,176,174,.035) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(226,184,32,.026) 1px, transparent 1px),
+      linear-gradient(145deg, #07090b 0%, #0d1214 44%, #07090b 100%);
+    background-size: 28px 28px, 28px 28px, 100% 100%;
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overscroll-behavior-x: none;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 110px, rgba(54,176,174,.055) 110px 111px, transparent 111px 168px),
+      repeating-linear-gradient(0deg, transparent 0 92px, rgba(226,184,32,.045) 92px 93px, transparent 93px 156px);
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.75), rgba(0,0,0,.22));
+  }
+  img, canvas, video, svg { max-width: 100%; height: auto; }
+  button, input, select, textarea { font: inherit; max-width: 100%; }
+  button { -webkit-tap-highlight-color: transparent; }
+  ::selection { background: rgba(54,176,174,.34); color: #fff; }

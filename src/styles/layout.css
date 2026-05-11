@@ -1,0 +1,96 @@
+/* ── LOGIN ── */
+  #login-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background:
+      linear-gradient(90deg, rgba(54,176,174,.08) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(226,184,32,.055) 1px, transparent 1px),
+      linear-gradient(150deg, #050607 0%, #102024 52%, #07090b 100%);
+    background-size: 34px 34px, 34px 34px, 100% 100%;
+  }
+  .login-box {
+    width: min(360px, 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018)), rgba(19,23,25,.94);
+    border: 1px solid rgba(125,214,210,.22);
+    border-top-color: rgba(242,207,77,.32);
+    border-radius: 16px;
+    padding: 36px 32px;
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.06);
+    backdrop-filter: blur(16px);
+  }
+  .login-logo {
+    width: 64px; height: 64px; margin: 0 auto 16px;
+    background: linear-gradient(135deg, var(--gold2), var(--teal2));
+    border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px;
+    box-shadow: 0 12px 28px rgba(54,176,174,.18);
+  }
+  .login-title { text-align: center; font-size: 24px; font-weight: 900; color: var(--gold); letter-spacing: .8px; }
+  .login-sub { text-align: center; font-size: 12px; color: var(--text2); margin-bottom: 28px; letter-spacing: 2px; text-transform: uppercase; }
+  .login-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .login-input {
+    width: 100%; background: rgba(5,8,10,.72); border: 1px solid rgba(168,180,189,.22); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 15px; padding: 12px 14px; margin-bottom: 14px; outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  .login-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(226,184,32,.14); background: rgba(5,8,10,.9); }
+  .remember-row {
+    display: flex; align-items: center; gap: 9px; margin: -4px 0 16px;
+    color: var(--text2); font-size: 12px; cursor: pointer; user-select: none;
+  }
+  .remember-row input {
+    width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer;
+  }
+  .login-btn {
+    width: 100%; background: linear-gradient(135deg, var(--gold2), var(--gold));
+    border: 1px solid rgba(255,255,255,.1); border-radius: var(--radius-sm); color: #111;
+    font-size: 15px; font-weight: 800; padding: 14px; cursor: pointer;
+    letter-spacing: .8px; text-transform: uppercase; transition: transform .15s, filter .2s;
+    box-shadow: 0 10px 26px rgba(226,184,32,.18);
+  }
+  .login-btn:hover { filter: brightness(1.04); transform: translateY(-1px); }
+  .login-error { color: var(--red); font-size: 12px; text-align: center; margin-top: 10px; }
+
+  /* ── SHELL ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; width: 100%; max-width: 100%; overflow-x: hidden; position: relative; }
+  .topbar {
+    background: rgba(18,21,23,.88); border-bottom: 1px solid rgba(125,214,210,.16);
+    display: flex; align-items: center; padding: 0 16px; height: 52px; gap: 12px; position: sticky; top: 0; z-index: 100; min-width: 0;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .topbar-logo { font-size: 19px; font-weight: 900; color: var(--gold); letter-spacing: .8px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 0 16px rgba(226,184,32,.12); }
+  .topbar-logo span { color: var(--teal2); }
+  .topbar-user { font-size: 12px; color: var(--text2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .role-badge {
+    font-size: 10px; font-weight: 800; padding: 4px 9px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: .5px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .role-admin    { background: rgba(239,68,68,.15);   color: #ef4444; }
+  .role-dispatcher{ background: rgba(59,130,246,.15); color: #3b82f6; }
+  .role-tpv      { background: rgba(168,85,247,.15);  color: #a855f7; }
+  .role-management{ background: rgba(34,197,94,.15);  color: #22c55e; }
+  .role-operator { background: rgba(153,153,153,.15); color: #999; }
+  .logout-btn {
+    background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text2); font-size: 11px; padding: 5px 10px; cursor: pointer; flex-shrink: 0;
+  }
+  .logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── NAV TABS ── */
+  .navtabs {
+    background: rgba(10,14,16,.78); border-bottom: 1px solid rgba(255,255,255,.06);
+    display: flex; overflow-x: auto; gap: 0; padding: 0 8px;
+    backdrop-filter: blur(10px);
+  }
+  .navtab {
+    padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text2);
+    border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: .5px; transition: color .2s;
+  }
+  .navtab:hover { color: var(--text); background: rgba(255,255,255,.025); }
+  .navtab.active { color: var(--gold); border-bottom-color: var(--gold); background: linear-gradient(180deg, rgba(226,184,32,.08), transparent); }
+  .navtab .tab-icon { margin-right: 5px; }
+
+  /* ── CONTENT ── */
+  .page { display: none; padding: 18px; max-width: 900px; margin: 0 auto; width: 100%; min-width: 0; }
+  .page.active { display: block; }

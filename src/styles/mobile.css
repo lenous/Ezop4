@@ -1,0 +1,57 @@
+@media(min-width: 901px) {
+    .page { max-width: 1080px; padding: 22px 28px 28px; }
+    .modal-box { max-width: 540px; }
+    .stat-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+    .card { margin-bottom: 14px; }
+    .navtabs { justify-content: center; }
+  }
+
+  @media(max-width: 600px) {
+    .bottom-nav { display: block; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+    .navtabs { display: none; }
+    body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+    #login-screen { padding: max(24px, env(safe-area-inset-top)) 14px 16px; align-items: flex-start; }
+    .login-box { width: 100%; max-width: 370px; margin: 0 auto; padding: 28px 20px; border-radius: 14px; }
+    .topbar { height: auto; min-height: 58px; padding: 8px 10px; gap: 8px; }
+    .topbar-logo { flex: 1 1 auto; font-size: clamp(16px, 5vw, 21px); letter-spacing: .4px; }
+    .topbar-user, .logout-btn { display: none; }
+    .role-badge { max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0; padding: 3px 7px; }
+    #tbar-cloud { max-width: 78px; }
+    .page { max-width: 100%; padding: 12px 10px; }
+    .card { padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .stat-card { padding: 10px 8px; min-width: 0; }
+    .stat-val { font-size: 22px; }
+    .stat-lbl { font-size: 10px; }
+    .qty-grid { gap: 6px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .qty-field { padding: 10px 6px; min-height: 118px; display: flex; flex-direction: column; justify-content: center; }
+    .qty-field-val { font-size: clamp(24px, 10vw, 34px); }
+    .qty-field-label { font-size: 9px; letter-spacing: .5px; overflow-wrap: anywhere; }
+    .action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .action-btn { min-width: 0; padding: 10px 8px; justify-content: center; min-height: 46px; }
+    .station-header { gap: 10px; }
+    .station-badge { width: 42px; height: 42px; min-width: 42px; font-size: 20px; }
+    .modal-overlay { padding: 10px; align-items: flex-end; }
+    .modal-box { max-width: 100%; max-height: 92vh; padding: 18px 14px; border-radius: 16px 16px 0 0; }
+    .modal-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }
+    .modal-actions .btn { width: 100%; }
+    .admin-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #toast { max-width: calc(100vw - 24px); white-space: normal; text-align: center; left: 12px; right: 12px; transform: none; }
+    .card [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+    .card [style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  }
+
+  @media(max-width: 380px) {
+    .topbar { gap: 6px; padding: 7px 8px; }
+    .topbar-logo { font-size: 17px; }
+    .page { padding: 10px 8px; }
+    .card { padding: 11px; }
+    .qty-grid { gap: 5px; }
+    .qty-field { padding: 9px 4px; min-height: 108px; }
+    .qty-field-val { font-size: 28px; }
+    .bn-item .bn-icon { font-size: 18px; }
+    .bn-item span { font-size: 8px; }
+    .card [style*="min-width:84px"] { min-width: 72px !important; padding-left: 7px !important; padding-right: 7px !important; }
+    .card [style*="font-size:26px"] { font-size: 22px !important; }
+    .card [style*="font-size:20px"] { font-size: 18px !important; }
+  }
