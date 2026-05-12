@@ -1375,7 +1375,12 @@ function stationProgramLabel(stId) {
   return 'Program / nastavení stanoviště';
 }
 
+function stationHasProgram(stId) {
+  return [2, 3, 6].includes(Number(stId));
+}
+
 function stationProgramCardHtml(order, station, stInfo) {
+  if (!stationHasProgram(station.stId)) return '';
   const program = order.stationPrograms?.[station.stId] || '';
   const label = stationProgramLabel(station.stId);
   return `<div class="card">
@@ -1498,7 +1503,7 @@ function saveOrderInfo(orderId) {
 }
 
 function saveStationProgram() {
-  if (!selectedOrder || !selectedStation || !can('edit_product_memory')) return;
+  if (!selectedOrder || !selectedStation || !can('edit_product_memory') || !stationHasProgram(selectedStation.stId)) return;
   const before = cloneForAudit(selectedOrder.stationPrograms || {});
   const value = document.getElementById('station-program-input').value.trim();
   selectedOrder.stationPrograms = selectedOrder.stationPrograms || {};
@@ -2184,10 +2189,11 @@ function submitNote() {
     null,
     cloneForAudit(note),
   );
+  autoSave();
   closeModal();
   const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
   renderStationDetail(stInfo);
-  showToast('✅ Poznámka uložena');
+  showToast('✅ Poznámka uložena', { skipSave: true });
 }
 
 function deleteNote(id) {
