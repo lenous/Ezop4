@@ -37,5 +37,5 @@ export function qtyValidation(order: OrderLike, station: StationLike): QtyValida
 }
 
 export function readyForNextStation(station: StationLike): number {
-  return positiveNumber(station.qtyOk) + positiveNumber(station.qtyRework);
+  return positiveNumber(station.qtyOk) + positiveNumber(station.qtyRework) + positiveNumber(station.qtyScrap);
 }

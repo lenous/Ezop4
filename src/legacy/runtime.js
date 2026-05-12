@@ -263,6 +263,10 @@ function stationProcessedQty(station) {
 }
 
 function stationReadyQty(station) {
+  return stationProcessedQty(station);
+}
+
+function stationNonScrapQty(station) {
   return positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework);
 }
 
@@ -278,18 +282,34 @@ function syncOrderStationFlow(order) {
 
   order.stations.forEach((station, index) => {
     if (index > 0) {
-      const previousReady = stationReadyQty(order.stations[index - 1]);
+      const previous = order.stations[index - 1];
+      const previousReady = stationReadyQty(previous);
+      const previousScrap = positiveQty(previous.qtyScrap);
       if (previousReady > 0 && positiveQty(station.qtyReceived) < previousReady) {
         station.qtyReceived = previousReady;
+        changed = true;
+      }
+      if (previousScrap > positiveQty(station.qtyScrap)) {
+        station.qtyScrap = previousScrap;
         changed = true;
       }
     }
 
     const available = stationInputQty(order, station, index);
-    if (station.status === 'completed' && stationProcessedQty(station) === 0 && available > 0) {
-      station.qtyOk = available;
-      station.qtyRework = 0;
-      station.qtyScrap = 0;
+    if (station.status === 'completed' && stationNonScrapQty(station) === 0 && available > 0) {
+      const autoOk = Math.max(0, available - positiveQty(station.qtyScrap));
+      if (positiveQty(station.qtyOk) !== autoOk || positiveQty(station.qtyRework) !== 0) {
+        station.qtyOk = autoOk;
+        station.qtyRework = 0;
+        changed = true;
+      }
+    }
+    const over = stationProcessedQty(station) - available;
+    if (available > 0 && over > 0) {
+      const okBefore = positiveQty(station.qtyOk);
+      station.qtyOk = Math.max(0, okBefore - over);
+      const remainingOver = over - (okBefore - station.qtyOk);
+      if (remainingOver > 0) station.qtyRework = Math.max(0, positiveQty(station.qtyRework) - remainingOver);
       changed = true;
     }
   });
@@ -689,6 +709,7 @@ function can(action) {
     manage_order_stations:['dispatcher','management','admin'],
     edit_order_info:['dispatcher','management','admin'],
     edit_product_memory:['tpv','dispatcher','management','admin'],
+    manage_scrap:   ['tpv','dispatcher','management','admin'],
     view_kpi:       ['dispatcher','management','admin'],
     manage_users:   ['admin'],
     app_settings:   ['admin'],
@@ -1854,6 +1875,7 @@ function renderStationDetail(stInfo) {
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
       </div>
+      ${scrapControlHtml()}
     </div>
 
     <!-- STATUS ACTIONS -->
@@ -1897,6 +1919,25 @@ function qtyFieldHtml(field, label, val, colorClass) {
     <div class="qty-field-label" style="color:var(--text2)">${label}</div>
     <div class="qty-field-val ${colorClass}" id="qtv-${field}">${val}</div>
     <div style="font-size:9px;color:var(--text3);margin-top:3px">klikni pro zadání</div>
+  </div>`;
+}
+
+function scrapControlHtml() {
+  const scrap = positiveQty(selectedStation?.qtyScrap);
+  if (!scrap) return '';
+  const canRemove = can('manage_scrap');
+  return `<div style="margin-top:12px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:10px 12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:var(--red)">Vadné desky ve zmetku: ${scrap} ks</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">
+          Zmetek se automaticky přenáší do dalších stanovišť, dokud ho oprávněná role nevyjme s důvodem.
+        </div>
+      </div>
+      ${canRemove
+        ? `<button class="btn btn-danger btn-sm" onclick="removeScrapModal()">Vyjmout ze zmetku</button>`
+        : `<span style="font-size:11px;color:var(--text3)">Vyjmout může jen vedení, TPV, mistr nebo admin.</span>`}
+    </div>
   </div>`;
 }
 
@@ -1981,6 +2022,7 @@ function persistStationCounts(options = {}) {
   else updateStationStatusFromQty(v);
   const missingCheckMessage = createMissingPreviousCheckAlert();
   const releaseMessage = autoReleaseToNextStation();
+  syncOrderStationFlow(selectedOrder);
   const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
   const after = cloneForAudit(selectedStation);
   if (JSON.stringify(before) !== JSON.stringify(after)) {
@@ -2014,16 +2056,115 @@ function resetQty() {
   renderStationDetail(stInfo);
 }
 
+function removeScrapModal() {
+  if (!selectedStation || !selectedOrder) return;
+  if (!can('manage_scrap')) {
+    showToast('🚫 Zmetek může vyjmout jen vedení, TPV, mistr nebo admin.');
+    return;
+  }
+  const scrap = positiveQty(selectedStation.qtyScrap);
+  if (!scrap) {
+    showToast('Zde není žádný zmetek k vyjmutí.');
+    return;
+  }
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  openModal('Vyjmout desku ze zmetku', `
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:800;color:var(--red);margin-bottom:5px">Zmetek na stanovišti ${stInfo?.name || selectedStation.stId}: ${scrap} ks</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Vyjmutí sníží zmetky i na navazujících stanovištích. Důvod je povinný pro audit zakázky.
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Počet vyjímaných desek</div>
+      <input class="input" id="rs-count" type="number" min="1" max="${scrap}" value="1">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Odůvodnění *</div>
+      <textarea class="input" id="rs-reason" rows="4" placeholder="např. deska předána na analýzu, zákazník schválil vyřazení, fyzicky odstraněna z dávky"
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+  `, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Vyjmout', action:'submitScrapRemoval()', cls:'btn-danger' },
+  ]);
+  setTimeout(() => document.getElementById('rs-reason')?.focus(), 50);
+}
+
+function reduceDownstreamScrap(order, fromIndex, amount) {
+  for (let index = fromIndex + 1; index < order.stations.length; index++) {
+    const station = order.stations[index];
+    const beforeScrap = positiveQty(station.qtyScrap);
+    if (beforeScrap > 0) station.qtyScrap = Math.max(0, beforeScrap - amount);
+    const beforeReceived = positiveQty(station.qtyReceived);
+    if (beforeReceived > 0) station.qtyReceived = Math.max(0, beforeReceived - amount);
+  }
+}
+
+function submitScrapRemoval() {
+  if (!selectedStation || !selectedOrder) return;
+  if (!can('manage_scrap')) {
+    showToast('🚫 Nemáte oprávnění vyjmout zmetek.');
+    return;
+  }
+  const availableScrap = positiveQty(selectedStation.qtyScrap);
+  const count = Math.max(0, Number(document.getElementById('rs-count')?.value) || 0);
+  const reason = document.getElementById('rs-reason')?.value.trim() || '';
+  if (count < 1 || count > availableScrap) {
+    showToast(`⚠️ Zadejte počet 1 až ${availableScrap}`);
+    return;
+  }
+  if (!reason) {
+    showToast('⚠️ Vyplňte odůvodnění vyjmutí zmetku.');
+    return;
+  }
+
+  const before = cloneForAudit(selectedOrder);
+  const stationIndex = selectedOrder.stations.findIndex(s => s === selectedStation || s.stId === selectedStation.stId);
+  selectedStation.qtyScrap = Math.max(0, availableScrap - count);
+  reduceDownstreamScrap(selectedOrder, stationIndex, count);
+  syncOrderStationFlow(selectedOrder);
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  const note = {
+    id: 'pn-scrap-' + Date.now(),
+    orderId: selectedOrder.id,
+    stationId: selectedStation.stId,
+    stationIds: [selectedStation.stId],
+    sourceStationId: selectedStation.stId,
+    targetScope: 'stations',
+    type: 'change',
+    text: `Vyjmuto ze zmetku: ${count} ks. Důvod: ${reason}`,
+    author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
+    authorRole: currentUser.role,
+    createdAt: new Date().toISOString(),
+  };
+  PROD_NOTES.unshift(note);
+  writeAudit(
+    'scrap.removed',
+    'order',
+    selectedOrder.id,
+    `${selectedOrder.number} · ${stInfo?.name || selectedStation.stId}: vyjmuto ze zmetku ${count} ks`,
+    before,
+    cloneForAudit(selectedOrder),
+  );
+  closeModal();
+  saveState();
+  renderStationDetail(stInfo);
+  buildNav();
+  showToast(`✅ Vyjmuto ze zmetku: ${count} ks`, { skipSave: true });
+}
+
 function setStatus(newStatus) {
   if (!selectedStation) return;
   if (newStatus === 'issue') { reportIssueModal(); return; }
   if (newStatus === 'completed') {
-    selectedStation.qtyOk = qtyAvailable();
+    selectedStation.qtyOk = Math.max(0, qtyAvailable() - positiveQty(selectedStation.qtyScrap));
     selectedStation.qtyRework = 0;
-    selectedStation.qtyScrap = 0;
     const result = persistStationCounts({
       forceCompleted: true,
-      message: '✅ Stanoviště dokončeno. Doplněn plný počet OK kusů.',
+      message: '✅ Stanoviště dokončeno. Doplněn dostupný počet OK kusů.',
     });
     if (result?.ok) showToast(result.message);
     return;
@@ -2574,6 +2715,13 @@ function numConfirm() {
     return;
   }
 
+  if (numpadField === 'scrap' && val < positiveQty(selectedStation.qtyScrap)) {
+    closeNumpad();
+    showToast('⚠️ Snížení zmetku musí mít odůvodnění.');
+    removeScrapModal();
+    return;
+  }
+
   selectedStation[fieldMap[numpadField]] = val;
   const valEl = document.getElementById('qtv-' + numpadField);
   if (valEl) valEl.textContent = val;
@@ -2921,6 +3069,7 @@ function auditLogHtml(row) {
     'order.deleted': 'Zakázka smazána',
     'note.created': 'Poznámka přidána',
     'note.deleted': 'Poznámka smazána',
+    'scrap.removed': 'Zmetek vyjmut',
     'issue.created': 'Problém nahlášen',
     'issue.resolved': 'Problém vyřešen',
   }[row.action] || row.action;
