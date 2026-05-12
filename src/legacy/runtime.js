@@ -2084,8 +2084,12 @@ function stationNotes(orderId, stationId) {
   return PROD_NOTES.filter(n => {
     if (n.orderId !== orderId) return false;
     const isAuthor = noteAuthoredByCurrentUser(n);
+    const targetStationIds = Array.isArray(n.stationIds) ? n.stationIds.map(Number) : [];
     if (Array.isArray(n.targetRoles) && !n.targetRoles.includes(currentUser?.role) && !isAuthor) return false;
-    return n.targetScope === 'all' || Number(n.stationId) === Number(stationId);
+    return n.targetScope === 'all'
+      || targetStationIds.includes(Number(stationId))
+      || Number(n.stationId) === Number(stationId)
+      || Number(n.sourceStationId) === Number(stationId);
   })
     .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
@@ -2100,8 +2104,59 @@ function noteAuthoredByCurrentUser(note) {
 function noteRecipientLabel(note) {
   if (note.targetScope === 'all') return 'Všem stanovištím';
   if (Array.isArray(note.targetRoles)) return 'Role: ' + note.targetRoles.map(r => ROLE_LABELS[r] || r).join(', ');
+  if (Array.isArray(note.stationIds) && note.stationIds.length) {
+    return 'Pro: ' + note.stationIds
+      .map(id => STATIONS.find(x => x.id === Number(id)))
+      .filter(Boolean)
+      .map(st => `${st.icon} ${st.name}`)
+      .join(', ');
+  }
   const st = STATIONS.find(x => x.id === Number(note.stationId));
   return st ? `Pro: ${st.icon} ${st.name}` : '';
+}
+
+function noteDefaultTargetIds() {
+  const next = nextStationAfterCurrent();
+  return next ? [Number(next.stId)] : [];
+}
+
+function noteTargetLabel(targetScope, stationIds = []) {
+  if (targetScope === 'all') return 'všem stanovištím';
+  const labels = stationIds
+    .map(id => STATIONS.find(x => x.id === Number(id)))
+    .filter(Boolean)
+    .map(st => `${st.icon} ${st.name}`);
+  return labels.length ? labels.join(', ') : 'vybraným stanovištím';
+}
+
+function createNoteNotification(note, sourceStationId, targetStationId, index = 0) {
+  if (!note || !targetStationId) return null;
+  const source = STATIONS.find(x => x.id === Number(sourceStationId));
+  const target = STATIONS.find(x => x.id === Number(targetStationId));
+  if (!target) return null;
+  const issue = {
+    id: `iss-note-${Date.now()}-${target.id}-${index}`,
+    autoKey: `note:${note.id}:${target.id}`,
+    orderId: selectedOrder.id,
+    orderName: selectedOrder.name,
+    orderNumber: selectedOrder.number,
+    stationId: Number(target.id),
+    stationName: target.name,
+    stationIcon: target.icon || '📝',
+    severity: 'low',
+    description: `Nová poznámka od ${source?.name || 'stanoviště'}: ${note.text}`,
+    reportedBy: currentUser.name,
+    reportedByUserId: currentUser.id,
+    reportedByLogin: currentUser.login,
+    reportedByRole: currentUser.role,
+    targetScope: 'station',
+    targetStationId: Number(target.id),
+    targetLabel: `${target.icon || ''} ${target.name}`,
+    reportedAt: new Date().toISOString(),
+    resolved: false,
+  };
+  ISSUES.unshift(issue);
+  return issue;
 }
 
 function renderStationNotes() {
@@ -2135,6 +2190,7 @@ function renderStationNotes() {
 
 function addNoteModal() {
   const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  const defaultTargetIds = noteDefaultTargetIds();
   openModal('📝 Přidat poznámku k výrobě', `
     <div style="background:var(--card2);border-radius:8px;padding:8px 10px;margin-bottom:14px;font-size:12px;color:var(--text2)">
       ${stInfo?.icon} <b style="color:var(--text)">${stInfo?.name}</b>
@@ -2150,15 +2206,24 @@ function addNoteModal() {
     </div>
 
     <div class="input-group">
-      <div class="input-label">Adresát</div>
-      <select class="input" id="an-target">
-        <option value="current">Aktuální stanoviště - ${stInfo?.name || ''}</option>
-        <option value="all">Všem stanovištím zakázky</option>
+      <div class="input-label">Adresáti</div>
+      <label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="an-target-all" onchange="toggleNoteAllTargets(this.checked)">
+        Všem stanovištím zakázky
+      </label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
         ${selectedOrder.stations.map(station => {
           const st = STATIONS.find(x => x.id === station.stId);
-          return `<option value="station:${station.stId}" ${station.stId === selectedStation.stId ? 'selected' : ''}>${st?.icon || ''} ${escapeHtml(st?.name || 'Stanoviště')}</option>`;
+          const checked = defaultTargetIds.includes(Number(station.stId)) ? 'checked' : '';
+          return `<label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+            <input type="checkbox" class="an-target-station" value="${station.stId}" ${checked}>
+            <span>${st?.icon || ''} ${escapeHtml(st?.name || 'Stanoviště')}</span>
+          </label>`;
         }).join('')}
-      </select>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">
+        Lze vybrat více adresátů. Poznámka se zobrazí odesílateli na tomto stanovišti a zároveň všem vybraným stanovištím.
+      </div>
     </div>
 
     <div class="input-group">
@@ -2178,18 +2243,35 @@ function addNoteModal() {
   setTimeout(() => document.getElementById('an-text')?.focus(), 50);
 }
 
+function toggleNoteAllTargets(checked) {
+  document.querySelectorAll('.an-target-station').forEach(input => {
+    input.checked = checked;
+    input.disabled = checked;
+  });
+}
+
 function submitNote() {
   const text = document.getElementById('an-text').value.trim();
   if (!text) { showToast('⚠️ Vyplňte text poznámky'); return; }
-  const target = document.getElementById('an-target').value;
-  const targetStationId = target.startsWith('station:')
-    ? Number(target.split(':')[1])
-    : selectedStation.stId;
+  const sourceStationId = selectedStation.stId;
+  const targetAll = document.getElementById('an-target-all')?.checked;
+  const selectedTargetIds = Array.from(document.querySelectorAll('.an-target-station:checked'))
+    .map(input => Number(input.value))
+    .filter(Boolean);
+  const targetStationIds = targetAll
+    ? selectedOrder.stations.map(station => Number(station.stId)).filter(Boolean)
+    : selectedTargetIds;
+  if (!targetStationIds.length) {
+    showToast('⚠️ Vyberte alespoň jedno cílové stanoviště');
+    return;
+  }
   const note = {
     id: 'pn' + Date.now(),
     orderId: selectedOrder.id,
-    stationId: targetStationId,
-    targetScope: target === 'all' ? 'all' : 'station',
+    stationId: targetStationIds[0],
+    stationIds: targetStationIds,
+    sourceStationId,
+    targetScope: targetAll ? 'all' : 'stations',
     type: document.getElementById('an-type').value,
     text,
     author: currentUser.name,
@@ -2199,6 +2281,10 @@ function submitNote() {
     createdAt: new Date().toISOString(),
   };
   PROD_NOTES.unshift(note);
+  const notificationTargets = targetStationIds.filter(id => Number(id) !== Number(sourceStationId));
+  const notifications = notificationTargets
+    .map((stationId, index) => createNoteNotification(note, sourceStationId, stationId, index))
+    .filter(Boolean);
   writeAudit(
     'note.created',
     'production_note',
@@ -2207,11 +2293,22 @@ function submitNote() {
     null,
     cloneForAudit(note),
   );
+  notifications.forEach(notification => {
+    writeAudit(
+      'note.notification_created',
+      'issue',
+      notification.id,
+      `${selectedOrder.number} · poznámka odeslána pro ${notification.targetLabel}`,
+      null,
+      cloneForAudit(notification),
+    );
+  });
   saveState();
   closeModal();
   const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
   renderStationDetail(stInfo);
-  showToast('✅ Poznámka uložena', { skipSave: true });
+  buildNav();
+  showToast(`✅ Poznámka odeslána pro ${noteTargetLabel(note.targetScope, targetStationIds)}`, { skipSave: true });
 }
 
 function deleteNote(id) {
