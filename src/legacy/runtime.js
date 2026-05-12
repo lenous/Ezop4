@@ -83,6 +83,7 @@ function applyState(s, options = {}) {
 function saveState() {
   try { localStorage.setItem(LS_KEY, JSON.stringify(currentState())); }
   catch (e) { console.warn('LS save failed:', e); }
+  markLocalMutation();
   cloudPush();
 }
 function loadState() {
@@ -101,6 +102,12 @@ function resetState() {
 
 // Cloud sync: jeden řádek s JSONB blobem (jednoduché, postačí pro malou dílnu)
 let cloudPushTimer;
+let localMutationIgnorePullUntil = 0;
+
+function markLocalMutation() {
+  localMutationIgnorePullUntil = Date.now() + 2500;
+}
+
 function cloudPush() {
   if (!db) return;
   clearTimeout(cloudPushTimer);
@@ -128,6 +135,7 @@ function startCloudRealtime() {
   if (!db) return;
   db.channel('app_state_ch')
     .on('postgres_changes', { event:'*', schema:'public', table:'app_state' }, async () => {
+      if (Date.now() < localMutationIgnorePullUntil) return;
       const ok = await cloudPull();
       if (ok) {
         showToast('🔄 Data synchronizována', { skipSave: true });
@@ -2075,10 +2083,18 @@ const NOTE_TYPES = {
 function stationNotes(orderId, stationId) {
   return PROD_NOTES.filter(n => {
     if (n.orderId !== orderId) return false;
-    if (Array.isArray(n.targetRoles) && !n.targetRoles.includes(currentUser?.role) && n.authorRole !== currentUser?.role) return false;
+    const isAuthor = noteAuthoredByCurrentUser(n);
+    if (Array.isArray(n.targetRoles) && !n.targetRoles.includes(currentUser?.role) && !isAuthor) return false;
     return n.targetScope === 'all' || Number(n.stationId) === Number(stationId);
   })
     .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function noteAuthoredByCurrentUser(note) {
+  if (!currentUser || !note) return false;
+  if (note.authorUserId && note.authorUserId === currentUser.id) return true;
+  if (note.authorLogin && normalizeLogin(note.authorLogin) === normalizeLogin(currentUser.login)) return true;
+  return note.author === currentUser.name && note.authorRole === currentUser.role;
 }
 
 function noteRecipientLabel(note) {
@@ -2109,7 +2125,7 @@ function renderStationNotes() {
       <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:6px">${escapeHtml(n.text)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text2)">
         <span>👤 ${n.author}</span>
-        ${n.authorRole === currentUser.role || ['admin','dispatcher'].includes(currentUser.role)
+        ${noteAuthoredByCurrentUser(n) || ['admin','dispatcher'].includes(currentUser.role)
           ? `<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="deleteNote('${n.id}')">🗑️</button>`
           : ''}
       </div>
@@ -2147,7 +2163,7 @@ function addNoteModal() {
 
     <div class="input-group">
       <div class="input-label">Text poznámky *</div>
-      <textarea class="input" id="an-text" rows="4" placeholder="např. „Polotovary v sušce, budova C, regál 4." nebo „Zákazník dodal náhradu R7 = 12k namísto 10k.""
+      <textarea class="input" id="an-text" rows="4" placeholder="např. Polotovary v sušce, budova C, regál 4 nebo zákazník dodal náhradu R7 = 12k namísto 10k"
         style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
     </div>
 
@@ -2177,6 +2193,8 @@ function submitNote() {
     type: document.getElementById('an-type').value,
     text,
     author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
     authorRole: currentUser.role,
     createdAt: new Date().toISOString(),
   };
@@ -2189,7 +2207,7 @@ function submitNote() {
     null,
     cloneForAudit(note),
   );
-  autoSave();
+  saveState();
   closeModal();
   const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
   renderStationDetail(stInfo);
