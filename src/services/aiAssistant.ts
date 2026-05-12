@@ -21,8 +21,17 @@ export async function summarizeOrder(input: OrderAiSummaryInput): Promise<OrderA
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || `AI summary failed with HTTP ${response.status}`);
+    throw new Error(parseAiErrorMessage(message) || `AI přehled se nepodařilo vytvořit (HTTP ${response.status}).`);
   }
 
   return response.json() as Promise<OrderAiSummary>;
+}
+
+function parseAiErrorMessage(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw) as { error?: { message?: string } };
+    return parsed.error?.message || raw;
+  } catch {
+    return raw;
+  }
 }

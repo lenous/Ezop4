@@ -22,7 +22,7 @@ function attachAiRoute(middlewares: { use: (path: string, handler: (req: any, re
 
     if (!apiKey) {
       res.statusCode = 503;
-      res.end('OPENAI_API_KEY is not configured on the server.');
+      sendAiError(res, 503, 'AI přehled není nakonfigurovaný. Chybí serverový OPENAI_API_KEY.');
       return;
     }
 
@@ -33,9 +33,26 @@ function attachAiRoute(middlewares: { use: (path: string, handler: (req: any, re
       res.end(JSON.stringify(result));
     } catch (error) {
       res.statusCode = 500;
-      res.end(error instanceof Error ? error.message : 'AI summary failed.');
+      const message = error instanceof Error ? error.message : 'AI summary failed.';
+      console.error('[EZOP4 AI]', message);
+      sendAiError(res, 500, toUserAiErrorMessage(message));
     }
   });
+}
+
+function sendAiError(res: { setHeader: (name: string, value: string) => void; end: (body?: string) => void }, status: number, message: string): void {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify({ error: { status, message } }));
+}
+
+function toUserAiErrorMessage(message: string): string {
+  if (message.includes('insufficient_quota') || message.includes('exceeded your current quota') || message.includes('OpenAI request failed: 429')) {
+    return 'AI přehled teď nejde vytvořit: OpenAI projekt nemá dostupnou kvótu nebo kredit. Zkontrolujte billing/quota na platform.openai.com.';
+  }
+  if (message.includes('invalid_api_key') || message.includes('Incorrect API key')) {
+    return 'AI přehled teď nejde vytvořit: OpenAI API klíč není platný.';
+  }
+  return 'AI přehled se teď nepodařilo vytvořit. Zkuste to později nebo zkontrolujte serverový log.';
 }
 
 async function readJsonBody(req: NodeJS.ReadableStream): Promise<unknown> {

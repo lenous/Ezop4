@@ -1273,7 +1273,9 @@ async function generateOrderAiSummary(orderId) {
       ${(result.nextSteps || []).length ? `<ul style="margin:0 0 0 18px;padding:0">${result.nextSteps.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<div>Bez doporučených kroků.</div>'}
     `;
   } catch (error) {
-    box.innerHTML = escapeHtml(error instanceof Error ? error.message : 'AI přehled se nepodařilo vytvořit.');
+    const message = error instanceof Error ? error.message : 'AI přehled se nepodařilo vytvořit.';
+    box.innerHTML = `<div style="color:var(--amber);font-weight:700;margin-bottom:4px">AI přehled není dostupný</div>
+      <div>${escapeHtml(message)}</div>`;
   }
 }
 
