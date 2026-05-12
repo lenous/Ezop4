@@ -670,7 +670,6 @@ function getNavItems() {
     { id:'orders',    label:'Zakázky',  icon:'📋' },
     { id:'issues',    label:'Problémy' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
   ];
-  if (can('view_kpi'))   items.push({ id:'kpi',   label:'KPI',        icon:'📊' });
   if (can('app_settings')) items.push({ id:'admin', label:'Správa',   icon:'⚙️' });
   items.push({ id:'profile', label:'Profil', icon:'👤' });
   return items;
@@ -2410,22 +2409,53 @@ function numConfirm() {
 }
 
 // ── KPI ───────────────────────────────────────────────
+let kpiFilters = { customer:'', product:'', number:'' };
+
 function renderKpi() {
-  const totalOk = ORDERS.reduce((a,o) => a + orderGoodQty(o),0);
-  const totalScrap = ORDERS.reduce((a,o) => a + o.stations.reduce((b,s) => b+s.qtyScrap,0),0);
-  const totalRework = ORDERS.reduce((a,o) => a + o.stations.reduce((b,s) => b+s.qtyRework,0),0);
-  const totalQty = ORDERS.reduce((a,o) => a+o.qty,0);
+  document.getElementById('page-kpi').innerHTML = renderKpiHtml();
+}
+
+function renderKpiHtml() {
+  const kpiOrders = filteredKpiOrders();
+  const totalOk = kpiOrders.reduce((a,o) => a + orderGoodQty(o),0);
+  const totalScrap = kpiOrders.reduce((a,o) => a + o.stations.reduce((b,s) => b+s.qtyScrap,0),0);
+  const totalRework = kpiOrders.reduce((a,o) => a + o.stations.reduce((b,s) => b+s.qtyRework,0),0);
+  const totalQty = kpiOrders.reduce((a,o) => a+o.qty,0);
   const yield_ = totalQty > 0 ? Math.round(totalOk/(totalQty)*100) : 0;
 
   const stationStats = STATIONS.map(st => {
-    const allSt = ORDERS.flatMap(o => o.stations.filter(s=>s.stId===st.id));
+    const allSt = kpiOrders.flatMap(o => o.stations.filter(s=>s.stId===st.id));
     const stOk = allSt.reduce((a,s)=>a+s.qtyOk,0);
     const stAll = allSt.reduce((a,s)=>a+s.qtyOk+s.qtyRework+s.qtyScrap,0);
     return { ...st, ok:stOk, total:stAll, pct:stAll>0?Math.round(stOk/stAll*100):null };
   }).filter(s => s.total > 0);
 
-  document.getElementById('page-kpi').innerHTML = `
+  return `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">📊 KPI – Výkonnost výroby</div>
+    <div class="card">
+      <div class="card-title">🔎 Filtr KPI</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+        <div>
+          <div class="input-label">Zákazník</div>
+          <select class="input" onchange="setKpiFilter('customer', this.value)">
+            <option value="">Všichni zákazníci</option>
+            ${knownCustomers().map(customer => `<option value="${escapeHtml(customer)}" ${kpiFilters.customer===customer?'selected':''}>${escapeHtml(customer)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div class="input-label">Výrobek</div>
+          <input class="input" value="${escapeHtml(kpiFilters.product)}" placeholder="název výrobku" oninput="setKpiFilter('product', this.value)">
+        </div>
+        <div>
+          <div class="input-label">Číslo zakázky</div>
+          <input class="input" value="${escapeHtml(kpiFilters.number)}" placeholder="např. 261100" oninput="setKpiFilter('number', this.value)">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <div style="font-size:12px;color:var(--text2)">Zobrazeno ${kpiOrders.length} z ${ORDERS.length} zakázek</div>
+        <button class="btn btn-ghost btn-sm" onclick="clearKpiFilters()">Vymazat filtr</button>
+      </div>
+    </div>
     <div class="stat-grid">
       <div class="stat-card">
         <div class="stat-val" style="color:var(--green)">${yield_}%</div>
@@ -2447,12 +2477,12 @@ function renderKpi() {
 
     <div class="card">
       <div class="card-title">📈 Výtěžnost podle stanovišť</div>
-      ${stationStats.map(s => `
+      ${stationStats.length ? stationStats.map(s => `
         <div class="kpi-bar-row">
           <div class="kpi-bar-lbl">${s.icon} ${s.name.split(' ')[0]}</div>
           <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${s.pct}%"></div></div>
           <div class="kpi-bar-val">${s.pct}%</div>
-        </div>`).join('')}
+        </div>`).join('') : `<div style="font-size:12px;color:var(--text2)">Pro vybraný filtr nejsou data stanovišť.</div>`}
     </div>
 
     <div class="card">
@@ -2460,22 +2490,59 @@ function renderKpi() {
       <table class="tbl">
         <thead><tr><th>Zakázka</th><th>Plán</th><th>OK</th><th>Oprava</th><th>Zmetek</th></tr></thead>
         <tbody>
-          ${ORDERS.map(o => {
+          ${kpiOrders.length ? kpiOrders.map(o => {
             const ok = orderGoodQty(o);
             const rw = o.stations.reduce((a,s)=>a+s.qtyRework,0);
             const sc = o.stations.reduce((a,s)=>a+s.qtyScrap,0);
             return `<tr>
-              <td style="font-size:12px;font-weight:600">${o.name}</td>
+              <td style="font-size:12px;font-weight:600">
+                <div>${escapeHtml(o.name)}</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">${escapeHtml(o.number)} · ${escapeHtml(o.customer)}</div>
+              </td>
               <td>${o.qty}</td>
               <td style="color:var(--green);font-weight:700">${ok}</td>
               <td style="color:var(--amber)">${rw}</td>
               <td style="color:var(--red)">${sc}</td>
             </tr>`;
-          }).join('')}
+          }).join('') : `<tr><td colspan="5" style="font-size:12px;color:var(--text2);padding:14px">Žádná zakázka neodpovídá filtru.</td></tr>`}
         </tbody>
       </table>
     </div>
   `;
+}
+
+function filteredKpiOrders() {
+  const customer = normalizeSearch(kpiFilters.customer);
+  const product = normalizeSearch(kpiFilters.product);
+  const number = normalizeSearch(kpiFilters.number);
+  return ORDERS.filter(order => {
+    const byCustomer = !customer || normalizeSearch(order.customer) === customer;
+    const byProduct = !product || normalizeSearch(order.name).includes(product);
+    const byNumber = !number || normalizeSearch(order.number).includes(number);
+    return byCustomer && byProduct && byNumber;
+  });
+}
+
+function normalizeSearch(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function setKpiFilter(key, value) {
+  kpiFilters[key] = value || '';
+  rerenderKpiLocation();
+}
+
+function clearKpiFilters() {
+  kpiFilters = { customer:'', product:'', number:'' };
+  rerenderKpiLocation();
+}
+
+function rerenderKpiLocation() {
+  if (currentPage === 'admin' && adminTab === 'kpi_report') {
+    document.getElementById('adm-kpi').innerHTML = renderKpiHtml();
+    return;
+  }
+  renderKpi();
 }
 
 // ── ADMIN ─────────────────────────────────────────────
@@ -2495,6 +2562,7 @@ function renderAdmin() {
       <div class="admin-tab ${adminTab==='settings'?'active':''}" onclick="switchAdminTab('settings')">⚙️ Nastavení</div>
       <div class="admin-tab ${adminTab==='stations'?'active':''}" onclick="switchAdminTab('stations')">🏭 Stanoviště</div>
       <div class="admin-tab ${adminTab==='orders_mgmt'?'active':''}" onclick="switchAdminTab('orders_mgmt')">📋 Zakázky</div>
+      <div class="admin-tab ${adminTab==='kpi_report'?'active':''}" onclick="switchAdminTab('kpi_report')">📊 KPI</div>
       <div class="admin-tab ${adminTab==='cloud'?'active':''}" onclick="switchAdminTab('cloud')">☁️ Cloud</div>
       <div class="admin-tab ${adminTab==='lupanet'?'active':''}" onclick="switchAdminTab('lupanet')">🔌 Lupa NET</div>
       <div class="admin-tab ${adminTab==='ezop4'?'active':''}" onclick="switchAdminTab('ezop4')">🚀 Ezop4</div>
@@ -2517,6 +2585,9 @@ function renderAdmin() {
     </div>
     <div class="admin-section ${adminTab==='orders_mgmt'?'active':''}" id="adm-orders">
       ${renderAdminOrders()}
+    </div>
+    <div class="admin-section ${adminTab==='kpi_report'?'active':''}" id="adm-kpi">
+      ${renderKpiHtml()}
     </div>
     <div class="admin-section ${adminTab==='cloud'?'active':''}" id="adm-cloud">
       ${renderAdminCloud()}
