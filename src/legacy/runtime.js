@@ -617,13 +617,13 @@ function can(action) {
   const r = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
   const perms = {
     view_orders:    ['operator','tpv','dispatcher','management','admin'],
-    edit_qty:       ['operator','tpv','dispatcher','management','admin'],
-    change_status:  ['operator','tpv','dispatcher','management','admin'],
+    edit_qty:       ['tpv','dispatcher','management','admin'],
+    change_status:  ['tpv','dispatcher','management','admin'],
     create_order:   ['dispatcher','management','admin'],
     delete_order:   ['tpv','dispatcher','management','admin'],
     manage_order_stations:['dispatcher','management','admin'],
     edit_order_info:['dispatcher','management','admin'],
-    edit_product_memory:['operator','tpv','dispatcher','management','admin'],
+    edit_product_memory:['tpv','dispatcher','management','admin'],
     view_kpi:       ['dispatcher','management','admin'],
     manage_users:   ['admin'],
     app_settings:   ['admin'],
@@ -1164,6 +1164,7 @@ function openOrder(orderId, options = {}) {
     ${orderInfoCardHtml(selectedOrder)}
     ${productPhotoCardHtml(selectedOrder)}
     ${orderDocsCardHtml(selectedOrder)}
+    ${orderAiCardHtml(selectedOrder)}
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
       <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Stanoviště výroby</div>
@@ -1233,6 +1234,47 @@ function orderInfoCardHtml(o) {
       </div>` : ''}
     </div>
   </div>`;
+}
+
+function orderAiCardHtml(o) {
+  if (!can('edit_order_info') && !can('view_kpi')) return '';
+  return `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div class="card-title" style="margin:0">🤖 AI přehled zakázky</div>
+      <button class="btn btn-ghost btn-sm" onclick="generateOrderAiSummary('${o.id}')">Shrnout</button>
+    </div>
+    <div id="ai-summary-${o.id}" style="font-size:12px;color:var(--text2);line-height:1.55">
+      AI přehled je dostupný při spuštění přes vývojový server EZOP4 s nastaveným OPENAI_API_KEY.
+    </div>
+  </div>`;
+}
+
+async function generateOrderAiSummary(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  const box = document.getElementById(`ai-summary-${orderId}`);
+  if (!order || !box) return;
+  if (!window.EZOP4_AI?.summarizeOrder) {
+    box.innerHTML = 'AI modul není dostupný v této sestavě aplikace.';
+    return;
+  }
+
+  box.innerHTML = 'Generuji přehled zakázky...';
+  try {
+    const result = await window.EZOP4_AI.summarizeOrder({
+      order,
+      issues: ISSUES.filter(issue => issue.orderId === orderId),
+      notes: PROD_NOTES.filter(note => note.orderId === orderId),
+    });
+    box.innerHTML = `
+      <div style="font-weight:700;color:var(--text);margin-bottom:8px">${escapeHtml(result.summary || 'Bez shrnutí.')}</div>
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Rizika</div>
+      ${(result.risks || []).length ? `<ul style="margin:0 0 10px 18px;padding:0">${result.risks.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<div style="margin-bottom:10px">Bez významných rizik.</div>'}
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Doporučené kroky</div>
+      ${(result.nextSteps || []).length ? `<ul style="margin:0 0 0 18px;padding:0">${result.nextSteps.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : '<div>Bez doporučených kroků.</div>'}
+    `;
+  } catch (error) {
+    box.innerHTML = escapeHtml(error instanceof Error ? error.message : 'AI přehled se nepodařilo vytvořit.');
+  }
 }
 
 function deleteOrderModal(orderId) {
@@ -2997,7 +3039,10 @@ function renderAdminUsers() {
         <div class="user-login" style="color:var(--text3)">Login: <b style="color:var(--text2)">${escapeHtml(u.login)}</b> · Heslo: <b style="color:var(--text2)">skryté lokálně</b></div>
       </div>
       <span class="role-badge role-${u.role}">${ROLE_LABELS[u.role]}</span>
-      <button class="btn btn-ghost btn-sm" onclick="editUserModal('${u.id}')">✏️</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" title="Upravit uživatele" onclick="editUserModal('${u.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" title="Smazat uživatele" onclick="deleteUserModal('${u.id}')">🗑️</button>
+      </div>
     </div>`).join('')}`;
 }
 
@@ -3081,7 +3126,6 @@ function renderAdminSettings() {
   return Object.entries({
     companyName:        { label:'Název firmy', desc:'Zobrazuje se v záhlaví aplikace', type:'text' },
     lockTimeout:        { label:'Timeout zamčení (hod)', desc:'Po jaké době neaktivity se zamkne', type:'number' },
-    allowOperatorQty:   { label:'Operátor může měnit počty', desc:'Všichni operátoři mohou zadávat qty', type:'toggle' },
     showKpiOperator:    { label:'KPI pro operátory', desc:'Operátoři vidí KPI záložku', type:'toggle' },
     requireNoteOnIssue: { label:'Poznámka povinná u problému', desc:'Při nahlášení problému vyžadovat text', type:'toggle' },
     notifyOnIssue:      { label:'Notifikovat při problému', desc:'Zasílat notifikace mistrovi', type:'toggle' },
@@ -3655,6 +3699,73 @@ function saveEditUser(uid) {
   u.role  = document.getElementById('eu-role').value;
   autoSave();
   closeModal(); showToast('✅ Uživatel uložen'); renderAdmin();
+}
+
+function deleteUserModal(uid) {
+  const u = USERS.find(x=>x.id===uid);
+  if (!u) return;
+  if (currentUser?.id === uid) {
+    showToast('⚠️ Nelze smazat právě přihlášeného uživatele');
+    return;
+  }
+  if (u.role === 'admin' && USERS.filter(x => x.role === 'admin').length <= 1) {
+    showToast('⚠️ Nelze smazat posledního admina');
+    return;
+  }
+
+  openModal('Smazat uživatele', `
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--red);margin-bottom:6px">Tato akce odebere přístup</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Smazat uživatele <b style="color:var(--text)">${escapeHtml(u.name)}</b>
+        s loginem <b style="color:var(--text)">${escapeHtml(u.login)}</b>?
+      </div>
+    </div>
+    <div class="card" style="background:var(--card2);box-shadow:none">
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Lokální heslo bude odstraněno. Historické login záznamy a audit zůstanou zachované.
+      </div>
+    </div>
+  `, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'🗑️ Smazat uživatele', action:`deleteUser('${uid}')`, cls:'btn-danger' },
+  ]);
+}
+
+function deleteUser(uid) {
+  const u = USERS.find(x=>x.id===uid);
+  if (!u) return;
+  if (currentUser?.id === uid) {
+    showToast('⚠️ Nelze smazat právě přihlášeného uživatele');
+    return;
+  }
+  if (u.role === 'admin' && USERS.filter(x => x.role === 'admin').length <= 1) {
+    showToast('⚠️ Nelze smazat posledního admina');
+    return;
+  }
+
+  const login = normalizeLogin(u.login);
+  USERS = USERS.filter(x => x.id !== uid);
+  if (login && USER_PASSWORDS[login]) {
+    delete USER_PASSWORDS[login];
+    saveUserPasswords();
+  }
+  ISSUES.forEach(issue => {
+    issue.targetUserIds = (issue.targetUserIds || []).filter(id => id !== uid);
+    issue.targetLogins = (issue.targetLogins || []).filter(item => normalizeLogin(item) !== login);
+  });
+  writeAudit(
+    'user.deleted',
+    'user',
+    uid,
+    `${u.login} · uživatel smazán`,
+    { id: u.id, login: u.login, role: u.role, name: u.name },
+    null,
+  );
+  autoSave();
+  closeModal();
+  renderAdmin();
+  showToast('🗑️ Uživatel smazán');
 }
 
 function editStationModal(stId) {

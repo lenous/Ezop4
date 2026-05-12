@@ -19,7 +19,7 @@ export const users = [
 export const appSettings = {
   companyName: 'HC Electronics a.s.',
   lockTimeout: 8,
-  allowOperatorQty: true,
+  allowOperatorQty: false,
   showKpiOperator: false,
   requireNoteOnIssue: true,
   notifyOnIssue: true,

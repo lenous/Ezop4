@@ -75,6 +75,18 @@ Tyto soubory odpovídají tabulkám v `schema.sql` a lze je použít jako seed/i
 
 V kompatibilním režimu se audit ukládá lokálně do prohlížeče. V Supabase Auth režimu se aplikace pokusí stejnou událost uložit také do tabulky `audit_logs`. Audit neukládá lokální hesla ani login logy.
 
+## AI přehled zakázky
+
+EZOP4 má připravený serverový OpenAI endpoint pro stručné shrnutí zakázky, rizik a doporučených dalších kroků. API klíč se načítá ze serverového prostředí jako `OPENAI_API_KEY` a neposílá se do prohlížeče.
+
+Lokálně se používá `.env.local`:
+
+```bash
+OPENAI_API_KEY=...
+```
+
+AI přehled je dostupný v detailu zakázky pro role, které mohou zakázky řídit nebo vyhodnocovat. Role `operator` má jen náhled a nemůže měnit počty, stavy ani produktovou paměť.
+
 ## Lupa NET
 
 EZOP4 má připravený integrační modul pro Lupa NET:
