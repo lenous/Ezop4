@@ -254,6 +254,63 @@ function orderGoodQty(order) {
   return window.EZOP_FLOW?.orderGoodQty(order) ?? 0;
 }
 
+function positiveQty(value) {
+  return Math.max(0, Number(value) || 0);
+}
+
+function stationProcessedQty(station) {
+  return positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework) + positiveQty(station?.qtyScrap);
+}
+
+function stationReadyQty(station) {
+  return positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework);
+}
+
+function stationInputQty(order, station, index) {
+  if (!order || !station) return 0;
+  if (index <= 0) return positiveQty(order.qty);
+  return positiveQty(station.qtyReceived);
+}
+
+function syncOrderStationFlow(order) {
+  if (!order || !Array.isArray(order.stations)) return false;
+  let changed = false;
+
+  order.stations.forEach((station, index) => {
+    if (index > 0) {
+      const previousReady = stationReadyQty(order.stations[index - 1]);
+      if (previousReady > 0 && positiveQty(station.qtyReceived) < previousReady) {
+        station.qtyReceived = previousReady;
+        changed = true;
+      }
+    }
+
+    const available = stationInputQty(order, station, index);
+    if (station.status === 'completed' && stationProcessedQty(station) === 0 && available > 0) {
+      station.qtyOk = available;
+      station.qtyRework = 0;
+      station.qtyScrap = 0;
+      changed = true;
+    }
+  });
+
+  return changed;
+}
+
+function stationCardQtyHtml(order, station, index) {
+  const processed = stationProcessedQty(station);
+  const received = stationInputQty(order, station, index);
+  const hasQty = processed > 0 || received > 0;
+  if (!hasQty) return '<div style="font-size:11px;color:var(--text3)">Zatím bez kusů</div>';
+
+  return `<div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap">
+    ${received > 0 && index > 0 ? `<span style="color:var(--text2)">Přišlo: ${received}</span>` : ''}
+    <span style="color:var(--green)">OK: ${positiveQty(station.qtyOk)}</span>
+    <span style="color:var(--amber)">Oprava: ${positiveQty(station.qtyRework)}</span>
+    <span style="color:var(--red)">Zmetek: ${positiveQty(station.qtyScrap)}</span>
+  </div>`;
+}
+
 function validStencilNumber(value) {
   return !String(value || '').trim() || /^\d+\/\d{4}$/.test(String(value).trim());
 }
@@ -1118,6 +1175,7 @@ function openOrder(orderId, options = {}) {
     if (options.fromSync) navigateTo('orders');
     return;
   }
+  if (syncOrderStationFlow(selectedOrder)) saveState();
   detailView = { type: 'order', orderId };
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1177,7 +1235,7 @@ function openOrder(orderId, options = {}) {
       <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Stanoviště výroby</div>
       ${can('manage_order_stations') ? `<button class="btn btn-ghost btn-sm" onclick="manageStationsModal('${selectedOrder.id}')">⚙️ Spravovat</button>` : ''}
     </div>
-    ${selectedOrder.stations.map(s => {
+    ${selectedOrder.stations.map((s, index) => {
       const stInfo = STATIONS.find(x => x.id === s.stId);
       const meta = stationStatusMeta(s.status);
       const nCount = stationNotes(selectedOrder.id, s.stId).length;
@@ -1192,11 +1250,7 @@ function openOrder(orderId, options = {}) {
                 <span class="badge ${meta.badge}">${meta.label}</span>
               </div>
             </div>
-            ${s.qtyReceived > 0 ? `<div style="display:flex;gap:12px;font-size:11px">
-              <span style="color:var(--green)">OK: ${s.qtyOk}</span>
-              <span style="color:var(--amber)">Oprava: ${s.qtyRework}</span>
-              <span style="color:var(--red)">Zmetek: ${s.qtyScrap}</span>
-            </div>` : '<div style="font-size:11px;color:var(--text3)">Zatím bez kusů</div>'}
+            ${stationCardQtyHtml(selectedOrder, s, index)}
           </div>
           <span style="color:var(--text3)">›</span>
         </div>
@@ -1752,6 +1806,10 @@ function openStation(orderId, stId, options = {}) {
     detailView = null;
     if (options.fromSync) navigateTo('orders');
     return;
+  }
+  if (syncOrderStationFlow(selectedOrder)) {
+    selectedStation = selectedOrder.stations.find(s => s.stId === Number(stId));
+    saveState();
   }
   detailView = { type: 'station', orderId, stId: Number(stId) };
 
@@ -3484,11 +3542,12 @@ function normalizeAppData() {
     order.stations.forEach(st => {
       st.stId = Number(st.stId);
       st.status ||= 'waiting';
-      st.qtyOk = Math.max(0, Number(st.qtyOk) || 0);
-      st.qtyRework = Math.max(0, Number(st.qtyRework) || 0);
-      st.qtyScrap = Math.max(0, Number(st.qtyScrap) || 0);
-      st.qtyReceived = Math.max(0, Number(st.qtyReceived) || 0);
+      st.qtyOk = positiveQty(st.qtyOk);
+      st.qtyRework = positiveQty(st.qtyRework);
+      st.qtyScrap = positiveQty(st.qtyScrap);
+      st.qtyReceived = positiveQty(st.qtyReceived);
     });
+    syncOrderStationFlow(order);
     applyProductMemoryToOrder(order);
   });
 }
