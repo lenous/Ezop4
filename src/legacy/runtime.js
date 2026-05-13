@@ -836,6 +836,141 @@ function queueDrop(event, targetOrderId, targetStId) {
   queueDragSource = null;
 }
 
+function openQueueForStation(stId) {
+  queueStationFilter = String(stId || '');
+  queueSearch = '';
+  navigateTo('queue');
+}
+
+function orderIsClosed(order) {
+  const stations = order?.stations || [];
+  return stations.length > 0 && stations.every(station => ['completed','skipped'].includes(station.status));
+}
+
+function dateOnlyTime(value) {
+  if (!value) return Number.NaN;
+  const text = String(value).slice(0, 10);
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match.map(Number);
+    return new Date(year, month - 1, day).getTime();
+  }
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : Number.NaN;
+}
+
+function todayStartTime() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.getTime();
+}
+
+function isOrderOverdue(order) {
+  const due = dateOnlyTime(order?.due);
+  return Number.isFinite(due) && due < todayStartTime() && !orderIsClosed(order);
+}
+
+function orderDaysLate(order) {
+  const due = dateOnlyTime(order?.due);
+  if (!Number.isFinite(due)) return 0;
+  return Math.max(0, Math.floor((todayStartTime() - due) / 86400000));
+}
+
+function stationLoadSummaries() {
+  return STATIONS.map(station => {
+    const items = workQueueItems(station.id).filter(item => Number(item.station.stId) === Number(station.id));
+    const active = items.filter(item => !['completed','skipped'].includes(item.station.status) || isOrderBlocked(item.order));
+    const urgent = active.filter(item => item.order.priority === 'urgent').length;
+    const overdue = active.filter(item => isOrderOverdue(item.order)).length;
+    const blocked = active.filter(item => isOrderBlocked(item.order)).length;
+    const inProgress = active.filter(item => ['in_progress','partial','issue'].includes(item.station.status)).length;
+    const score = active.length + urgent + (overdue * 2) + (blocked * 2) + inProgress;
+    const level = blocked || overdue || active.length >= 5
+      ? 'overload'
+      : active.length >= 3 || urgent >= 2 ? 'busy' : 'ok';
+    return { station, items: active, count: active.length, urgent, overdue, blocked, inProgress, score, level };
+  })
+    .filter(summary => summary.count > 0)
+    .sort((a, b) => b.score - a.score || b.count - a.count || a.station.id - b.station.id);
+}
+
+function stationLoadColor(level) {
+  if (level === 'overload') return 'var(--red)';
+  if (level === 'busy') return 'var(--amber)';
+  return 'var(--green)';
+}
+
+function dashboardPlanningRiskHtml(orders) {
+  if (!isManagerRole()) return '';
+  const overdueOrders = orders.filter(isOrderOverdue)
+    .sort((a, b) => dateOnlyTime(a.due) - dateOnlyTime(b.due) || priorityRank(a.priority) - priorityRank(b.priority));
+  const blockedOrders = orders.filter(isOrderBlocked);
+  const loads = stationLoadSummaries();
+  const riskyLoads = loads.filter(load => load.level !== 'ok').slice(0, 4);
+  const calm = overdueOrders.length === 0 && blockedOrders.length === 0 && riskyLoads.length === 0;
+
+  return `<div class="card" style="border-left:4px solid ${calm ? 'var(--green)' : 'var(--amber)'}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">🧭 Rizika směny pro mistra</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">
+          Fronty linek, zpoždění a blokace z aktuálních zakázek.
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Fronty</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer" onclick="showOrdersFiltered('overdue')">
+        <div style="font-size:20px;font-weight:900;color:${overdueOrders.length ? 'var(--red)' : 'var(--green)'}">${overdueOrders.length}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Po termínu</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer" onclick="showOrdersFiltered('blocked')">
+        <div style="font-size:20px;font-weight:900;color:${blockedOrders.length ? 'var(--red)' : 'var(--green)'}">${blockedOrders.length}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Blokace</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer" onclick="navigateTo('queue')">
+        <div style="font-size:20px;font-weight:900;color:${riskyLoads.length ? 'var(--amber)' : 'var(--green)'}">${riskyLoads.length}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Přetížení</div>
+      </div>
+    </div>
+
+    ${calm ? `<div style="font-size:13px;color:var(--green);font-weight:800;text-align:center;padding:10px">✅ Bez zjevného rizika směny</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Přetížená pracoviště</div>
+          ${riskyLoads.length ? riskyLoads.map(load => {
+            const color = stationLoadColor(load.level);
+            const pct = Math.min(100, 22 + load.count * 14 + load.overdue * 10 + load.blocked * 10);
+            return `<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:9px;margin-bottom:7px;cursor:pointer" onclick="openQueueForStation('${load.station.id}')">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+                <div style="font-size:13px;font-weight:900;color:var(--text)">${load.station.icon} ${escapeHtml(load.station.name)}</div>
+                <div style="font-size:11px;color:${color};font-weight:900">${load.count} ve frontě</div>
+              </div>
+              <div class="progress-bar" style="height:7px"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+              <div style="font-size:10px;color:var(--text2);margin-top:5px">🔥 ${load.urgent} urgent · ⏰ ${load.overdue} po termínu · ⛔ ${load.blocked} blok.</div>
+            </div>`;
+          }).join('') : `<div style="font-size:12px;color:var(--text2);padding:10px 0">Žádné pracoviště není nad limitem.</div>`}
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Zakázky po termínu</div>
+          ${overdueOrders.length ? overdueOrders.slice(0, 4).map(order => `
+            <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:9px;margin-bottom:7px;cursor:pointer" onclick="openOrder('${order.id}')">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div style="font-size:13px;font-weight:900;color:var(--gold);font-family:'SF Mono',Menlo,monospace">${escapeHtml(order.number)}</div>
+                <span class="badge badge-${order.priority}">${priorityLabel(order.priority)}</span>
+              </div>
+              <div style="font-size:12px;color:var(--text);font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(order.name)}</div>
+              <div style="font-size:10px;color:var(--red);margin-top:3px">Termín ${formatDate(order.due)} · ${orderDaysLate(order)} dní po termínu</div>
+            </div>
+          `).join('') : `<div style="font-size:12px;color:var(--text2);padding:10px 0">Žádná otevřená zakázka není po termínu.</div>`}
+          ${overdueOrders.length > 4 ? `<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="showOrdersFiltered('overdue')">Zobrazit všech ${overdueOrders.length}</button>` : ''}
+        </div>
+      </div>
+    `}
+  </div>`;
+}
+
 function stationWorkerLabel(station) {
   if (!station?.workerName && !station?.workerLogin) return 'Bez převzetí';
   return station.workerName || station.workerLogin;
@@ -1779,6 +1914,8 @@ function renderDashboard() {
       </div>
     </div>
 
+    ${dashboardPlanningRiskHtml(orders)}
+
     <div class="card">
       <div class="card-title">⚡ Aktivní zakázky</div>
       ${orders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status))).map(o => {
@@ -1970,7 +2107,7 @@ async function copyTextToClipboard(text) {
 
 // ── ORDERS LIST ───────────────────────────────────────
 let orderSearch = '';
-let orderFilter = null; // 'in_progress' | 'urgent' | null
+let orderFilter = null; // 'in_progress' | 'urgent' | 'overdue' | 'blocked' | null
 
 function filterOrders(q) {
   let list = visibleOrders();
@@ -1978,6 +2115,10 @@ function filterOrders(q) {
     list = list.filter(o => o.stations.some(s => ['in_progress','partial'].includes(s.status)));
   } else if (orderFilter === 'urgent') {
     list = list.filter(o => o.priority === 'urgent');
+  } else if (orderFilter === 'overdue') {
+    list = list.filter(isOrderOverdue);
+  } else if (orderFilter === 'blocked') {
+    list = list.filter(isOrderBlocked);
   }
   if (q) {
     const s = q.toLowerCase().trim();
@@ -1996,8 +2137,18 @@ function showOrdersFiltered(filter) {
   navigateTo('orders');
 }
 
+function orderFilterLabel(filter) {
+  return {
+    in_progress: { label:'⚙️ Ve výrobě', cls:'badge-progress' },
+    urgent:      { label:'🔥 Urgentní',  cls:'badge-urgent' },
+    overdue:     { label:'⏰ Po termínu', cls:'badge-issue' },
+    blocked:     { label:'⛔ Blokované', cls:'badge-issue' },
+  }[filter] || null;
+}
+
 function renderOrders() {
   const list = filterOrders(orderSearch);
+  const activeFilter = orderFilterLabel(orderFilter);
   document.getElementById('page-orders').innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px;flex-wrap:wrap">
       <div style="font-size:16px;font-weight:800;color:var(--gold)">📋 Zakázky</div>
@@ -2015,8 +2166,8 @@ function renderOrders() {
       ${orderFilter ? `
         <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
           <span style="font-size:11px;color:var(--text2)">Filtr:</span>
-          <span class="badge ${orderFilter==='urgent'?'badge-urgent':'badge-progress'}" style="display:inline-flex;align-items:center;gap:6px">
-            ${orderFilter==='urgent'?'🔥 Urgentní':'⚙️ Ve výrobě'}
+          <span class="badge ${activeFilter?.cls || 'badge-progress'}" style="display:inline-flex;align-items:center;gap:6px">
+            ${activeFilter?.label || 'Filtrované'}
             <span style="cursor:pointer;font-weight:900" onclick="orderFilter=null;renderOrders()">✕</span>
           </span>
         </div>` : ''}

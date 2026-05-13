@@ -22,7 +22,7 @@ Z aplikace postupne udelat pouzitelny vyrobni system pro dilnu i kancelar, bez k
 
 - Fronty pracovist podle priority, terminu a blokaci.
 - Drag/drop zmena poradi v ramci fronty. Hotovo: mistr/admin muze menit poradi fronty vybraneho stanoviste pretazenim nebo tlacitky nahoru/dolu.
-- Zobrazeni pretizenych stanovist a zakazek po terminu.
+- Zobrazeni pretizenych stanovist a zakazek po terminu. Hotovo: dashboard mistra ukazuje rizika smeny, po terminu, blokace a pretizena pracoviste s proklikem do front.
 - Rychly prehled, co stoji na materialu, dokumentaci nebo programu.
 
 ## Etapa 4 - pripravenost zakazky
