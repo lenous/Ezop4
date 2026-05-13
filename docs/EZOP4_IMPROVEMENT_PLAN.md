@@ -13,7 +13,7 @@ Z aplikace postupne udelat pouzitelny vyrobni system pro dilnu i kancelar, bez k
 
 ## Etapa 2 - operator bez zbytecnych poli
 
-- Operator vidi jen svoje stanoviste a svoje fronty. Hotovo: obrazovka stanoviste ma panel Aktualni ukol s dostupnymi kusy, zbytkem, dalsim krokem, blokaci a poslednimi poznamkami.
+- Operator vidi jen svoje stanoviste a svoje fronty. Hotovo: dashboard operatora ma kartu Moje dalsi prace a obrazovka stanoviste ma panel Aktualni ukol s dostupnymi kusy, zbytkem, dalsim krokem, blokaci a poslednimi poznamkami.
 - Zapis poctu se povoli az po prevzeti prace.
 - Pozastaveni prace musi mit volitelny duvod.
 - Dokonceni automaticky posune dostupne kusy na dalsi stanoviste.

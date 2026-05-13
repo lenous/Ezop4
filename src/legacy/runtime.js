@@ -1932,6 +1932,8 @@ function renderDashboard() {
 
     ${dashboardWorkspaceWidgetHtml()}
 
+    ${dashboardOperatorWorkHtml()}
+
     <div class="stat-grid">
       <div class="stat-card" style="cursor:pointer" onclick="showOrdersFiltered(null)">
         <div class="stat-val">${total}</div>
@@ -2000,6 +2002,46 @@ function renderDashboard() {
       </div>`;
     })()}
   `;
+}
+
+function dashboardOperatorWorkHtml() {
+  if (currentUser?.role !== 'operator') return '';
+  const items = workQueueItems('').slice(0, 4);
+  return `<div class="card" style="border-left:4px solid var(--teal);background:linear-gradient(135deg,rgba(34,184,158,.12),rgba(15,23,42,.02))">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">🎯 Moje další práce</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">${escapeHtml(stationAccessLabel())}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Fronta</button>
+    </div>
+    ${items.length ? items.map(item => {
+      const { order, station, index, stInfo, queueState } = item;
+      const available = stationInputQty(order, station, index);
+      const processed = stationProcessedQty(station);
+      const remaining = Math.max(0, available - processed);
+      const notes = stationNotes(order.id, station.stId).length;
+      return `<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:11px;margin-bottom:8px;cursor:pointer"
+        onclick="openStation('${order.id}', '${station.stId}')">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px">
+          <div style="min-width:0">
+            <div style="font-size:12px;font-weight:900;color:var(--gold);font-family:'SF Mono',Menlo,monospace">${escapeHtml(order.number)}</div>
+            <div style="font-size:14px;font-weight:900;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(order.name)}</div>
+            <div style="font-size:11px;color:var(--teal2);margin-top:2px">${stInfo?.icon || '🔧'} ${escapeHtml(stInfo?.name || 'Stanoviště')} · ${escapeHtml(queueState.label)}</div>
+          </div>
+          <span class="badge badge-${order.priority}">${priorityLabel(order.priority)}</span>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <span class="badge" style="background:rgba(212,160,23,.14);color:var(--gold)">${available} ks přišlo</span>
+          <span class="badge" style="background:${remaining ? 'rgba(245,158,11,.14)' : 'rgba(34,197,94,.14)'};color:${remaining ? 'var(--amber)' : 'var(--green)'}">${remaining} ks zbývá</span>
+          ${notes ? `<span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">📝 ${notes}</span>` : ''}
+          ${isOrderBlocked(order) ? `<span class="badge badge-issue">⛔ blokace</span>` : ''}
+        </div>
+      </div>`;
+    }).join('') : `<div style="text-align:center;color:var(--text2);font-size:13px;padding:16px 8px">
+      Teď nemáte žádnou aktivní práci ve svých stanovištích.
+    </div>`}
+  </div>`;
 }
 
 // ── WORK QUEUES ───────────────────────────────────────
