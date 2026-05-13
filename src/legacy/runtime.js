@@ -7,6 +7,42 @@ if ('serviceWorker' in navigator) {
   );
 }
 
+// PWA install prompt support
+let _pwaInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  // Show install button if user is already logged in
+  setTimeout(() => {
+    if (typeof refreshInstallButton === 'function') refreshInstallButton();
+  }, 500);
+});
+window.addEventListener('appinstalled', () => {
+  _pwaInstallPrompt = null;
+  if (typeof refreshInstallButton === 'function') refreshInstallButton();
+  if (typeof showToast === 'function') showToast('✅ Aplikace nainstalována');
+});
+
+function refreshInstallButton() {
+  const btn = document.getElementById('tbar-install');
+  if (!btn) return;
+  btn.style.display = _pwaInstallPrompt ? '' : 'none';
+}
+
+async function triggerPwaInstall() {
+  if (!_pwaInstallPrompt) {
+    showToast('ℹ️ Instalaci spusť z menu prohlížeče');
+    return;
+  }
+  _pwaInstallPrompt.prompt();
+  try {
+    const { outcome } = await _pwaInstallPrompt.userChoice;
+    if (outcome === 'accepted') showToast('📥 Instalace spuštěna…');
+  } catch { /* ignore */ }
+  _pwaInstallPrompt = null;
+  refreshInstallButton();
+}
+
 // ── SUPABASE CONFIG ───────────────────────────────────
 // Konfiguraci nastavte v Admin → ☁️ Cloud (URL + anon key)
 // Když je prázdné, aplikace běží jen s localStorage v prohlížeči.
@@ -57,7 +93,7 @@ function localState() {
 function cloudState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
-    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS,
+    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, SHIFT_HANDOVERS,
     securityVersion: SECURITY_VERSION,
     securityNote: 'Cloud state intentionally excludes user profiles, credentials and login logs.',
   };
@@ -77,6 +113,7 @@ function applyState(s, options = {}) {
   if (s.PRODUCT_MEMORY && typeof s.PRODUCT_MEMORY === 'object') PRODUCT_MEMORY = s.PRODUCT_MEMORY;
   if (s.USER_WORKSPACE && typeof s.USER_WORKSPACE === 'object') USER_WORKSPACE = s.USER_WORKSPACE;
   if (Array.isArray(s.ANNOUNCEMENTS)) ANNOUNCEMENTS = s.ANNOUNCEMENTS;
+  if (Array.isArray(s.SHIFT_HANDOVERS)) SHIFT_HANDOVERS = s.SHIFT_HANDOVERS;
   if (s.APP_SETTINGS) APP_SETTINGS = { ...APP_SETTINGS, ...s.APP_SETTINGS };
   if (s.NEXT_ORDER_CODE) NEXT_ORDER_CODE = s.NEXT_ORDER_CODE;
   normalizeAppData();
@@ -157,6 +194,7 @@ const USER_CREDENTIALS_KEY = 'vyrobais-creds-v2';
 let USER_PASSWORDS = loadUserPasswords();
 let USER_WORKSPACE = {};
 let ANNOUNCEMENTS = [];
+let SHIFT_HANDOVERS = [];
 
 function normalizeLogin(login) {
   return String(login || '').trim().toLowerCase();
@@ -706,7 +744,7 @@ async function doLogout(options = {}) {
         </div>
       `, [
         { label: '⏭️ Odhlásit bez odchodu', cls: 'btn-ghost',   action: 'doLogout({skipCheckoutPrompt:true})' },
-        { label: '🔴 Odchod + odhlásit',    cls: 'btn-primary', action: 'workspaceCheckOut(); doLogout({skipCheckoutPrompt:true})' },
+        { label: '🔴 Odchod + odhlásit',    cls: 'btn-primary', action: 'workspaceCheckOut({skipHandoverPrompt:true}); doLogout({skipCheckoutPrompt:true})' },
       ]);
       return;
     }
@@ -779,8 +817,17 @@ async function initApp() {
   }
 
   buildNav();
-  navigateTo('dashboard');
+
+  // Routing z PWA shortcut nebo URL parametru ?go=...
+  const params = new URLSearchParams(location.search);
+  const target = params.get('go');
+  const validTargets = ['dashboard','orders','issues','workspace','profile','kpi','admin'];
+  navigateTo(validTargets.includes(target) ? target : 'dashboard');
+
   refreshAttendanceIndicator();
+  refreshInstallButton();
+  const searchBtn = document.getElementById('tbar-search');
+  if (searchBtn) searchBtn.style.display = '';
   setInterval(refreshAttendanceIndicator, 60000);
 }
 
@@ -1058,6 +1105,8 @@ function renderDashboard() {
     <div class="divider"></div>
 
     ${announcementsBannerHtml()}
+
+    ${shiftHandoverWidgetHtml()}
 
     ${dashboardWorkspaceWidgetHtml()}
 
@@ -4285,7 +4334,7 @@ function workspaceCheckIn() {
   refreshAfterWorkspaceMutation();
 }
 
-function workspaceCheckOut() {
+function workspaceCheckOut(options = {}) {
   const ws  = myWorkspace();
   const rec = ws.attendance.find(a => a.date === todayDateStr());
   if (!rec || rec.checkOut) return;
@@ -4293,6 +4342,84 @@ function workspaceCheckOut() {
   saveState();
   showToast('🔴 Odchod zaznamenán');
   refreshAfterWorkspaceMutation();
+  if (!options.skipHandoverPrompt) openShiftHandoverPrompt();
+}
+
+// ── PŘEDÁNÍ SMĚNY ────────────────────────────────────
+function openShiftHandoverPrompt() {
+  if (!currentUser) return;
+  openModal('🔄 Předání směny (volitelné)', `
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5">
+      Krátká zpráva pro další směnu – co se dělalo, kde stojíš, na co dát pozor.
+      Můžeš nechat prázdné a kliknout Přeskočit.
+    </div>
+    <textarea class="input" id="handover-text" rows="5"
+      placeholder="např. „Stencil 3/0042 – dokončeno 80 ks, zbytek na stolu u stanice 2. Dnešní pasta dochází."
+      style="resize:vertical;min-height:120px"></textarea>
+  `, [
+    { label: '⏭️ Přeskočit', cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '✔ Předat',     cls: 'btn-primary', action: 'saveShiftHandover()' },
+  ]);
+  setTimeout(() => document.getElementById('handover-text')?.focus(), 50);
+}
+
+function saveShiftHandover() {
+  const text = document.getElementById('handover-text')?.value?.trim();
+  if (!text) { closeModal(); return; }
+  SHIFT_HANDOVERS.push({
+    id: 'sh' + Date.now() + Math.random().toString(36).slice(2,6),
+    userId: currentUser.id,
+    userName: currentUser.name,
+    role: currentUser.role,
+    text,
+    createdAt: new Date().toISOString(),
+    viewedBy: [currentUser.id],
+  });
+  saveState();
+  closeModal();
+  showToast('✅ Předání uloženo pro další směnu');
+}
+
+function unseenHandovers(limit = 5) {
+  const uid = currentUser?.id;
+  if (!uid) return [];
+  return SHIFT_HANDOVERS
+    .filter(h => !Array.isArray(h.viewedBy) || !h.viewedBy.includes(uid))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+}
+
+function markHandoverSeen(id) {
+  const h = SHIFT_HANDOVERS.find(x => x.id === id);
+  if (!h || !currentUser) return;
+  if (!Array.isArray(h.viewedBy)) h.viewedBy = [];
+  if (!h.viewedBy.includes(currentUser.id)) h.viewedBy.push(currentUser.id);
+  saveState();
+  if (document.getElementById('page-dashboard')?.classList.contains('active')) renderDashboard();
+}
+
+function shiftHandoverWidgetHtml() {
+  const list = unseenHandovers(5);
+  if (list.length === 0) return '';
+  return `
+    <div class="card" style="border-left:3px solid var(--blue,#60a5fa);margin-bottom:10px">
+      <div class="card-title">🔄 Předání z poslední směny</div>
+      ${list.map(h => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);position:relative">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+            <div style="font-size:12px;color:var(--text);font-weight:700">
+              ${escapeHtml(h.userName)} <span style="color:var(--text3);font-weight:400">· ${ROLE_LABELS[h.role] || h.role}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:11px;color:var(--text3)">${formatDateTime(h.createdAt)}</span>
+              <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px"
+                title="Označit jako přečtené"
+                onclick="markHandoverSeen('${escapeHtml(h.id)}')">✓</button>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.45">${escapeHtml(h.text)}</div>
+        </div>`).join('')}
+    </div>`;
 }
 
 function refreshAfterWorkspaceMutation() {
@@ -4300,6 +4427,162 @@ function refreshAfterWorkspaceMutation() {
   if (document.getElementById('page-workspace')?.classList.contains('active')) renderWorkspaceContent();
   refreshAttendanceIndicator();
 }
+
+// ── GLOBÁLNÍ VYHLEDÁVÁNÍ (Cmd/Ctrl + K) ───────────────
+let _globalSearchSelectedIdx = 0;
+let _globalSearchResults = [];
+
+function globalSearch(q) {
+  const query = String(q || '').toLowerCase().trim();
+  if (!query) return [];
+  const results = [];
+
+  ORDERS.forEach(o => {
+    const haystack = `${o.number} ${o.name} ${o.customer || ''} ${o.purchaseOrderNumber || ''} ${o.stencilNumber || ''}`.toLowerCase();
+    if (haystack.includes(query)) {
+      results.push({
+        type: 'order',
+        icon: '📋',
+        label: `${o.number} · ${o.name}`,
+        sublabel: o.customer || 'Bez zákazníka',
+        action: `closeGlobalSearch(); openOrder('${o.id.replace(/'/g, "\\'")}')`,
+      });
+    }
+  });
+
+  ISSUES.filter(i => !i.resolved).forEach(i => {
+    if ((i.description || '').toLowerCase().includes(query) ||
+        (i.reportedBy || '').toLowerCase().includes(query)) {
+      const order = ORDERS.find(o => o.id === i.orderId);
+      results.push({
+        type: 'issue',
+        icon: '⚠️',
+        label: (i.description || '').slice(0, 60),
+        sublabel: `${order ? order.number + ' · ' : ''}${i.reportedBy || ''}`,
+        action: `closeGlobalSearch(); navigateTo('issues')`,
+      });
+    }
+  });
+
+  PROD_NOTES.forEach(n => {
+    if ((n.text || '').toLowerCase().includes(query)) {
+      const order = ORDERS.find(o => o.id === n.orderId);
+      results.push({
+        type: 'note',
+        icon: '📝',
+        label: (n.text || '').slice(0, 60),
+        sublabel: `${order ? order.number + ' · ' : ''}${n.author || ''}`,
+        action: order ? `closeGlobalSearch(); openOrder('${order.id.replace(/'/g, "\\'")}')` : 'closeGlobalSearch()',
+      });
+    }
+  });
+
+  (USERS || []).forEach(u => {
+    const haystack = `${u.name} ${u.login}`.toLowerCase();
+    if (haystack.includes(query)) {
+      results.push({
+        type: 'user',
+        icon: u.avatar || '👤',
+        label: u.name,
+        sublabel: `${u.login} · ${ROLE_LABELS[u.role] || u.role}`,
+        action: `closeGlobalSearch(); ${can('app_settings') ? "switchAdminTab('users');navigateTo('admin')" : "navigateTo('profile')"}`,
+      });
+    }
+  });
+
+  const ws = myWorkspace();
+  ws.notes.forEach(n => {
+    if ((n.text || '').toLowerCase().includes(query)) {
+      results.push({
+        type: 'mynote',
+        icon: '📒',
+        label: n.text.slice(0, 60),
+        sublabel: `Moje poznámka · ${NOTE_CATEGORIES[n.category] || n.category}`,
+        action: `closeGlobalSearch(); navigateTo('workspace'); switchWorkspaceTab('notes')`,
+      });
+    }
+  });
+
+  return results.slice(0, 30);
+}
+
+function openGlobalSearch() {
+  _globalSearchSelectedIdx = 0;
+  _globalSearchResults = [];
+  openModal('🔎 Hledat napříč aplikací', `
+    <input class="input" id="gs-input" placeholder="Zakázka, problém, poznámka, uživatel…"
+      style="font-size:15px;padding:12px"
+      oninput="updateGlobalSearchResults(this.value)"
+      onkeydown="handleGlobalSearchKey(event)">
+    <div id="gs-hint" style="font-size:11px;color:var(--text3);margin-top:6px">
+      Tipy: čísla zakázek, jména, klíčová slova z poznámek · Šipky = pohyb · Enter = otevřít · Esc = zavřít
+    </div>
+    <div id="gs-results" style="margin-top:12px;max-height:50vh;overflow-y:auto"></div>
+  `, [
+    { label: '✕ Zavřít', cls: 'btn-ghost', action: 'closeGlobalSearch()' },
+  ]);
+  setTimeout(() => document.getElementById('gs-input')?.focus(), 50);
+}
+
+function closeGlobalSearch() {
+  closeModal();
+  _globalSearchResults = [];
+}
+
+function updateGlobalSearchResults(q) {
+  _globalSearchResults = globalSearch(q);
+  _globalSearchSelectedIdx = 0;
+  renderGlobalSearchResults();
+}
+
+function renderGlobalSearchResults() {
+  const el = document.getElementById('gs-results');
+  if (!el) return;
+  if (_globalSearchResults.length === 0) {
+    el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Začni psát pro vyhledávání…</div>`;
+    return;
+  }
+  el.innerHTML = _globalSearchResults.map((r, i) => `
+    <div class="gs-row" data-idx="${i}"
+      style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;
+             ${i === _globalSearchSelectedIdx ? 'background:rgba(212,160,23,.15);border:1px solid var(--gold)' : 'border:1px solid transparent'}"
+      onclick="${r.action}"
+      onmouseenter="_globalSearchSelectedIdx=${i};renderGlobalSearchResults()">
+      <div style="font-size:20px">${r.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.label)}</div>
+        <div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.sublabel || '')}</div>
+      </div>
+      <span class="role-badge" style="font-size:9px;text-transform:uppercase">${r.type}</span>
+    </div>`).join('');
+}
+
+function handleGlobalSearchKey(e) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _globalSearchSelectedIdx = Math.min(_globalSearchSelectedIdx + 1, _globalSearchResults.length - 1);
+    renderGlobalSearchResults();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _globalSearchSelectedIdx = Math.max(_globalSearchSelectedIdx - 1, 0);
+    renderGlobalSearchResults();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const r = _globalSearchResults[_globalSearchSelectedIdx];
+    if (r) eval(r.action);
+  } else if (e.key === 'Escape') {
+    closeGlobalSearch();
+  }
+}
+
+// Cmd+K / Ctrl+K opens global search
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    if (!currentUser) return;
+    e.preventDefault();
+    openGlobalSearch();
+  }
+});
 
 // ── TOPBAR ATTENDANCE INDICATOR ───────────────────────
 function refreshAttendanceIndicator() {

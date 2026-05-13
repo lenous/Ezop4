@@ -1,14 +1,16 @@
 {
-  "name": "EZOP 4",
+  "name": "EZOP 4 – Výrobní systém",
   "short_name": "EZOP 4",
   "description": "Řízení výroby pro elektronickou výrobu (EMS). Role, audit, workflow, dokumenty a interní data.",
-  "start_url": "./",
+  "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#07090b",
   "theme_color": "#e2b820",
   "lang": "cs",
+  "dir": "ltr",
   "categories": [
     "productivity",
     "business"
@@ -18,13 +20,48 @@
       "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Zakázky",
+      "short_name": "Zakázky",
+      "description": "Otevřít přehled zakázek",
+      "url": "./?go=orders",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Můj prostor",
+      "short_name": "Můj prostor",
+      "description": "Poznámky, kusy, docházka",
+      "url": "./?go=workspace",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Problémy",
+      "short_name": "Problémy",
+      "description": "Nahlášené problémy",
+      "url": "./?go=issues",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
