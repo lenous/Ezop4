@@ -502,6 +502,199 @@ function orderBlockedBadgeHtml(order) {
   return `<span class="badge badge-issue" title="${escapeHtml(orderBlockReason(order))}">${escapeHtml(label)}</span>`;
 }
 
+const READINESS_ITEMS = {
+  documentation: { label:'Dokumentace', icon:'📄', blockCategory:'documentation', note:'Výrobní podklady, BOM, výkresy.' },
+  material:      { label:'Materiál',    icon:'📦', blockCategory:'material',      note:'Materiál HC i zákazníka.' },
+  stencil:       { label:'Planžeta',    icon:'🎯', blockCategory:'program',       note:'Planžeta nebo přípravek pro výrobu.' },
+  program:       { label:'Program',     icon:'🧠', blockCategory:'program',       note:'Program automatu nebo zařízení.' },
+  customer:      { label:'Zákazník',    icon:'🤝', blockCategory:'customer',      note:'Schválení změn a dohody.' },
+  quality:       { label:'Kvalita',     icon:'✅', blockCategory:'quality',       note:'Kontrolní podmínky a výstup.' },
+};
+
+const READINESS_STATUS = {
+  ok:      { label:'Připraveno', color:'var(--green)', icon:'🟢', rank:2 },
+  partial: { label:'Částečně',   color:'var(--amber)', icon:'🟡', rank:1 },
+  blocked: { label:'Blokace',    color:'var(--red)',   icon:'🔴', rank:0 },
+};
+
+function normalizeReadinessStatus(value) {
+  return READINESS_STATUS[value] ? value : 'partial';
+}
+
+function orderHasStationName(order, pattern) {
+  return (order?.stations || []).some(station => {
+    const stationInfo = STATIONS.find(st => Number(st.id) === Number(station.stId));
+    return pattern.test(stationInfo?.name || '');
+  });
+}
+
+function hasStationProgramForOrder(order) {
+  return Object.values(order?.stationPrograms || {}).some(value => String(value || '').trim());
+}
+
+function defaultReadinessForOrder(order) {
+  const hasDocs = (order?.documents || []).length > 0;
+  const needsProgram = orderHasStationName(order, /automat|aoi|rtg|vlna|selektiv/i);
+  const hasProgram = !needsProgram || hasStationProgramForOrder(order);
+  return {
+    documentation: {
+      status: hasDocs ? 'ok' : 'partial',
+      note: hasDocs ? 'Dokumentace je připojená.' : 'Doplnit nebo ověřit výrobní dokumentaci.',
+    },
+    material: {
+      status: 'partial',
+      note: 'Sklad musí potvrdit připravenost materiálu.',
+    },
+    stencil: {
+      status: order?.stencilNumber ? 'ok' : 'partial',
+      note: order?.stencilNumber ? `Planžeta ${order.stencilNumber}` : 'Doplnit číslo planžety nebo přípravku.',
+    },
+    program: {
+      status: hasProgram ? 'ok' : 'partial',
+      note: hasProgram ? 'Program je vyplněný nebo není potřeba.' : 'Doplnit program pro strojní pracoviště.',
+    },
+    customer: {
+      status: 'ok',
+      note: 'Bez otevřeného čekání na zákazníka.',
+    },
+    quality: {
+      status: 'ok',
+      note: 'Bez otevřené kvalitativní blokace.',
+    },
+  };
+}
+
+function normalizeOrderReadiness(order) {
+  const defaults = defaultReadinessForOrder(order);
+  const existing = order?.readiness && typeof order.readiness === 'object' ? order.readiness : {};
+  return Object.fromEntries(Object.keys(READINESS_ITEMS).map(key => {
+    const current = existing[key] && typeof existing[key] === 'object' ? existing[key] : {};
+    return [key, {
+      status: normalizeReadinessStatus(current.status || defaults[key].status),
+      note: String(current.note ?? defaults[key].note ?? ''),
+      updatedByName: String(current.updatedByName || ''),
+      updatedAt: current.updatedAt || '',
+    }];
+  }));
+}
+
+function readinessEffectiveStatus(order, key) {
+  const item = READINESS_ITEMS[key];
+  if (isOrderBlocked(order) && item?.blockCategory === order?.blocked?.category) return 'blocked';
+  return normalizeReadinessStatus(order?.readiness?.[key]?.status);
+}
+
+function readinessSummary(order) {
+  const readiness = normalizeOrderReadiness(order);
+  order.readiness = readiness;
+  const keys = Object.keys(READINESS_ITEMS);
+  const statuses = keys.map(key => readinessEffectiveStatus(order, key));
+  const okCount = statuses.filter(status => status === 'ok').length;
+  const status = isOrderBlocked(order) || statuses.includes('blocked')
+    ? 'blocked'
+    : statuses.includes('partial') ? 'partial' : 'ok';
+  return { status, okCount, total: keys.length };
+}
+
+function orderReadinessBadgeHtml(order) {
+  const summary = readinessSummary(order);
+  const meta = READINESS_STATUS[summary.status] || READINESS_STATUS.partial;
+  return `<span class="badge" style="background:${meta.color}22;color:${meta.color}" title="Připravenost zakázky: ${summary.okCount}/${summary.total}">${meta.icon} ${summary.okCount}/${summary.total}</span>`;
+}
+
+function orderReadinessCardHtml(order) {
+  const summary = readinessSummary(order);
+  const summaryMeta = READINESS_STATUS[summary.status] || READINESS_STATUS.partial;
+  return `<div class="card" style="border-left:4px solid ${summaryMeta.color}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">🚦 Připravenost zakázky</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">${summaryMeta.icon} ${summaryMeta.label} · ${summary.okCount}/${summary.total} bodů připraveno</div>
+      </div>
+      ${can('block_order') ? `<button class="btn btn-ghost btn-sm" onclick="editOrderReadinessModal('${order.id}')">✏️ Upravit</button>` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">
+      ${Object.entries(READINESS_ITEMS).map(([key, item]) => {
+        const status = readinessEffectiveStatus(order, key);
+        const meta = READINESS_STATUS[status] || READINESS_STATUS.partial;
+        const readiness = order.readiness?.[key] || {};
+        const blockedByOrder = isOrderBlocked(order) && item.blockCategory === order?.blocked?.category;
+        const note = blockedByOrder ? orderBlockReason(order) : readiness.note || item.note;
+        return `<div style="background:var(--card2);border:1px solid ${meta.color}66;border-radius:10px;padding:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+            <div style="font-size:13px;font-weight:900;color:var(--text)">${item.icon} ${item.label}</div>
+            <span style="font-size:11px;font-weight:900;color:${meta.color}">${meta.icon} ${meta.label}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.35">${escapeHtml(note || item.note)}</div>
+          ${readiness.updatedByName ? `<div style="font-size:10px;color:var(--text3);margin-top:6px">${escapeHtml(readiness.updatedByName)} · ${formatDateTime(readiness.updatedAt)}</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function editOrderReadinessModal(orderId) {
+  if (!can('block_order')) {
+    showToast('🚫 Připravenost může měnit TPV, mistr, vedení nebo admin.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  order.readiness = normalizeOrderReadiness(order);
+  openModal('🚦 Připravenost zakázky', `
+    <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:12px">
+      Nastavte, co zakázce chybí před výrobou. Pokud je zakázka blokovaná typem materiál/dokumentace/program/zákazník/kvalita, odpovídající bod se v přehledu zobrazí červeně.
+    </div>
+    ${Object.entries(READINESS_ITEMS).map(([key, item]) => {
+      const readiness = order.readiness[key] || {};
+      return `<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:9px">
+        <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px">${item.icon} ${item.label}</div>
+        <div style="display:grid;grid-template-columns:150px 1fr;gap:8px">
+          <select class="input" id="or-${key}-status">
+            ${Object.entries(READINESS_STATUS).map(([status, meta]) => `
+              <option value="${status}" ${normalizeReadinessStatus(readiness.status) === status ? 'selected' : ''}>${meta.icon} ${meta.label}</option>
+            `).join('')}
+          </select>
+          <input class="input" id="or-${key}-note" value="${escapeHtml(readiness.note || '')}" placeholder="${escapeHtml(item.note)}">
+        </div>
+      </div>`;
+    }).join('')}
+  `, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Uložit', action:`saveOrderReadiness('${order.id}')`, cls:'btn-primary' },
+  ]);
+}
+
+function saveOrderReadiness(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order || !can('block_order')) return;
+  const before = cloneForAudit(order.readiness || {});
+  const now = new Date().toISOString();
+  order.readiness = Object.fromEntries(Object.keys(READINESS_ITEMS).map(key => {
+    const status = normalizeReadinessStatus(document.getElementById(`or-${key}-status`)?.value);
+    const note = document.getElementById(`or-${key}-note`)?.value.trim() || '';
+    return [key, {
+      status,
+      note,
+      updatedByName: currentUser?.name || '',
+      updatedAt: now,
+    }];
+  }));
+  writeAudit(
+    'order.readiness.updated',
+    'order',
+    order.id,
+    `${order.number} · připravenost zakázky upravena`,
+    before,
+    cloneForAudit(order.readiness),
+  );
+  saveState();
+  closeModal();
+  showToast('✅ Připravenost uložena', { skipSave: true });
+  if (detailView?.type === 'order' && selectedOrder?.id === order.id) openOrder(order.id);
+  else refreshCurrentView();
+}
+
 function activeStationIndex(order) {
   if (!order?.stations?.length) return -1;
   const active = order.stations.findIndex(s => !['completed','skipped'].includes(s.status));
@@ -1719,6 +1912,7 @@ function queueCardHtml(item, position = 0, total = 0) {
           <span style="font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:900;color:var(--gold)">${escapeHtml(order.number)}</span>
           <span class="badge badge-${order.priority}">${priorityLabel(order.priority)}</span>
           ${orderBlockedBadgeHtml(order)}
+          ${orderReadinessBadgeHtml(order)}
           ${stationWorkBadgeHtml(station)}
           <span class="badge ${meta.badge}">${meta.label}</span>
           ${queueRankValue(station) < Number.MAX_SAFE_INTEGER ? `<span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">#${queueRankValue(station)}</span>` : ''}
@@ -1856,6 +2050,7 @@ function ordersListHtml(list) {
             <span style="font-size:13px;font-weight:600;color:var(--teal2)">${o.customer}</span>
             <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
             ${orderBlockedBadgeHtml(o)}
+            ${orderReadinessBadgeHtml(o)}
             ${can('delete_order') ? `<button class="btn btn-danger btn-sm" style="margin-left:auto;padding:5px 9px;font-size:11px" onclick="event.stopPropagation();deleteOrderModal('${o.id}')">🗑️</button>` : ''}
           </div>
           <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${o.name}</div>
@@ -1922,6 +2117,7 @@ function openOrder(orderId, options = {}) {
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
           <span class="badge badge-${selectedOrder.priority}">${priorityLabel(selectedOrder.priority)}</span>
           ${orderBlockedBadgeHtml(selectedOrder)}
+          ${orderReadinessBadgeHtml(selectedOrder)}
           <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(currentOrderLink(selectedOrder))}')">🔗 Odkaz</button>
           ${can('block_order') ? (isOrderBlocked(selectedOrder)
             ? `<button class="btn btn-teal btn-sm" onclick="unblockOrderModal('${selectedOrder.id}')">Odblokovat</button>`
@@ -1949,6 +2145,7 @@ function openOrder(orderId, options = {}) {
     </div>
 
     ${orderBlockCardHtml(selectedOrder)}
+    ${orderReadinessCardHtml(selectedOrder)}
     ${orderInfoCardHtml(selectedOrder)}
     ${productPhotoCardHtml(selectedOrder)}
     ${orderDocsCardHtml(selectedOrder)}
@@ -5844,6 +6041,7 @@ function normalizeAppData() {
     order.stationPrograms = order.stationPrograms || {};
     order.productPhotoDataUrl ??= '';
     order.documents = Array.isArray(order.documents) ? order.documents : [];
+    order.readiness = normalizeOrderReadiness(order);
     if (order.blocked && typeof order.blocked === 'object') {
       order.blocked.active = !!order.blocked.active;
       order.blocked.category = BLOCK_CATEGORIES[order.blocked.category] ? order.blocked.category : 'other';
@@ -6129,11 +6327,13 @@ function createOrder() {
     stationPrograms: {},
     productPhotoDataUrl: '',
     documents: [...pendingDocs],
+    readiness: {},
     stations: pickedStations.map(stId => ({
       stId, status:'waiting', qtyOk:0, qtyRework:0, qtyScrap:0, qtyReceived:0,
     })),
   };
   applyProductMemoryToOrder(order);
+  order.readiness = normalizeOrderReadiness(order);
   ORDERS.push(order);
   pendingDocs = [];
   pickedStations = DEFAULT_STATIONS.slice();

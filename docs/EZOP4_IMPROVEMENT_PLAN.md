@@ -27,7 +27,7 @@ Z aplikace postupne udelat pouzitelny vyrobni system pro dilnu i kancelar, bez k
 
 ## Etapa 4 - pripravenost zakazky
 
-- Semafor dokumentace, materialu, planzety, programu a pripravku.
+- Semafor dokumentace, materialu, planzety, programu a pripravku. Hotovo: detail zakazky, seznam zakazek a fronty ukazuji pripravenost 0-6; TPV/mistr/vedeni/admin ji muze upravit.
 - Blokace podle typu: material, dokumentace, program, zakaznik, kvalita.
 - Historie, kdo blokaci zalozil a kdo ji odblokoval.
 

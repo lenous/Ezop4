@@ -69,6 +69,7 @@ create table if not exists public.orders (
   stencil_number text not null default '',
   purchase_order_number text,
   product_photo_data_url text,
+  readiness jsonb not null default '{}'::jsonb,
   block_active boolean not null default false,
   block_category text check (block_category is null or block_category in ('material','documentation','program','customer','quality','other')),
   block_reason text,
@@ -247,6 +248,7 @@ create table if not exists public.integration_outbox (
 alter table public.profiles add column if not exists station_ids integer[] not null default '{}'::integer[];
 
 alter table public.orders add column if not exists block_active boolean not null default false;
+alter table public.orders add column if not exists readiness jsonb not null default '{}'::jsonb;
 alter table public.orders add column if not exists block_category text;
 alter table public.orders add column if not exists block_reason text;
 alter table public.orders add column if not exists blocked_by uuid references auth.users(id);

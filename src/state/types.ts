@@ -10,6 +10,8 @@ export type Permission =
   | 'manage_order_stations'
   | 'edit_order_info'
   | 'edit_product_memory'
+  | 'manage_scrap'
+  | 'block_order'
   | 'view_kpi'
   | 'manage_users'
   | 'app_settings';
@@ -37,6 +39,10 @@ export interface StationProgress {
   workCompletedByName?: string;
 }
 export interface OrderDocument { name: string; type: string; size: number; }
+export type ReadinessStatus = 'ok' | 'partial' | 'blocked';
+export type ReadinessKey = 'documentation' | 'material' | 'stencil' | 'program' | 'customer' | 'quality';
+export interface OrderReadinessItem { status: ReadinessStatus; note: string; updatedByName?: string; updatedAt?: string; }
+export type OrderReadiness = Partial<Record<ReadinessKey, OrderReadinessItem>>;
 export interface OrderBlock {
   active: boolean;
   category?: 'material' | 'documentation' | 'program' | 'customer' | 'quality' | 'other';
@@ -53,7 +59,7 @@ export interface OrderBlock {
   resolvedByRole?: Role;
   resolvedAt?: string;
 }
-export interface Order { id: string; number: string; name: string; priority: Priority; qty: number; customer: string; due: string; orderDate: string; technology: string; productionType: string; stencilNumber: string; purchaseOrderNumber?: string; stationPrograms?: Record<string, string>; productPhotoDataUrl?: string; blocked?: OrderBlock; documents: OrderDocument[]; stations: StationProgress[]; }
+export interface Order { id: string; number: string; name: string; priority: Priority; qty: number; customer: string; due: string; orderDate: string; technology: string; productionType: string; stencilNumber: string; purchaseOrderNumber?: string; stationPrograms?: Record<string, string>; productPhotoDataUrl?: string; readiness?: OrderReadiness; blocked?: OrderBlock; documents: OrderDocument[]; stations: StationProgress[]; }
 export interface Issue {
   id: string;
   orderId: string;

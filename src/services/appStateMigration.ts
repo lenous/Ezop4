@@ -36,6 +36,7 @@ export interface OrderRow {
   stencil_number: string;
   purchase_order_number: string | null;
   product_photo_data_url: string | null;
+  readiness: Record<string, unknown> | null;
   block_active: boolean;
   block_category: string | null;
   block_reason: string | null;
@@ -171,6 +172,7 @@ function orderToRow(order: Order): OrderRow {
     stencil_number: order.stencilNumber,
     purchase_order_number: order.purchaseOrderNumber || null,
     product_photo_data_url: order.productPhotoDataUrl || null,
+    readiness: order.readiness || null,
     block_active: Boolean(order.blocked?.active),
     block_category: order.blocked?.category || null,
     block_reason: order.blocked?.reason || null,

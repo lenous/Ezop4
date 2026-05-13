@@ -9,6 +9,8 @@ const perms: Record<Permission, Role[]> = {
   manage_order_stations: ['dispatcher','management','admin'],
   edit_order_info: ['dispatcher','management','admin'],
   edit_product_memory: ['tpv','dispatcher','management','admin'],
+  manage_scrap: ['tpv','dispatcher','management','admin'],
+  block_order: ['tpv','dispatcher','management','admin'],
   view_kpi: ['dispatcher','management','admin'],
   manage_users: ['admin'],
   app_settings: ['admin'],

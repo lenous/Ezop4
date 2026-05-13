@@ -77,6 +77,7 @@ function orderToRow(order) {
     stencil_number: order.stencilNumber || '',
     purchase_order_number: order.purchaseOrderNumber || null,
     product_photo_data_url: order.productPhotoDataUrl || null,
+    readiness: order.readiness || null,
     block_active: Boolean(order.blocked?.active),
     block_category: order.blocked?.category || null,
     block_reason: order.blocked?.reason || null,
