@@ -49,7 +49,7 @@ function localState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
     USERS: userProfilesForStorage(),
-    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE,
+    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS,
     securityVersion: SECURITY_VERSION,
   };
 }
@@ -57,7 +57,7 @@ function localState() {
 function cloudState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
-    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE,
+    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS,
     securityVersion: SECURITY_VERSION,
     securityNote: 'Cloud state intentionally excludes user profiles, credentials and login logs.',
   };
@@ -76,6 +76,7 @@ function applyState(s, options = {}) {
   if (options.includeLogs && Array.isArray(s.LOGIN_LOGS)) LOGIN_LOGS = s.LOGIN_LOGS;
   if (s.PRODUCT_MEMORY && typeof s.PRODUCT_MEMORY === 'object') PRODUCT_MEMORY = s.PRODUCT_MEMORY;
   if (s.USER_WORKSPACE && typeof s.USER_WORKSPACE === 'object') USER_WORKSPACE = s.USER_WORKSPACE;
+  if (Array.isArray(s.ANNOUNCEMENTS)) ANNOUNCEMENTS = s.ANNOUNCEMENTS;
   if (s.APP_SETTINGS) APP_SETTINGS = { ...APP_SETTINGS, ...s.APP_SETTINGS };
   if (s.NEXT_ORDER_CODE) NEXT_ORDER_CODE = s.NEXT_ORDER_CODE;
   normalizeAppData();
@@ -155,6 +156,7 @@ const USER_CREDENTIALS_KEY = 'vyrobais-creds-v2';
 
 let USER_PASSWORDS = loadUserPasswords();
 let USER_WORKSPACE = {};
+let ANNOUNCEMENTS = [];
 
 function normalizeLogin(login) {
   return String(login || '').trim().toLowerCase();
@@ -691,7 +693,25 @@ document.getElementById('remember-user').addEventListener('change', () => {
 });
 applyRememberedLogin();
 
-async function doLogout() {
+async function doLogout(options = {}) {
+  // Reminder: pokud je uživatel přihlášený na směnu a ještě se neodhlásil,
+  // nabídneme rychlý odchod před odhlášením.
+  if (!options.skipCheckoutPrompt && currentUser) {
+    const rec = todayAttendance();
+    if (rec && rec.checkIn && !rec.checkOut) {
+      openModal('🕐 Ještě jste se neodhlásil/a ze směny', `
+        <div style="font-size:13px;color:var(--text);line-height:1.5">
+          Máte otevřený příchod od <b>${formatTime(rec.checkIn)}</b>.
+          Chcete zaznamenat odchod předtím, než se odhlásíte z aplikace?
+        </div>
+      `, [
+        { label: '⏭️ Odhlásit bez odchodu', cls: 'btn-ghost',   action: 'doLogout({skipCheckoutPrompt:true})' },
+        { label: '🔴 Odchod + odhlásit',    cls: 'btn-primary', action: 'workspaceCheckOut(); doLogout({skipCheckoutPrompt:true})' },
+      ]);
+      return;
+    }
+  }
+
   if (currentAuthSource === 'supabase') {
     try {
       const authPort = db && window.EZOP4_AUTH?.createSupabaseAuthPort?.(db);
@@ -700,11 +720,14 @@ async function doLogout() {
       console.warn('Supabase signOut failed:', error);
     }
   }
+  closeModal();
   currentUser = null;
   currentAuthSource = 'demo';
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-pass').value = '';
+  const ind = document.getElementById('tbar-attendance');
+  if (ind) ind.style.display = 'none';
   applyRememberedLogin();
 }
 
@@ -757,6 +780,8 @@ async function initApp() {
 
   buildNav();
   navigateTo('dashboard');
+  refreshAttendanceIndicator();
+  setInterval(refreshAttendanceIndicator, 60000);
 }
 
 // ── NAVIGATION ────────────────────────────────────────
@@ -817,6 +842,7 @@ function navigateTo(page) {
     profile:   renderProfile,
   };
   renderers[page]?.();
+  refreshAttendanceIndicator();
   buildNav(); // refresh badge counts
   document.querySelectorAll('.navtab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
@@ -1022,14 +1048,18 @@ function renderDashboard() {
   document.getElementById('page-dashboard').innerHTML = `
     <div style="padding:16px 0 4px">
       <div style="font-size:20px;font-weight:800;color:var(--gold);margin-bottom:2px">
-        Dobrý den, ${currentUser.name.split(' ')[0]}! 👋
+        Dobrý den, ${escapeHtml(currentUser.name.split(' ')[0])}! 👋
       </div>
       <div style="font-size:12px;color:var(--text2)">
         ${new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long'})}
-        &nbsp;·&nbsp; ${APP_SETTINGS.companyName}
+        &nbsp;·&nbsp; ${escapeHtml(APP_SETTINGS.companyName || '')}
       </div>
     </div>
     <div class="divider"></div>
+
+    ${announcementsBannerHtml()}
+
+    ${dashboardWorkspaceWidgetHtml()}
 
     <div class="stat-grid">
       <div class="stat-card" style="cursor:pointer" onclick="showOrdersFiltered(null)">
@@ -2887,6 +2917,329 @@ function rerenderKpiLocation() {
 
 // ── ADMIN ─────────────────────────────────────────────
 let adminTab = 'users';
+// ── OZNÁMENÍ ──────────────────────────────────────────
+const ANNOUNCE_TYPES = {
+  info:    { label: 'Informace', color: 'var(--blue,#60a5fa)', icon: 'ℹ️'  },
+  warning: { label: 'Upozornění', color: 'var(--amber)',        icon: '⚠️' },
+  urgent:  { label: 'Urgentní',  color: 'var(--red)',           icon: '🚨' },
+};
+
+function visibleAnnouncements() {
+  const uid = currentUser?.id;
+  if (!uid) return [];
+  return ANNOUNCEMENTS
+    .filter(a => !Array.isArray(a.dismissedBy) || !a.dismissedBy.includes(uid))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+function dismissAnnouncement(id) {
+  const a = ANNOUNCEMENTS.find(x => x.id === id);
+  if (!a || !currentUser) return;
+  if (!Array.isArray(a.dismissedBy)) a.dismissedBy = [];
+  if (!a.dismissedBy.includes(currentUser.id)) a.dismissedBy.push(currentUser.id);
+  saveState();
+  if (typeof renderDashboard === 'function') renderDashboard();
+}
+
+function announcementsBannerHtml() {
+  const list = visibleAnnouncements();
+  if (list.length === 0) return '';
+  return list.slice(0, 3).map(a => {
+    const t = ANNOUNCE_TYPES[a.type] || ANNOUNCE_TYPES.info;
+    return `
+      <div class="card" style="border-left:4px solid ${t.color};margin-bottom:10px;position:relative">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="font-size:22px">${t.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:700;color:${t.color};text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
+              ${t.label}${a.title ? ' · ' + escapeHtml(a.title) : ''}
+            </div>
+            <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.5">${escapeHtml(a.text)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px">
+              ${escapeHtml(a.createdByName || 'Admin')} · ${formatDateTime(a.createdAt)}
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:14px;color:var(--text3)"
+            title="Skrýt"
+            onclick="dismissAnnouncement('${escapeHtml(a.id)}')">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderAdminAnnouncements() {
+  if (!can('app_settings')) return '';
+  const list = [...ANNOUNCEMENTS].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return `
+    <div class="card">
+      <div class="card-title">📢 Oznámení pro tým</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px">
+        Vytvořené oznámení se zobrazí všem uživatelům na úvodní obrazovce. Každý si může
+        oznámení skrýt tlačítkem ✕. Smazáním v této tabulce zmizí všem.
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openAddAnnouncementModal()">＋ Nové oznámení</button>
+    </div>
+    ${list.length === 0 ? `
+      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
+        <div style="font-size:32px;margin-bottom:8px">📢</div>
+        <div>Zatím žádná oznámení.</div>
+      </div>` : list.map(a => {
+        const t = ANNOUNCE_TYPES[a.type] || ANNOUNCE_TYPES.info;
+        const totalUsers = (USERS || []).length;
+        const dismissed = Array.isArray(a.dismissedBy) ? a.dismissedBy.length : 0;
+        return `
+        <div class="card" style="border-left:4px solid ${t.color};margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <div style="font-size:22px">${t.icon}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:700;color:${t.color};text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
+                ${t.label}${a.title ? ' · ' + escapeHtml(a.title) : ''}
+              </div>
+              <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.5;margin-bottom:6px">${escapeHtml(a.text)}</div>
+              <div style="font-size:11px;color:var(--text3)">
+                ${escapeHtml(a.createdByName || 'Admin')} · ${formatDateTime(a.createdAt)}
+                · Skryto: ${dismissed}/${totalUsers}
+              </div>
+            </div>
+            <button class="btn btn-danger btn-sm" style="padding:4px 8px"
+              onclick="deleteAnnouncement('${escapeHtml(a.id)}')">🗑️</button>
+          </div>
+        </div>`;
+      }).join('')}
+  `;
+}
+
+function openAddAnnouncementModal() {
+  openModal('📢 Nové oznámení', `
+    <div class="input-group">
+      <div class="input-label">Typ</div>
+      <select class="input" id="ann-type">
+        ${Object.entries(ANNOUNCE_TYPES).map(([v, t]) => `<option value="${v}">${t.icon} ${t.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Nadpis (volitelné)</div>
+      <input class="input" id="ann-title" maxlength="80" placeholder="např. Servisní okno v sobotu">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Text oznámení</div>
+      <textarea class="input" id="ann-text" rows="5" placeholder="Napiš obsah oznámení…"
+        style="resize:vertical;min-height:120px"></textarea>
+    </div>
+  `, [
+    { label: '✕ Zrušit',     cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '📢 Publikovat', cls: 'btn-primary', action: 'saveAnnouncement()' },
+  ]);
+}
+
+function saveAnnouncement() {
+  const text = document.getElementById('ann-text')?.value?.trim();
+  if (!text) { showToast('⚠️ Text je prázdný'); return; }
+  const type  = document.getElementById('ann-type')?.value || 'info';
+  const title = document.getElementById('ann-title')?.value?.trim() || '';
+  ANNOUNCEMENTS.push({
+    id: 'ann' + Date.now() + Math.random().toString(36).slice(2,6),
+    type, title, text,
+    createdBy: currentUser?.id || null,
+    createdByName: currentUser?.name || 'Admin',
+    createdAt: new Date().toISOString(),
+    dismissedBy: [],
+  });
+  saveState();
+  closeModal();
+  showToast('📢 Oznámení publikováno');
+  renderAdmin();
+}
+
+function deleteAnnouncement(id) {
+  if (!confirm('Smazat oznámení? Zmizí všem uživatelům.')) return;
+  ANNOUNCEMENTS = ANNOUNCEMENTS.filter(a => a.id !== id);
+  saveState();
+  showToast('🗑️ Oznámení smazáno');
+  renderAdmin();
+}
+
+// ── DOCHÁZKA TÝMU (admin) ────────────────────────────
+function renderAdminTeamAttendance() {
+  if (!can('app_settings')) return '';
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthStr = monthStart.toISOString().slice(0, 7);
+
+  const stats = (USERS || []).map(u => {
+    const ws  = USER_WORKSPACE[u.id] || {};
+    const att = (ws.attendance || []).filter(a => a.date >= monthStr + '-01');
+    let totalMin = 0;
+    let openShift = null;
+    let lastDate  = null;
+    att.forEach(a => {
+      if (a.checkIn && a.checkOut) {
+        totalMin += Math.max(0, Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000));
+      } else if (a.checkIn && !a.checkOut) {
+        openShift = a;
+      }
+      if (!lastDate || a.date > lastDate) lastDate = a.date;
+    });
+    return { user: u, totalMin, days: att.length, openShift, lastDate };
+  }).sort((a, b) => b.totalMin - a.totalMin);
+
+  return `
+    <div class="card">
+      <div class="card-title">🕐 Docházka týmu – ${monthStart.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' })}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+        Sumář odpracovaných hodin v aktuálním měsíci. Klikni na uživatele pro detail
+        a možnost opravy chybných záznamů.
+      </div>
+    </div>
+
+    ${stats.length === 0 ? `
+      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
+        Žádní uživatelé.
+      </div>` : stats.map(s => `
+      <div class="card" style="margin-bottom:8px;cursor:pointer" onclick="openUserAttendanceDetail('${escapeHtml(s.user.id)}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:24px">${escapeHtml(s.user.avatar || '👤')}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${escapeHtml(s.user.name)}</div>
+            <div style="font-size:11px;color:var(--text3)">
+              ${ROLE_LABELS[s.user.role] || s.user.role}
+              ${s.openShift ? ' · <span style="color:var(--green)">🟢 Právě přihlášen</span>' : ''}
+              ${s.lastDate ? ' · poslední: ' + formatDate(s.lastDate) : ' · bez záznamu'}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:800;color:var(--gold)">
+              ${Math.floor(s.totalMin / 60)}h ${s.totalMin % 60}m
+            </div>
+            <div style="font-size:11px;color:var(--text3)">${s.days} ${s.days === 1 ? 'den' : s.days < 5 ? 'dny' : 'dní'}</div>
+          </div>
+        </div>
+      </div>`).join('')}
+
+    <div class="card" style="margin-top:10px">
+      <button class="btn btn-ghost" style="width:100%" onclick="exportTeamAttendanceCsv()">📥 Stáhnout CSV (celý měsíc)</button>
+    </div>
+  `;
+}
+
+function openUserAttendanceDetail(userId) {
+  const u = (USERS || []).find(x => x.id === userId);
+  if (!u) return;
+  const ws  = USER_WORKSPACE[userId] || {};
+  const att = [...(ws.attendance || [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60);
+
+  const rows = att.map(a => {
+    const mins = a.checkIn && a.checkOut
+      ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000)
+      : null;
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text)">${formatDate(a.date)}</div>
+          <div style="font-size:11px;color:var(--text2)">
+            ${a.checkIn ? formatTime(a.checkIn) : '–'} → ${a.checkOut ? formatTime(a.checkOut) : '⏳ otevřeno'}
+            ${mins !== null ? ` · <b>${Math.floor(mins/60)}h ${mins%60}m</b>` : ''}
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 8px"
+          onclick="adminEditAttendance('${escapeHtml(userId)}','${escapeHtml(a.id)}')">✏️</button>
+        <button class="btn btn-danger btn-sm" style="padding:2px 8px"
+          onclick="adminDeleteAttendance('${escapeHtml(userId)}','${escapeHtml(a.id)}')">🗑️</button>
+      </div>`;
+  }).join('') || '<div style="text-align:center;color:var(--text2);padding:20px">Žádné záznamy</div>';
+
+  openModal(`🕐 Docházka · ${u.name}`, rows, [
+    { label: '✕ Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ]);
+}
+
+function adminEditAttendance(userId, recordId) {
+  const ws  = USER_WORKSPACE[userId];
+  const rec = ws?.attendance?.find(a => a.id === recordId);
+  if (!rec) return;
+  const inT  = rec.checkIn  ? new Date(rec.checkIn).toTimeString().slice(0, 5)  : '';
+  const outT = rec.checkOut ? new Date(rec.checkOut).toTimeString().slice(0, 5) : '';
+  openModal('✏️ Upravit docházku', `
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Den: <b>${formatDate(rec.date)}</b></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="input-group">
+        <div class="input-label">Příchod</div>
+        <input class="input" id="att-in"  type="time" value="${inT}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Odchod</div>
+        <input class="input" id="att-out" type="time" value="${outT}">
+      </div>
+    </div>
+  `, [
+    { label: '✕ Zrušit',  cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '✔ Uložit',  cls: 'btn-primary', action: `saveAttendanceEdit('${userId}','${recordId}')` },
+  ]);
+}
+
+function saveAttendanceEdit(userId, recordId) {
+  const ws  = USER_WORKSPACE[userId];
+  const rec = ws?.attendance?.find(a => a.id === recordId);
+  if (!rec) return;
+  const inV  = document.getElementById('att-in')?.value;
+  const outV = document.getElementById('att-out')?.value;
+  if (inV)  rec.checkIn  = new Date(rec.date + 'T' + inV  + ':00').toISOString();
+  if (outV) rec.checkOut = new Date(rec.date + 'T' + outV + ':00').toISOString();
+  else if (outV === '') rec.checkOut = null;
+  saveState();
+  closeModal();
+  showToast('✅ Záznam upraven');
+  renderAdmin();
+}
+
+function adminDeleteAttendance(userId, recordId) {
+  if (!confirm('Smazat tento záznam docházky?')) return;
+  const ws = USER_WORKSPACE[userId];
+  if (!ws) return;
+  ws.attendance = (ws.attendance || []).filter(a => a.id !== recordId);
+  saveState();
+  showToast('🗑️ Záznam smazán');
+  closeModal();
+  renderAdmin();
+}
+
+function exportTeamAttendanceCsv() {
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  const monthStr = monthStart.toISOString().slice(0, 7);
+  const rows = [['Uživatel', 'Login', 'Role', 'Datum', 'Příchod', 'Odchod', 'Minuty']];
+  (USERS || []).forEach(u => {
+    const ws = USER_WORKSPACE[u.id] || {};
+    (ws.attendance || []).filter(a => a.date >= monthStr + '-01').forEach(a => {
+      const mins = a.checkIn && a.checkOut
+        ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000)
+        : '';
+      rows.push([
+        u.name, u.login, ROLE_LABELS[u.role] || u.role, a.date,
+        a.checkIn ? formatTime(a.checkIn) : '',
+        a.checkOut ? formatTime(a.checkOut) : '',
+        mins,
+      ]);
+    });
+  });
+  downloadCsv(`dochazka-${monthStr}.csv`, rows);
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map(r => r.map(cell => {
+    const s = String(cell ?? '');
+    return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(';')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function renderAdmin() {
   if (!can('app_settings')) {
     navigateTo('dashboard');
@@ -2906,6 +3259,8 @@ function renderAdmin() {
       <div class="admin-tab ${adminTab==='cloud'?'active':''}" onclick="switchAdminTab('cloud')">☁️ Cloud</div>
       <div class="admin-tab ${adminTab==='lupanet'?'active':''}" onclick="switchAdminTab('lupanet')">🔌 Lupa NET</div>
       <div class="admin-tab ${adminTab==='ezop4'?'active':''}" onclick="switchAdminTab('ezop4')">🚀 Ezop4</div>
+      <div class="admin-tab ${adminTab==='announcements'?'active':''}" onclick="switchAdminTab('announcements')">📢 Oznámení</div>
+      <div class="admin-tab ${adminTab==='team_attendance'?'active':''}" onclick="switchAdminTab('team_attendance')">🕐 Docházka týmu</div>
     </div>
 
     <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
@@ -2937,6 +3292,12 @@ function renderAdmin() {
     </div>
     <div class="admin-section ${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
       ${renderAdminEzop4()}
+    </div>
+    <div class="admin-section ${adminTab==='announcements'?'active':''}" id="adm-announcements">
+      ${renderAdminAnnouncements()}
+    </div>
+    <div class="admin-section ${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
+      ${renderAdminTeamAttendance()}
     </div>
   `;
 }
@@ -3618,7 +3979,10 @@ function renderWorkspace() {
     { id: 'attendance', label: '🕐 Docházka'  },
   ];
   document.getElementById('page-workspace').innerHTML = `
-    <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">📒 Můj prostor</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px;flex-wrap:wrap">
+      <div style="font-size:16px;font-weight:800;color:var(--gold)">📒 Můj prostor</div>
+      <button class="btn btn-ghost btn-sm" onclick="exportMyWorkspaceCsv()">📥 Export CSV</button>
+    </div>
     <div style="display:flex;gap:6px;margin-bottom:14px">
       ${tabs.map(t => `
         <button class="btn ${workspaceTab === t.id ? 'btn-primary' : 'btn-ghost'} btn-sm"
@@ -3629,6 +3993,36 @@ function renderWorkspace() {
     <div id="workspace-content"></div>
   `;
   renderWorkspaceContent();
+}
+
+function exportMyWorkspaceCsv() {
+  const ws = myWorkspace();
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  if (workspaceTab === 'notes') {
+    const rows = [['Kategorie', 'Text', 'Vytvořeno']];
+    [...ws.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .forEach(n => rows.push([NOTE_CATEGORIES[n.category] || n.category, n.text, formatDateTime(n.createdAt)]));
+    downloadCsv(`moje-poznamky-${stamp}.csv`, rows);
+    return;
+  }
+  if (workspaceTab === 'boards') {
+    const rows = [['Zakázka', 'Výrobek', 'OK', 'Oprava', 'Zmetek', 'Poznámka', 'Zaznamenáno']];
+    [...ws.myBoards].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))
+      .forEach(b => rows.push([b.orderNumber, b.orderName, b.qtyOk, b.qtyRework, b.qtyScrap, b.note || '', formatDateTime(b.recordedAt)]));
+    downloadCsv(`moje-kusy-${stamp}.csv`, rows);
+    return;
+  }
+  if (workspaceTab === 'attendance') {
+    const rows = [['Datum', 'Příchod', 'Odchod', 'Minuty']];
+    [...ws.attendance].sort((a, b) => b.date.localeCompare(a.date)).forEach(a => {
+      const mins = a.checkIn && a.checkOut
+        ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000) : '';
+      rows.push([a.date, a.checkIn ? formatTime(a.checkIn) : '', a.checkOut ? formatTime(a.checkOut) : '', mins]);
+    });
+    downloadCsv(`moje-dochazka-${stamp}.csv`, rows);
+    return;
+  }
 }
 
 function switchWorkspaceTab(tab) {
@@ -3888,7 +4282,7 @@ function workspaceCheckIn() {
   ws.attendance.push({ id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), date: today, checkIn: new Date().toISOString(), checkOut: null });
   saveState();
   showToast('🟢 Příchod zaznamenán');
-  renderWorkspaceContent();
+  refreshAfterWorkspaceMutation();
 }
 
 function workspaceCheckOut() {
@@ -3898,7 +4292,89 @@ function workspaceCheckOut() {
   rec.checkOut = new Date().toISOString();
   saveState();
   showToast('🔴 Odchod zaznamenán');
-  renderWorkspaceContent();
+  refreshAfterWorkspaceMutation();
+}
+
+function refreshAfterWorkspaceMutation() {
+  if (document.getElementById('page-dashboard')?.classList.contains('active')) renderDashboard();
+  if (document.getElementById('page-workspace')?.classList.contains('active')) renderWorkspaceContent();
+  refreshAttendanceIndicator();
+}
+
+// ── TOPBAR ATTENDANCE INDICATOR ───────────────────────
+function refreshAttendanceIndicator() {
+  const el = document.getElementById('tbar-attendance');
+  if (!el || !currentUser) return;
+  const rec = todayAttendance();
+  if (rec?.checkIn && !rec.checkOut) {
+    el.style.display = '';
+    el.textContent = '🟢 ' + formatTime(rec.checkIn);
+    el.style.background = 'rgba(34,197,94,.18)';
+    el.style.color = 'var(--green)';
+    el.title = 'Přihlášen od ' + formatTime(rec.checkIn) + ' · klikni pro Můj prostor';
+  } else if (rec?.checkIn && rec?.checkOut) {
+    el.style.display = '';
+    el.textContent = '✅ Hotovo';
+    el.style.background = 'rgba(153,153,153,.15)';
+    el.style.color = 'var(--text2)';
+    el.title = 'Dnešní směna ukončena';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── DASHBOARD WIDGET ──────────────────────────────────
+function dashboardWorkspaceWidgetHtml() {
+  if (!currentUser) return '';
+  const ws       = myWorkspace();
+  const todayRec = todayAttendance();
+  const checkedIn  = todayRec && todayRec.checkIn && !todayRec.checkOut;
+  const checkedOut = todayRec && todayRec.checkOut;
+
+  let statusBlock;
+  if (!todayRec || !todayRec.checkIn) {
+    statusBlock = `
+      <button class="btn btn-primary btn-sm" onclick="workspaceCheckIn()"
+        style="padding:6px 14px">🟢 Příchod</button>`;
+  } else if (checkedIn) {
+    statusBlock = `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--green);font-weight:700">
+          🟢 Příchod ${formatTime(todayRec.checkIn)}
+        </span>
+        <button class="btn btn-danger btn-sm" onclick="workspaceCheckOut()"
+          style="padding:6px 14px">🔴 Odchod</button>
+      </div>`;
+  } else {
+    const mins = Math.round((new Date(todayRec.checkOut) - new Date(todayRec.checkIn)) / 60000);
+    statusBlock = `
+      <span style="font-size:12px;color:var(--text2)">
+        ✅ Hotovo · ${Math.floor(mins/60)}h ${mins%60}m
+      </span>`;
+  }
+
+  const noteCount  = ws.notes.length;
+  const boardCount = ws.myBoards.length;
+
+  return `
+    <div class="card" style="border-left:3px solid var(--gold);margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0">
+          <span style="font-size:22px">📒</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Můj prostor</div>
+            <div style="font-size:11px;color:var(--text3)">
+              📝 ${noteCount} ${noteCount === 1 ? 'poznámka' : 'pozn.'} · 🔢 ${boardCount} ${boardCount === 1 ? 'záznam' : 'zázn.'}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${statusBlock}
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('workspace')"
+            style="padding:6px 10px">→</button>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ── HELPERS (workspace) ───────────────────────────────
