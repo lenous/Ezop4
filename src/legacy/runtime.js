@@ -602,6 +602,28 @@ function orderReadinessBadgeHtml(order) {
   return `<span class="badge" style="background:${meta.color}22;color:${meta.color}" title="Připravenost zakázky: ${summary.okCount}/${summary.total}">${meta.icon} ${summary.okCount}/${summary.total}</span>`;
 }
 
+const READINESS_ORDER_FILTERS = {
+  wait_material: { label:'📦 Čeká na materiál', keys:['material'] },
+  wait_docs:     { label:'📄 Čeká na dokumentaci', keys:['documentation'] },
+  wait_program:  { label:'🧠 Čeká na program/planžetu', keys:['program','stencil'] },
+};
+
+function orderMatchesReadinessFilter(order, filter) {
+  const meta = READINESS_ORDER_FILTERS[filter];
+  if (!meta || orderIsClosed(order)) return false;
+  return meta.keys.some(key => ['partial','blocked'].includes(readinessEffectiveStatus(order, key)));
+}
+
+function readinessRiskCounts(orders) {
+  return Object.fromEntries(Object.entries(READINESS_ORDER_FILTERS).map(([filter, meta]) => [
+    filter,
+    {
+      ...meta,
+      count: orders.filter(order => orderMatchesReadinessFilter(order, filter)).length,
+    },
+  ]));
+}
+
 function orderReadinessCardHtml(order) {
   const summary = readinessSummary(order);
   const summaryMeta = READINESS_STATUS[summary.status] || READINESS_STATUS.partial;
@@ -907,7 +929,9 @@ function dashboardPlanningRiskHtml(orders) {
   const blockedOrders = orders.filter(isOrderBlocked);
   const loads = stationLoadSummaries();
   const riskyLoads = loads.filter(load => load.level !== 'ok').slice(0, 4);
-  const calm = overdueOrders.length === 0 && blockedOrders.length === 0 && riskyLoads.length === 0;
+  const readinessRisks = readinessRiskCounts(orders);
+  const readinessRiskTotal = Object.values(readinessRisks).reduce((sum, item) => sum + item.count, 0);
+  const calm = overdueOrders.length === 0 && blockedOrders.length === 0 && riskyLoads.length === 0 && readinessRiskTotal === 0;
 
   return `<div class="card" style="border-left:4px solid ${calm ? 'var(--green)' : 'var(--amber)'}">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
@@ -932,6 +956,19 @@ function dashboardPlanningRiskHtml(orders) {
       <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer" onclick="navigateTo('queue')">
         <div style="font-size:20px;font-weight:900;color:${riskyLoads.length ? 'var(--amber)' : 'var(--green)'}">${riskyLoads.length}</div>
         <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Přetížení</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Stojí na přípravě</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px">
+        ${Object.entries(readinessRisks).map(([filter, item]) => `
+          <div style="background:var(--card2);border:1px solid ${item.count ? 'rgba(245,158,11,.45)' : 'var(--border)'};border-radius:10px;padding:9px;cursor:pointer"
+            onclick="showOrdersFiltered('${filter}')">
+            <div style="font-size:18px;font-weight:900;color:${item.count ? 'var(--amber)' : 'var(--green)'}">${item.count}</div>
+            <div style="font-size:10px;color:var(--text2);font-weight:800;line-height:1.25">${item.label}</div>
+          </div>
+        `).join('')}
       </div>
     </div>
 
@@ -2107,7 +2144,7 @@ async function copyTextToClipboard(text) {
 
 // ── ORDERS LIST ───────────────────────────────────────
 let orderSearch = '';
-let orderFilter = null; // 'in_progress' | 'urgent' | 'overdue' | 'blocked' | null
+let orderFilter = null; // 'in_progress' | 'urgent' | 'overdue' | 'blocked' | 'wait_*' | null
 
 function filterOrders(q) {
   let list = visibleOrders();
@@ -2119,6 +2156,8 @@ function filterOrders(q) {
     list = list.filter(isOrderOverdue);
   } else if (orderFilter === 'blocked') {
     list = list.filter(isOrderBlocked);
+  } else if (READINESS_ORDER_FILTERS[orderFilter]) {
+    list = list.filter(order => orderMatchesReadinessFilter(order, orderFilter));
   }
   if (q) {
     const s = q.toLowerCase().trim();
@@ -2143,6 +2182,9 @@ function orderFilterLabel(filter) {
     urgent:      { label:'🔥 Urgentní',  cls:'badge-urgent' },
     overdue:     { label:'⏰ Po termínu', cls:'badge-issue' },
     blocked:     { label:'⛔ Blokované', cls:'badge-issue' },
+    wait_material: { label:'📦 Čeká na materiál', cls:'badge-waiting' },
+    wait_docs:     { label:'📄 Čeká na dokumentaci', cls:'badge-waiting' },
+    wait_program:  { label:'🧠 Čeká na program/planžetu', cls:'badge-waiting' },
   }[filter] || null;
 }
 
