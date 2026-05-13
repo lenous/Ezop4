@@ -379,6 +379,112 @@ function stationCardQtyHtml(order, station, index) {
   </div>`;
 }
 
+function priorityRank(priority) {
+  return { urgent: 0, high: 1, normal: 2, low: 3 }[priority] ?? 2;
+}
+
+function dueTime(order) {
+  const time = new Date(order?.due || '').getTime();
+  return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER;
+}
+
+function isOrderBlocked(order) {
+  return !!order?.blocked?.active;
+}
+
+function orderBlockReason(order) {
+  return String(order?.blocked?.reason || '').trim();
+}
+
+function orderBlockedBadgeHtml(order) {
+  if (!isOrderBlocked(order)) return '';
+  return `<span class="badge badge-issue" title="${escapeHtml(orderBlockReason(order))}">⛔ Blokace</span>`;
+}
+
+function activeStationIndex(order) {
+  if (!order?.stations?.length) return -1;
+  const active = order.stations.findIndex(s => !['completed','skipped'].includes(s.status));
+  return active >= 0 ? active : order.stations.length - 1;
+}
+
+function stationQueueState(order, station, index) {
+  if (isOrderBlocked(order)) return { label: 'Blokováno', color: 'var(--red)', rank: 0 };
+  if (station.status === 'issue') return { label: 'Problém', color: 'var(--red)', rank: 1 };
+  if (['in_progress','partial'].includes(station.status)) return { label: 'Rozpracováno', color: 'var(--blue)', rank: 2 };
+  if (stationInputQty(order, station, index) > 0 || index === 0) return { label: 'Připraveno', color: 'var(--green)', rank: 3 };
+  return { label: 'Čeká na předchozí krok', color: 'var(--amber)', rank: 4 };
+}
+
+function workQueueItems(stationId = '') {
+  const selectedId = Number(stationId) || 0;
+  const rows = [];
+  ORDERS.forEach(order => {
+    syncOrderStationFlow(order);
+    (order.stations || []).forEach((station, index) => {
+      if (selectedId && Number(station.stId) !== selectedId) return;
+      if (!selectedId && index !== activeStationIndex(order)) return;
+      if (['completed','skipped'].includes(station.status) && !isOrderBlocked(order)) return;
+      const stInfo = STATIONS.find(st => st.id === Number(station.stId));
+      const queueState = stationQueueState(order, station, index);
+      rows.push({ order, station, index, stInfo, queueState });
+    });
+  });
+  return rows.sort((a, b) =>
+    a.queueState.rank - b.queueState.rank ||
+    priorityRank(a.order.priority) - priorityRank(b.order.priority) ||
+    dueTime(a.order) - dueTime(b.order) ||
+    String(a.order.number).localeCompare(String(b.order.number))
+  );
+}
+
+function findOrderByCode(rawCode) {
+  const code = String(rawCode || '').trim();
+  if (!code) return null;
+  const normalized = code
+    .replace(/^ezop:/i, '')
+    .replace(/^zakazka:/i, '')
+    .trim();
+  const fromUrl = (() => {
+    try {
+      const url = new URL(normalized, location.origin);
+      return url.searchParams.get('order') || url.searchParams.get('code') || url.searchParams.get('qr') || '';
+    } catch {
+      return '';
+    }
+  })();
+  const needle = (fromUrl || normalized).trim().toLowerCase();
+  return ORDERS.find(o =>
+    String(o.number || '').toLowerCase() === needle ||
+    String(o.id || '').toLowerCase() === needle ||
+    String(o.purchaseOrderNumber || '').toLowerCase() === needle
+  ) || null;
+}
+
+function openOrderByCode(code, options = {}) {
+  const order = findOrderByCode(code);
+  if (!order) {
+    if (!options.silent) showToast('⚠️ Zakázka podle kódu nebyla nalezena');
+    return false;
+  }
+  const stationId = Number(options.station) || 0;
+  if (stationId && order.stations?.some(st => Number(st.stId) === stationId)) {
+    openStation(order.id, stationId);
+  } else {
+    openOrder(order.id);
+  }
+  if (!options.silent) showToast(`📎 Otevřeno: ${order.number}`, { skipSave: true });
+  return true;
+}
+
+function currentOrderLink(order, stationId = '') {
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('order', order.number || order.id);
+  if (stationId) url.searchParams.set('station', String(stationId));
+  return url.toString();
+}
+
 function validStencilNumber(value) {
   return !String(value || '').trim() || /^\d+\/\d{4}$/.test(String(value).trim());
 }
@@ -782,6 +888,7 @@ function can(action) {
     edit_order_info:['dispatcher','management','admin'],
     edit_product_memory:['tpv','dispatcher','management','admin'],
     manage_scrap:   ['tpv','dispatcher','management','admin'],
+    block_order:    ['tpv','dispatcher','management','admin'],
     view_kpi:       ['dispatcher','management','admin'],
     manage_users:   ['admin'],
     app_settings:   ['admin'],
@@ -818,11 +925,17 @@ async function initApp() {
 
   buildNav();
 
-  // Routing z PWA shortcut nebo URL parametru ?go=...
+  // Routing z PWA shortcut, QR/deeplink URL parametru nebo rychlého odkazu.
   const params = new URLSearchParams(location.search);
   const target = params.get('go');
-  const validTargets = ['dashboard','orders','issues','workspace','profile','kpi','admin'];
-  navigateTo(validTargets.includes(target) ? target : 'dashboard');
+  const orderCode = params.get('order') || params.get('code') || params.get('qr');
+  const stationCode = params.get('station');
+  const validTargets = ['dashboard','orders','queue','issues','workspace','profile','kpi','admin'];
+  if (orderCode && openOrderByCode(orderCode, { station: stationCode, silent: true })) {
+    // Deeplink otevřel zakázku nebo stanoviště.
+  } else {
+    navigateTo(validTargets.includes(target) ? target : 'dashboard');
+  }
 
   refreshAttendanceIndicator();
   refreshInstallButton();
@@ -836,6 +949,7 @@ function getNavItems() {
   const openIssueCount = visibleIssues().filter(i => !i.resolved).length;
   const items = [
     { id:'dashboard', label:'Přehled',  icon:'🏠' },
+    { id:'queue',     label:'Fronty',   icon:'🧭' },
     { id:'orders',    label:'Zakázky',  icon:'📋' },
     { id:'issues',    label:'Problémy' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
   ];
@@ -872,7 +986,13 @@ function navigateTo(page) {
   document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
 
   currentPage = page;
-  const pg = document.getElementById('page-' + page);
+  let pg = document.getElementById('page-' + page);
+  if (!pg && page === 'queue') {
+    pg = document.createElement('div');
+    pg.className = 'page';
+    pg.id = 'page-queue';
+    document.querySelector('#app > div[style*="padding-bottom"]')?.appendChild(pg);
+  }
   if (pg) pg.classList.add('active');
   const tab = document.getElementById('tab-' + page);
   if (tab) tab.classList.add('active');
@@ -881,6 +1001,7 @@ function navigateTo(page) {
 
   const renderers = {
     dashboard: renderDashboard,
+    queue:     renderWorkQueue,
     orders:    renderOrders,
     issues:    renderIssues,
     kpi:       renderKpi,
@@ -1178,6 +1299,122 @@ function renderDashboard() {
   `;
 }
 
+// ── WORK QUEUES ───────────────────────────────────────
+let queueStationFilter = '';
+let queueSearch = '';
+
+function renderWorkQueue() {
+  const allItems = workQueueItems(queueStationFilter);
+  const q = queueSearch.trim().toLowerCase();
+  const list = q
+    ? allItems.filter(item => {
+      const o = item.order;
+      const st = item.stInfo;
+      return `${o.number} ${o.name} ${o.customer || ''} ${st?.name || ''}`.toLowerCase().includes(q);
+    })
+    : allItems;
+
+  document.getElementById('page-queue').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--gold)">🧭 Fronty pracovišť</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">Řazeno podle blokace, problému, priority a termínu.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="quickOpenOrderModal()">📎 QR / kód</button>
+    </div>
+
+    <div class="card" style="padding:10px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div class="input-label">Stanoviště</div>
+          <select class="input" id="queue-station" onchange="queueStationFilter=this.value;renderWorkQueue()">
+            <option value="">Aktuální krok každé zakázky</option>
+            ${STATIONS.map(st => `<option value="${st.id}" ${String(st.id)===String(queueStationFilter)?'selected':''}>${st.icon} ${escapeHtml(st.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <div class="input-label">Hledat ve frontě</div>
+          <input class="input" id="queue-search" value="${escapeHtml(queueSearch)}" placeholder="číslo, výrobek, zákazník..."
+            oninput="queueSearch=this.value;renderWorkQueue()">
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">
+        ${list.length} ${list.length===1?'položka':list.length<5?'položky':'položek'} ve frontě
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">${allItems.filter(i=>isOrderBlocked(i.order)).length}</div><div class="stat-lbl">Blokace</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${allItems.filter(i=>i.order.priority==='urgent').length}</div><div class="stat-lbl">Urgentní</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${allItems.filter(i=>i.queueState.label==='Připraveno').length}</div><div class="stat-lbl">Připraveno</div></div>
+    </div>
+
+    <div id="queue-list">
+      ${list.length ? list.map(queueCardHtml).join('') : `<div class="card" style="text-align:center;color:var(--text2);padding:28px">Fronta je prázdná.</div>`}
+    </div>
+  `;
+}
+
+function queueCardHtml(item) {
+  const { order, station, index, stInfo, queueState } = item;
+  const meta = stationStatusMeta(station.status);
+  const link = currentOrderLink(order, station.stId);
+  const blockReason = orderBlockReason(order);
+  return `<div class="card" style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''}">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:26px;line-height:1">${stInfo?.icon || '🔧'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:900;color:var(--gold)">${escapeHtml(order.number)}</span>
+          <span class="badge badge-${order.priority}">${priorityLabel(order.priority)}</span>
+          ${orderBlockedBadgeHtml(order)}
+          <span class="badge ${meta.badge}">${meta.label}</span>
+        </div>
+        <div style="font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(order.name)}</div>
+        <div style="font-size:11px;color:var(--teal2);margin:2px 0 6px">${escapeHtml(order.customer || '')} · ${escapeHtml(stInfo?.name || 'Stanoviště')} · ${escapeHtml(queueState.label)}</div>
+        ${stationCardQtyHtml(order, station, index)}
+        ${blockReason ? `<div style="font-size:11px;color:var(--red);margin-top:6px">⛔ ${escapeHtml(blockReason)}</div>` : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn btn-primary btn-sm" onclick="openStation('${order.id}', '${station.stId}')">Otevřít stanoviště</button>
+          <button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Detail zakázky</button>
+          <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(link)}')">Kopírovat QR odkaz</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function quickOpenOrderModal() {
+  openModal('📎 Rychlé otevření zakázky', `
+    <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+      Naskenujte QR/čárový kód do pole, nebo napište číslo zakázky. Podporuje číslo zakázky, ID, číslo objednávky i odkaz s parametrem <b>?order=</b>.
+    </div>
+    <div class="input-group">
+      <div class="input-label">Kód zakázky</div>
+      <input class="input" id="qo-code" placeholder="např. 261100" onkeydown="if(event.key==='Enter') submitQuickOpenOrder()">
+    </div>
+  `, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Otevřít', action:'submitQuickOpenOrder()', cls:'btn-primary' },
+  ]);
+  setTimeout(() => document.getElementById('qo-code')?.focus(), 50);
+}
+
+function submitQuickOpenOrder() {
+  const value = document.getElementById('qo-code')?.value || '';
+  if (!openOrderByCode(value)) return;
+  closeModal();
+}
+
+async function copyTextToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(String(text || ''));
+    showToast('📋 Odkaz zkopírován', { skipSave: true });
+  } catch {
+    showToast('⚠️ Kopírování se nepodařilo', { skipSave: true });
+  }
+}
+
 // ── ORDERS LIST ───────────────────────────────────────
 let orderSearch = '';
 let orderFilter = null; // 'in_progress' | 'urgent' | null
@@ -1259,6 +1496,7 @@ function ordersListHtml(list) {
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
             <span style="font-size:13px;font-weight:600;color:var(--teal2)">${o.customer}</span>
             <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
+            ${orderBlockedBadgeHtml(o)}
             ${can('delete_order') ? `<button class="btn btn-danger btn-sm" style="margin-left:auto;padding:5px 9px;font-size:11px" onclick="event.stopPropagation();deleteOrderModal('${o.id}')">🗑️</button>` : ''}
           </div>
           <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${o.name}</div>
@@ -1273,6 +1511,7 @@ function ordersListHtml(list) {
             </div>
             <span style="font-size:10px;color:var(--text2);min-width:30px;text-align:right">${pct}%</span>
           </div>
+          ${isOrderBlocked(o) ? `<div style="font-size:10px;color:var(--red);margin-top:4px">⛔ Blokace: ${escapeHtml(orderBlockReason(o))}</div>` : ''}
           ${hasIssue ? '<div style="font-size:10px;color:var(--red);margin-top:4px">⚠️ Problém na stanovišti</div>' : ''}
         </div>
       </div>
@@ -1317,6 +1556,11 @@ function openOrder(orderId, options = {}) {
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
           <span class="badge badge-${selectedOrder.priority}">${priorityLabel(selectedOrder.priority)}</span>
+          ${orderBlockedBadgeHtml(selectedOrder)}
+          <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(currentOrderLink(selectedOrder))}')">🔗 Odkaz</button>
+          ${can('block_order') ? (isOrderBlocked(selectedOrder)
+            ? `<button class="btn btn-teal btn-sm" onclick="unblockOrderModal('${selectedOrder.id}')">Odblokovat</button>`
+            : `<button class="btn btn-danger btn-sm" onclick="blockOrderModal('${selectedOrder.id}')">Blokovat</button>`) : ''}
           ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${selectedOrder.id}')">🗑️ Smazat</button>` : ''}
         </div>
       </div>
@@ -1339,6 +1583,7 @@ function openOrder(orderId, options = {}) {
       </div>
     </div>
 
+    ${orderBlockCardHtml(selectedOrder)}
     ${orderInfoCardHtml(selectedOrder)}
     ${productPhotoCardHtml(selectedOrder)}
     ${orderDocsCardHtml(selectedOrder)}
@@ -1408,6 +1653,151 @@ function orderInfoCardHtml(o) {
       </div>` : ''}
     </div>
   </div>`;
+}
+
+function orderBlockCardHtml(order) {
+  if (!isOrderBlocked(order)) return '';
+  const block = order.blocked || {};
+  return `<div class="card" style="border-left:4px solid var(--red);background:rgba(239,68,68,.10)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+      <div>
+        <div class="card-title" style="color:var(--red);margin-bottom:6px">⛔ Zakázka je blokovaná</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.45">${escapeHtml(block.reason || 'Bez důvodu')}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px">
+          ${escapeHtml(block.byName || 'Neznámý uživatel')} · ${formatDateTime(block.at)}
+        </div>
+      </div>
+      ${can('block_order') ? `<button class="btn btn-teal btn-sm" onclick="unblockOrderModal('${order.id}')">Odblokovat</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function blockOrderModal(orderId) {
+  if (!can('block_order')) {
+    showToast('🚫 Nemáte oprávnění blokovat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  openModal('⛔ Blokovat zakázku', `
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:800;color:var(--red);margin-bottom:5px">${escapeHtml(order.number)} · ${escapeHtml(order.name)}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Blokace zastaví ukládání počtů a změny stavu na stanovištích, dokud ji oprávněná role neodblokuje.
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Důvod blokace *</div>
+      <textarea class="input" id="bo-reason" rows="4" placeholder="např. chybí materiál, čeká se na zákazníka, chyba dokumentace"
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+  `, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Blokovat', action:`submitBlockOrder('${order.id}')`, cls:'btn-danger' },
+  ]);
+  setTimeout(() => document.getElementById('bo-reason')?.focus(), 50);
+}
+
+function submitBlockOrder(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order || !can('block_order')) return;
+  const reason = document.getElementById('bo-reason')?.value.trim() || '';
+  if (!reason) {
+    showToast('⚠️ Vyplňte důvod blokace.');
+    return;
+  }
+  const before = cloneForAudit(order);
+  order.blocked = {
+    active: true,
+    reason,
+    byUserId: currentUser.id,
+    byLogin: currentUser.login,
+    byName: currentUser.name,
+    byRole: currentUser.role,
+    at: new Date().toISOString(),
+  };
+  PROD_NOTES.unshift({
+    id: 'pn-block-' + Date.now(),
+    orderId: order.id,
+    stationId: order.stations?.[activeStationIndex(order)]?.stId || order.stations?.[0]?.stId || 0,
+    targetScope: 'all',
+    type: 'change',
+    text: `Zakázka blokována: ${reason}`,
+    author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
+    authorRole: currentUser.role,
+    createdAt: new Date().toISOString(),
+  });
+  writeAudit('order.blocked', 'order', order.id, `${order.number} · zakázka blokována`, before, cloneForAudit(order));
+  closeModal();
+  saveState();
+  if (selectedOrder?.id === order.id) openOrder(order.id);
+  else refreshCurrentView();
+  showToast('⛔ Zakázka blokována', { skipSave: true });
+}
+
+function unblockOrderModal(orderId) {
+  if (!can('block_order')) {
+    showToast('🚫 Nemáte oprávnění odblokovat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  openModal('✅ Odblokovat zakázku', `
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+      Zakázka <b style="color:var(--text)">${escapeHtml(order.number)} · ${escapeHtml(order.name)}</b> bude znovu uvolněna do výroby.
+    </div>
+    <div class="input-group">
+      <div class="input-label">Důvod odblokování *</div>
+      <textarea class="input" id="ubo-reason" rows="4" placeholder="např. materiál doplněn, dokumentace opravena, zákazník schválil pokračování"
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+  `, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Odblokovat', action:`submitUnblockOrder('${order.id}')`, cls:'btn-primary' },
+  ]);
+  setTimeout(() => document.getElementById('ubo-reason')?.focus(), 50);
+}
+
+function submitUnblockOrder(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order || !can('block_order')) return;
+  const reason = document.getElementById('ubo-reason')?.value.trim() || '';
+  if (!reason) {
+    showToast('⚠️ Vyplňte důvod odblokování.');
+    return;
+  }
+  const before = cloneForAudit(order);
+  order.blocked = {
+    ...(order.blocked || {}),
+    active: false,
+    resolvedReason: reason,
+    resolvedByUserId: currentUser.id,
+    resolvedByLogin: currentUser.login,
+    resolvedByName: currentUser.name,
+    resolvedByRole: currentUser.role,
+    resolvedAt: new Date().toISOString(),
+  };
+  PROD_NOTES.unshift({
+    id: 'pn-unblock-' + Date.now(),
+    orderId: order.id,
+    stationId: order.stations?.[activeStationIndex(order)]?.stId || order.stations?.[0]?.stId || 0,
+    targetScope: 'all',
+    type: 'change',
+    text: `Zakázka odblokována: ${reason}`,
+    author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
+    authorRole: currentUser.role,
+    createdAt: new Date().toISOString(),
+  });
+  writeAudit('order.unblocked', 'order', order.id, `${order.number} · zakázka odblokována`, before, cloneForAudit(order));
+  closeModal();
+  saveState();
+  if (selectedOrder?.id === order.id) openOrder(order.id);
+  else refreshCurrentView();
+  showToast('✅ Zakázka odblokována', { skipSave: true });
 }
 
 function orderAiCardHtml(o) {
@@ -1955,6 +2345,8 @@ function renderStationDetail(stInfo) {
       <span class="badge ${statusMeta.badge}" style="margin-left:auto">${statusMeta.label}</span>
     </div>
 
+    ${orderBlockCardHtml(selectedOrder)}
+
     <!-- QTY -->
     <div class="card">
       <div class="card-title">📦 Počty kusů</div>
@@ -2104,6 +2496,10 @@ function saveQty() {
 }
 
 function persistStationCounts(options = {}) {
+  if (isOrderBlocked(selectedOrder)) {
+    showToast('⛔ Zakázka je blokovaná. Nejdřív ji odblokujte.');
+    return { ok: false };
+  }
   const before = cloneForAudit(selectedStation);
   const v = qtyValidation();
   if (v.exceed) {
@@ -2251,6 +2647,10 @@ function submitScrapRemoval() {
 function setStatus(newStatus) {
   if (!selectedStation) return;
   if (newStatus === 'issue') { reportIssueModal(); return; }
+  if (isOrderBlocked(selectedOrder)) {
+    showToast('⛔ Zakázka je blokovaná. Stav nelze změnit.');
+    return;
+  }
   if (newStatus === 'completed') {
     selectedStation.qtyOk = Math.max(0, qtyAvailable() - positiveQty(selectedStation.qtyScrap));
     selectedStation.qtyRework = 0;
@@ -2764,6 +3164,10 @@ function doForward() {
 
 // ── NUMPAD ────────────────────────────────────────────
 function openNumpad(field, title, currentVal) {
+  if (isOrderBlocked(selectedOrder)) {
+    showToast('⛔ Zakázka je blokovaná. Počty nelze měnit.');
+    return;
+  }
   numpadField = field;
   numpadValue = String(currentVal || 0);
   document.getElementById('numpad-title').textContent = title + ' (ks)';
@@ -3489,6 +3893,8 @@ function auditLogHtml(row) {
     'station.status_changed': 'Stav změněn',
     'station.program_updated': 'Program upraven',
     'order.info_updated': 'Zakázka upravena',
+    'order.blocked': 'Zakázka blokována',
+    'order.unblocked': 'Zakázka odblokována',
     'order.deleted': 'Zakázka smazána',
     'note.created': 'Poznámka přidána',
     'note.deleted': 'Poznámka smazána',
@@ -4783,6 +5189,10 @@ function normalizeAppData() {
     order.stationPrograms = order.stationPrograms || {};
     order.productPhotoDataUrl ??= '';
     order.documents = Array.isArray(order.documents) ? order.documents : [];
+    if (order.blocked && typeof order.blocked === 'object') {
+      order.blocked.active = !!order.blocked.active;
+      order.blocked.reason = String(order.blocked.reason || '');
+    }
     order.stations = Array.isArray(order.stations) ? order.stations : [];
     order.stations.forEach(st => {
       st.stId = Number(st.stId);
