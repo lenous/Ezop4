@@ -13,6 +13,7 @@ export interface AuthProfileRow {
   name: string;
   avatar?: string | null;
   color?: string | null;
+  station_ids?: number[] | null;
   active: boolean;
 }
 
@@ -58,6 +59,7 @@ export function profileRowToUser(row: AuthProfileRow): UserProfile {
     name: row.name,
     avatar: row.avatar || '👤',
     color: row.color || '#6b7280',
+    stationIds: Array.isArray(row.station_ids) ? row.station_ids : [],
   };
 }
 
@@ -78,7 +80,7 @@ export function createSupabaseAuthPort(client: SupabaseLikeClient, internalDomai
 
       const { data: profile, error: profileError } = await client
         .from('profiles')
-        .select('user_id,login,role,name,avatar,color,active')
+        .select('user_id,login,role,name,avatar,color,station_ids,active')
         .eq('user_id', data.user.id)
         .maybeSingle();
 
@@ -102,7 +104,7 @@ export function createSupabaseAuthPort(client: SupabaseLikeClient, internalDomai
       if (error || !data?.session?.user) return null;
       const { data: profile } = await client
         .from('profiles')
-        .select('user_id,login,role,name,avatar,color,active')
+        .select('user_id,login,role,name,avatar,color,station_ids,active')
         .eq('user_id', data.session.user.id)
         .maybeSingle();
       return profile && profile.active !== false

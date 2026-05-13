@@ -1,6 +1,7 @@
 import type { AppState, Issue, Order, ProductionNote } from '../state/types';
 
 export interface Ezop4TableExport {
+  profiles: ProfileRow[];
   orders: OrderRow[];
   order_documents: OrderDocumentRow[];
   order_stations: OrderStationRow[];
@@ -8,6 +9,17 @@ export interface Ezop4TableExport {
   issues: IssueRow[];
   issue_recipients: IssueRecipientRow[];
   product_memory: ProductMemoryRow[];
+}
+
+export interface ProfileRow {
+  user_id: string | null;
+  login: string;
+  role: string;
+  name: string;
+  avatar: string;
+  color: string;
+  station_ids: number[];
+  active: boolean;
 }
 
 export interface OrderRow {
@@ -24,6 +36,14 @@ export interface OrderRow {
   stencil_number: string;
   purchase_order_number: string | null;
   product_photo_data_url: string | null;
+  block_active: boolean;
+  block_category: string | null;
+  block_reason: string | null;
+  blocked_by_name: string | null;
+  blocked_at: string | null;
+  unblock_reason: string | null;
+  unblocked_by_name: string | null;
+  unblocked_at: string | null;
 }
 
 export interface OrderDocumentRow {
@@ -43,6 +63,15 @@ export interface OrderStationRow {
   qty_rework: number;
   qty_scrap: number;
   program_name: string | null;
+  worker_user_id: string | null;
+  worker_login: string | null;
+  worker_name: string | null;
+  worker_role: string | null;
+  work_started_at: string | null;
+  work_paused_at: string | null;
+  work_pause_reason: string | null;
+  work_completed_at: string | null;
+  work_completed_by_name: string | null;
 }
 
 export interface ProductionNoteRow {
@@ -50,6 +79,7 @@ export interface ProductionNoteRow {
   order_id: string;
   station_id: number;
   target_scope: string;
+  target_station_ids: number[] | null;
   type: string;
   text: string;
   author_name: string;
@@ -92,6 +122,16 @@ export interface ProductMemoryRow {
 
 export function appStateToEzop4Tables(state: AppState): Ezop4TableExport {
   return {
+    profiles: (state.USERS || []).map(user => ({
+      user_id: null,
+      login: user.login,
+      role: user.role,
+      name: user.name,
+      avatar: user.avatar || '👤',
+      color: user.color || '#6b7280',
+      station_ids: user.stationIds || [],
+      active: true,
+    })),
     orders: state.ORDERS.map(orderToRow),
     order_documents: state.ORDERS.flatMap(orderDocumentsToRows),
     order_stations: state.ORDERS.flatMap(orderStationsToRows),
@@ -124,6 +164,14 @@ function orderToRow(order: Order): OrderRow {
     stencil_number: order.stencilNumber,
     purchase_order_number: order.purchaseOrderNumber || null,
     product_photo_data_url: order.productPhotoDataUrl || null,
+    block_active: Boolean(order.blocked?.active),
+    block_category: order.blocked?.category || null,
+    block_reason: order.blocked?.reason || null,
+    blocked_by_name: order.blocked?.byName || null,
+    blocked_at: order.blocked?.at || null,
+    unblock_reason: order.blocked?.resolvedReason || null,
+    unblocked_by_name: order.blocked?.resolvedByName || null,
+    unblocked_at: order.blocked?.resolvedAt || null,
   };
 }
 
@@ -147,6 +195,15 @@ function orderStationsToRows(order: Order): OrderStationRow[] {
     qty_rework: station.qtyRework || 0,
     qty_scrap: station.qtyScrap || 0,
     program_name: order.stationPrograms?.[String(station.stId)] || null,
+    worker_user_id: station.workerUserId || null,
+    worker_login: station.workerLogin || null,
+    worker_name: station.workerName || null,
+    worker_role: station.workerRole || null,
+    work_started_at: station.workStartedAt || null,
+    work_paused_at: station.workPausedAt || null,
+    work_pause_reason: station.workPauseReason || null,
+    work_completed_at: station.workCompletedAt || null,
+    work_completed_by_name: station.workCompletedByName || null,
   }));
 }
 
@@ -156,6 +213,7 @@ function noteToRow(note: ProductionNote): ProductionNoteRow {
     order_id: note.orderId,
     station_id: note.stationId,
     target_scope: note.targetScope || 'station',
+    target_station_ids: note.stationIds || (note.stationId ? [note.stationId] : null),
     type: note.type,
     text: note.text,
     author_name: note.author,

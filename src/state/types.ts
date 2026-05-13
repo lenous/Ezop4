@@ -14,11 +14,45 @@ export type Permission =
   | 'manage_users'
   | 'app_settings';
 
-export interface UserProfile { id: string; login: string; role: Role; name: string; avatar: string; color: string; }
+export interface UserProfile { id: string; login: string; role: Role; name: string; avatar: string; color: string; stationIds?: number[]; }
 export interface AppSettings { companyName: string; lockTimeout: number; allowOperatorQty: boolean; showKpiOperator: boolean; requireNoteOnIssue: boolean; notifyOnIssue: boolean; darkMode: boolean; language: string; shiftHours: number; }
-export interface StationProgress { stId: number; status: StationStatus; qtyOk: number; qtyRework: number; qtyScrap: number; qtyReceived: number; }
+export interface StationProgress {
+  stId: number;
+  status: StationStatus;
+  qtyOk: number;
+  qtyRework: number;
+  qtyScrap: number;
+  qtyReceived: number;
+  workerUserId?: string;
+  workerLogin?: string;
+  workerName?: string;
+  workerRole?: Role | '';
+  workStartedAt?: string | null;
+  workPausedAt?: string | null;
+  workPauseReason?: string;
+  workCompletedAt?: string | null;
+  workCompletedByUserId?: string;
+  workCompletedByLogin?: string;
+  workCompletedByName?: string;
+}
 export interface OrderDocument { name: string; type: string; size: number; }
-export interface Order { id: string; number: string; name: string; priority: Priority; qty: number; customer: string; due: string; orderDate: string; technology: string; productionType: string; stencilNumber: string; purchaseOrderNumber?: string; stationPrograms?: Record<string, string>; productPhotoDataUrl?: string; documents: OrderDocument[]; stations: StationProgress[]; }
+export interface OrderBlock {
+  active: boolean;
+  category?: 'material' | 'documentation' | 'program' | 'customer' | 'quality' | 'other';
+  reason?: string;
+  byUserId?: string;
+  byLogin?: string;
+  byName?: string;
+  byRole?: Role;
+  at?: string;
+  resolvedReason?: string;
+  resolvedByUserId?: string;
+  resolvedByLogin?: string;
+  resolvedByName?: string;
+  resolvedByRole?: Role;
+  resolvedAt?: string;
+}
+export interface Order { id: string; number: string; name: string; priority: Priority; qty: number; customer: string; due: string; orderDate: string; technology: string; productionType: string; stencilNumber: string; purchaseOrderNumber?: string; stationPrograms?: Record<string, string>; productPhotoDataUrl?: string; blocked?: OrderBlock; documents: OrderDocument[]; stations: StationProgress[]; }
 export interface Issue {
   id: string;
   orderId: string;
@@ -44,7 +78,8 @@ export interface ProductionNote {
   id: string;
   orderId: string;
   stationId: number;
-  targetScope?: 'station' | 'all';
+  stationIds?: number[];
+  targetScope?: 'station' | 'stations' | 'all';
   targetRoles?: Role[];
   type: string;
   text: string;

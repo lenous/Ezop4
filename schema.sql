@@ -32,6 +32,7 @@ create table if not exists public.profiles (
   name text not null,
   avatar text not null default '👤',
   color text not null default '#6b7280',
+  station_ids integer[] not null default '{}'::integer[],
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -68,6 +69,16 @@ create table if not exists public.orders (
   stencil_number text not null default '',
   purchase_order_number text,
   product_photo_data_url text,
+  block_active boolean not null default false,
+  block_category text check (block_category is null or block_category in ('material','documentation','program','customer','quality','other')),
+  block_reason text,
+  blocked_by uuid references auth.users(id),
+  blocked_by_name text,
+  blocked_at timestamptz,
+  unblock_reason text,
+  unblocked_by uuid references auth.users(id),
+  unblocked_by_name text,
+  unblocked_at timestamptz,
   archived boolean not null default false,
   created_by uuid references auth.users(id),
   created_at timestamptz not null default now(),
@@ -95,6 +106,16 @@ create table if not exists public.order_stations (
   qty_rework integer not null default 0 check (qty_rework >= 0),
   qty_scrap integer not null default 0 check (qty_scrap >= 0),
   program_name text,
+  worker_user_id uuid references auth.users(id),
+  worker_login text,
+  worker_name text,
+  worker_role public.ezop_role,
+  work_started_at timestamptz,
+  work_paused_at timestamptz,
+  work_pause_reason text,
+  work_completed_at timestamptz,
+  work_completed_by uuid references auth.users(id),
+  work_completed_by_name text,
   started_at timestamptz,
   completed_at timestamptz,
   updated_by uuid references auth.users(id),
@@ -121,6 +142,7 @@ create table if not exists public.production_notes (
   order_id text not null references public.orders(id) on delete cascade,
   station_id integer references public.station_catalog(id),
   target_scope text not null default 'station',
+  target_station_ids integer[],
   target_roles public.ezop_role[],
   type text not null default 'info',
   text text not null,
@@ -215,6 +237,33 @@ create table if not exists public.integration_outbox (
   sent_at timestamptz
 );
 
+-- Migracni doplneni sloupcu pro instalace, kde schema.sql uz jednou bezelo.
+alter table public.profiles add column if not exists station_ids integer[] not null default '{}'::integer[];
+
+alter table public.orders add column if not exists block_active boolean not null default false;
+alter table public.orders add column if not exists block_category text;
+alter table public.orders add column if not exists block_reason text;
+alter table public.orders add column if not exists blocked_by uuid references auth.users(id);
+alter table public.orders add column if not exists blocked_by_name text;
+alter table public.orders add column if not exists blocked_at timestamptz;
+alter table public.orders add column if not exists unblock_reason text;
+alter table public.orders add column if not exists unblocked_by uuid references auth.users(id);
+alter table public.orders add column if not exists unblocked_by_name text;
+alter table public.orders add column if not exists unblocked_at timestamptz;
+
+alter table public.order_stations add column if not exists worker_user_id uuid references auth.users(id);
+alter table public.order_stations add column if not exists worker_login text;
+alter table public.order_stations add column if not exists worker_name text;
+alter table public.order_stations add column if not exists worker_role public.ezop_role;
+alter table public.order_stations add column if not exists work_started_at timestamptz;
+alter table public.order_stations add column if not exists work_paused_at timestamptz;
+alter table public.order_stations add column if not exists work_pause_reason text;
+alter table public.order_stations add column if not exists work_completed_at timestamptz;
+alter table public.order_stations add column if not exists work_completed_by uuid references auth.users(id);
+alter table public.order_stations add column if not exists work_completed_by_name text;
+
+alter table public.production_notes add column if not exists target_station_ids integer[];
+
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin
@@ -249,6 +298,18 @@ as $$
   select role from public.profiles where user_id = auth.uid() and active = true
 $$;
 
+create or replace function public.current_user_station_ids()
+returns integer[]
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select coalesce(station_ids, '{}'::integer[])
+  from public.profiles
+  where user_id = auth.uid() and active = true
+$$;
+
 create or replace function public.has_role(allowed public.ezop_role[])
 returns boolean
 language sql
@@ -257,6 +318,23 @@ set search_path = public
 stable
 as $$
   select coalesce(public.current_user_role() = any(allowed), false)
+$$;
+
+create or replace function public.can_read_order(order_key text)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[])
+    or exists (
+      select 1
+      from public.order_stations os
+      where os.order_id = order_key
+        and os.station_id = any(public.current_user_station_ids())
+    )
 $$;
 
 alter table public.app_state enable row level security;
@@ -331,7 +409,7 @@ create policy "station catalog managers write" on public.station_catalog
 
 create policy "orders read production roles" on public.orders
   for select to authenticated
-  using (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));
+  using (public.can_read_order(id));
 
 create policy "orders create managers" on public.orders
   for insert to authenticated
@@ -347,18 +425,27 @@ create policy "orders delete production managers" on public.orders
   using (public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[]));
 
 create policy "order child read" on public.order_documents
-  for select to authenticated using (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));
+  for select to authenticated using (public.can_read_order(order_id));
 create policy "order child write managers" on public.order_documents
   for all to authenticated
   using (public.has_role(array['dispatcher','management','admin']::public.ezop_role[]))
   with check (public.has_role(array['dispatcher','management','admin']::public.ezop_role[]));
 
 create policy "station progress read" on public.order_stations
-  for select to authenticated using (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));
+  for select to authenticated using (
+    public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[])
+    or station_id = any(public.current_user_station_ids())
+  );
 create policy "station progress update production" on public.order_stations
   for update to authenticated
-  using (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]))
-  with check (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));
+  using (
+    public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[])
+    or (public.current_user_role() = 'operator'::public.ezop_role and station_id = any(public.current_user_station_ids()))
+  )
+  with check (
+    public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[])
+    or (public.current_user_role() = 'operator'::public.ezop_role and station_id = any(public.current_user_station_ids()))
+  );
 create policy "station progress managers insert" on public.order_stations
   for insert to authenticated
   with check (public.has_role(array['dispatcher','management','admin']::public.ezop_role[]));
@@ -367,15 +454,21 @@ create policy "station progress managers delete" on public.order_stations
   using (public.has_role(array['dispatcher','management','admin']::public.ezop_role[]));
 
 create policy "quantity events read" on public.station_quantity_events
-  for select to authenticated using (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));
+  for select to authenticated using (
+    public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[])
+    or station_id = any(public.current_user_station_ids())
+  );
 create policy "quantity events insert" on public.station_quantity_events
-  for insert to authenticated with check (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));
+  for insert to authenticated with check (
+    public.has_role(array['tpv','dispatcher','management','admin']::public.ezop_role[])
+    or (public.current_user_role() = 'operator'::public.ezop_role and station_id = any(public.current_user_station_ids()))
+  );
 
 create policy "notes read" on public.production_notes
   for select to authenticated using (
     target_scope = 'all'
-    or target_roles is null
-    or public.current_user_role() = any(target_roles)
+    or (target_roles is not null and public.current_user_role() = any(target_roles))
+    or (target_station_ids is not null and target_station_ids && public.current_user_station_ids())
     or author_id = auth.uid()
   );
 create policy "notes insert production" on public.production_notes

@@ -7,13 +7,13 @@ export const roleLabels = {
 };
 
 export const users = [
-  { id:'u1', login:'admin',  role:'admin',      name:'Administrátor',    avatar:'🔧', color:'#ef4444' },
-  { id:'u2', login:'mistr',  role:'dispatcher', name:'Jan Novák',        avatar:'👷', color:'#3b82f6' },
-  { id:'u3', login:'tpv',    role:'tpv',        name:'Petra Svobodová',  avatar:'📐', color:'#a855f7' },
-  { id:'u4', login:'vedeni', role:'management', name:'Karel Dvořák',     avatar:'📊', color:'#22c55e' },
-  { id:'u5', login:'op1',    role:'operator',   name:'Marie Horáčková',  avatar:'⚙️', color:'#6b7280' },
-  { id:'u6', login:'op2',    role:'operator',   name:'Tomáš Procházka',  avatar:'⚙️', color:'#6b7280' },
-  { id:'u7', login:'op3',    role:'operator',   name:'Jana Kučerová',    avatar:'⚙️', color:'#6b7280' },
+  { id:'u1', login:'admin',  role:'admin',      name:'Administrátor',    avatar:'🔧', color:'#ef4444', stationIds: [] },
+  { id:'u2', login:'mistr',  role:'dispatcher', name:'Jan Novák',        avatar:'👷', color:'#3b82f6', stationIds: [] },
+  { id:'u3', login:'tpv',    role:'tpv',        name:'Petra Svobodová',  avatar:'📐', color:'#a855f7', stationIds: [] },
+  { id:'u4', login:'vedeni', role:'management', name:'Karel Dvořák',     avatar:'📊', color:'#22c55e', stationIds: [] },
+  { id:'u5', login:'op1',    role:'operator',   name:'Marie Horáčková',  avatar:'⚙️', color:'#6b7280', stationIds: [1] },
+  { id:'u6', login:'op2',    role:'operator',   name:'Tomáš Procházka',  avatar:'⚙️', color:'#6b7280', stationIds: [2,5,6] },
+  { id:'u7', login:'op3',    role:'operator',   name:'Jana Kučerová',    avatar:'⚙️', color:'#6b7280', stationIds: [3,4,7,8,9] },
 ];
 
 export const appSettings = {

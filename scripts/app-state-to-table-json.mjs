@@ -12,6 +12,7 @@ const source = JSON.parse(await readFile(resolve(inputPath), 'utf8'));
 const state = source.data && source.id === 'main' ? source.data : source;
 
 const rows = {
+  profiles: (state.USERS || []).map(userToRow),
   orders: (state.ORDERS || []).map(orderToRow),
   order_documents: (state.ORDERS || []).flatMap(orderDocumentsToRows),
   order_stations: (state.ORDERS || []).flatMap(orderStationsToRows),
@@ -39,12 +40,26 @@ await writeFile(join(out, 'README.txt'), [
   '',
   'Tyto JSON soubory odpovidaji tabulkam v schema.sql.',
   'V Supabase je lze nahrat pres Table Editor import nebo vlastni seed script.',
+  'Pozor: profiles.json je sablona. Pred importem doplnte user_id z auth.users po vytvoreni uctu v Supabase Auth.',
   '',
   ...Object.entries(rows).map(([name, data]) => `${name}: ${data.length} radku`),
   '',
 ].join('\n'));
 
 console.log(`Hotovo: ${out}`);
+
+function userToRow(user) {
+  return {
+    user_id: null,
+    login: user.login,
+    role: user.role || 'operator',
+    name: user.name || user.login,
+    avatar: user.avatar || '👤',
+    color: user.color || '#6b7280',
+    station_ids: Array.isArray(user.stationIds) ? user.stationIds.map(Number).filter(Boolean) : [],
+    active: true,
+  };
+}
 
 function orderToRow(order) {
   return {
@@ -61,6 +76,14 @@ function orderToRow(order) {
     stencil_number: order.stencilNumber || '',
     purchase_order_number: order.purchaseOrderNumber || null,
     product_photo_data_url: order.productPhotoDataUrl || null,
+    block_active: Boolean(order.blocked?.active),
+    block_category: order.blocked?.category || null,
+    block_reason: order.blocked?.reason || null,
+    blocked_by_name: order.blocked?.byName || null,
+    blocked_at: order.blocked?.at || null,
+    unblock_reason: order.blocked?.resolvedReason || null,
+    unblocked_by_name: order.blocked?.resolvedByName || null,
+    unblocked_at: order.blocked?.resolvedAt || null,
   };
 }
 
@@ -84,6 +107,15 @@ function orderStationsToRows(order) {
     qty_rework: Number(station.qtyRework) || 0,
     qty_scrap: Number(station.qtyScrap) || 0,
     program_name: order.stationPrograms?.[String(station.stId)] || null,
+    worker_user_id: station.workerUserId || null,
+    worker_login: station.workerLogin || null,
+    worker_name: station.workerName || null,
+    worker_role: station.workerRole || null,
+    work_started_at: station.workStartedAt || null,
+    work_paused_at: station.workPausedAt || null,
+    work_pause_reason: station.workPauseReason || null,
+    work_completed_at: station.workCompletedAt || null,
+    work_completed_by_name: station.workCompletedByName || null,
   }));
 }
 
@@ -93,6 +125,7 @@ function noteToRow(note) {
     order_id: note.orderId,
     station_id: Number(note.stationId),
     target_scope: note.targetScope || 'station',
+    target_station_ids: Array.isArray(note.stationIds) ? note.stationIds.map(Number).filter(Boolean) : (note.stationId ? [Number(note.stationId)] : null),
     type: note.type || 'info',
     text: note.text || '',
     author_name: note.author || '',
