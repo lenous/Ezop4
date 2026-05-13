@@ -3130,6 +3130,119 @@ function stationWorkPanelHtml(order, station) {
   </div>`;
 }
 
+function stationIndexInOrder(order, station) {
+  return (order?.stations || []).findIndex(item => item === station || Number(item.stId) === Number(station?.stId));
+}
+
+function stationTaskState(order, station) {
+  const index = stationIndexInOrder(order, station);
+  const available = stationInputQty(order, station, index);
+  const processed = stationProcessedQty(station);
+  const remaining = Math.max(0, available - processed);
+  const blocked = isOrderBlocked(order);
+  const claimedByOther = stationClaimedByOther(station);
+  const claimedByCurrent = stationClaimedByCurrent(station);
+  const canOperate = canOperateStation(station);
+
+  if (blocked) {
+    return { color:'var(--red)', icon:'⛔', label:'Zakázka je blokovaná', action: orderBlockReason(order) || 'Čeká se na odblokování oprávněnou rolí.' };
+  }
+  if (!canOperate) {
+    return { color:'var(--red)', icon:'🚫', label:'Nemáte přístup ke stanovišti', action:'Otevřete své přiřazené stanoviště nebo požádejte mistra/admina.' };
+  }
+  if (claimedByOther) {
+    return { color:'var(--amber)', icon:'👤', label:'Práci má jiný operátor', action:`Převzal ${stationWorkerLabel(station)}. Počkejte nebo požádejte mistra o uvolnění.` };
+  }
+  if (!claimedByCurrent && !isManagerRole()) {
+    return { color:'var(--teal)', icon:'▶', label:'Převzít práci', action:'Nejdřív klikněte na Převzít. Potom půjde zapisovat počty a měnit stav.' };
+  }
+  if (index > 0 && available <= 0) {
+    return { color:'var(--amber)', icon:'⏳', label:'Čeká na předchozí krok', action:'Na toto stanoviště zatím nepřišly kusy z předchozí operace.' };
+  }
+  if (station.status === 'completed') {
+    return { color:'var(--green)', icon:'✅', label:'Stanoviště hotovo', action:'Zkontrolujte poznámky a případně pokračujte na další zakázku ve frontě.' };
+  }
+  if (station.workPausedAt) {
+    return { color:'var(--amber)', icon:'⏸', label:'Práce je pozastavená', action: station.workPauseReason || 'Obnovte práci, až bude možné pokračovat.' };
+  }
+  if (remaining <= 0 && available > 0) {
+    return { color:'var(--green)', icon:'✅', label:'Počty jsou kompletní', action:'Uložte počty a dokončete stanoviště, pokud je operace skutečně hotová.' };
+  }
+  if (processed > 0) {
+    return { color:'var(--blue)', icon:'◐', label:'Rozpracováno', action:`Zbývá zpracovat ${remaining} ks. Doplňte OK/Oprava/Zmetek a uložte počty.` };
+  }
+  return { color:'var(--teal)', icon:'▶', label:'Začít operaci', action:'Zkontrolujte poznámky, zadejte počty OK/Oprava/Zmetek a průběžně ukládejte.' };
+}
+
+function compactStationNoteHtml(note) {
+  const type = NOTE_TYPES[note.type] || NOTE_TYPES.other;
+  const flags = [
+    noteIsPrivate(note) ? '🔒 soukromá' : '',
+    note.productSticky ? '📌 k výrobku' : '',
+    note.inheritedProductNote ? '↻ z minulé zakázky' : '',
+  ].filter(Boolean).join(' · ');
+  return `<div style="background:rgba(255,255,255,.04);border-left:3px solid ${type.color};border-radius:8px;padding:8px 10px;margin-bottom:7px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <span style="font-size:10px;font-weight:900;color:${type.color}">${type.icon} ${type.label}</span>
+      <span style="font-size:10px;color:var(--text3)">${escapeHtml(note.author || '')}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text);line-height:1.35">${escapeHtml(note.text || '')}</div>
+    ${flags ? `<div style="font-size:10px;color:var(--text2);margin-top:4px">${escapeHtml(flags)}</div>` : ''}
+  </div>`;
+}
+
+function operatorStationTaskPanelHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const available = stationInputQty(order, station, index);
+  const processed = stationProcessedQty(station);
+  const remaining = Math.max(0, available - processed);
+  const notes = stationNotes(order.id, station.stId).slice(0, 3);
+  const nextStation = (order.stations || [])[index + 1];
+  const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  const noteCount = stationNotes(order.id, station.stId).length;
+
+  return `<div class="card" style="border-left:5px solid ${state.color};background:linear-gradient(135deg,rgba(34,184,158,.10),rgba(15,23,42,.02))">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;color:var(--text2);font-weight:900;text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Aktuální úkol operátora</div>
+        <div style="font-size:21px;font-weight:900;color:var(--text);line-height:1.15">${state.icon} ${escapeHtml(state.label)}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-top:5px">${escapeHtml(state.action)}</div>
+      </div>
+      <span class="badge" style="background:${state.color}22;color:${state.color};white-space:nowrap">${stInfo?.icon || '🔧'} ${escapeHtml(stInfo?.name || 'Stanoviště')}</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:var(--gold)">${available}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">${index > 0 ? 'Přišlo' : 'Objednáno'}</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:var(--green)">${positiveQty(station.qtyOk)}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">OK</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:${remaining ? 'var(--amber)' : 'var(--green)'}">${remaining}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Zbývá</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:${notes.length ? '12px' : '0'}">
+      <span style="font-size:11px;color:var(--text2)">Další krok:</span>
+      <span class="badge" style="background:rgba(59,130,246,.14);color:var(--blue)">
+        ${nextInfo ? `${nextInfo.icon} ${escapeHtml(nextInfo.name)}` : '🏁 poslední stanoviště'}
+      </span>
+      <span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">📝 ${noteCount} pozn.</span>
+      ${station.qtyScrap ? `<span class="badge" style="background:rgba(239,68,68,.14);color:var(--red)">Zmetek ${positiveQty(station.qtyScrap)}</span>` : ''}
+    </div>
+
+    ${notes.length ? `
+      <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Poslední důležité poznámky</div>
+      ${notes.map(compactStationNoteHtml).join('')}
+    ` : ''}
+  </div>`;
+}
+
 function renderStationDetail(stInfo) {
   const s = selectedStation;
   const statusMeta = stationStatusMeta(s.status);
@@ -3151,6 +3264,7 @@ function renderStationDetail(stInfo) {
       <span class="badge ${statusMeta.badge}" style="margin-left:auto">${statusMeta.label}</span>
     </div>
 
+    ${operatorStationTaskPanelHtml(selectedOrder, selectedStation, stInfo)}
     ${orderBlockCardHtml(selectedOrder)}
     ${stationWorkPanelHtml(selectedOrder, selectedStation)}
 
