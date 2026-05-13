@@ -49,7 +49,7 @@ function localState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
     USERS: userProfilesForStorage(),
-    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY,
+    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE,
     securityVersion: SECURITY_VERSION,
   };
 }
@@ -57,7 +57,7 @@ function localState() {
 function cloudState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
-    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY,
+    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE,
     securityVersion: SECURITY_VERSION,
     securityNote: 'Cloud state intentionally excludes user profiles, credentials and login logs.',
   };
@@ -75,6 +75,7 @@ function applyState(s, options = {}) {
   if (options.includeUsers && Array.isArray(s.USERS) && s.USERS.length) mergeUserProfiles(s.USERS);
   if (options.includeLogs && Array.isArray(s.LOGIN_LOGS)) LOGIN_LOGS = s.LOGIN_LOGS;
   if (s.PRODUCT_MEMORY && typeof s.PRODUCT_MEMORY === 'object') PRODUCT_MEMORY = s.PRODUCT_MEMORY;
+  if (s.USER_WORKSPACE && typeof s.USER_WORKSPACE === 'object') USER_WORKSPACE = s.USER_WORKSPACE;
   if (s.APP_SETTINGS) APP_SETTINGS = { ...APP_SETTINGS, ...s.APP_SETTINGS };
   if (s.NEXT_ORDER_CODE) NEXT_ORDER_CODE = s.NEXT_ORDER_CODE;
   normalizeAppData();
@@ -153,6 +154,7 @@ const DEFAULT_DEMO_PASSWORD = '1234';
 const USER_CREDENTIALS_KEY = 'vyrobais-creds-v2';
 
 let USER_PASSWORDS = loadUserPasswords();
+let USER_WORKSPACE = {};
 
 function normalizeLogin(login) {
   return String(login || '').trim().toLowerCase();
@@ -766,7 +768,8 @@ function getNavItems() {
     { id:'issues',    label:'Problémy' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
   ];
   if (can('app_settings')) items.push({ id:'admin', label:'Správa',   icon:'⚙️' });
-  items.push({ id:'profile', label:'Profil', icon:'👤' });
+  items.push({ id:'workspace', label:'Můj prostor', icon:'📒' });
+  items.push({ id:'profile',   label:'Profil',      icon:'👤' });
   return items;
 }
 
@@ -810,6 +813,7 @@ function navigateTo(page) {
     issues:    renderIssues,
     kpi:       renderKpi,
     admin:     renderAdmin,
+    workspace: renderWorkspace,
     profile:   renderProfile,
   };
   renderers[page]?.();
@@ -3589,6 +3593,318 @@ function renderAdminOrders() {
       <button class="btn btn-ghost btn-sm" onclick="editOrderModal('${o.id}')">✏️</button>
       ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${o.id}')">🗑️</button>` : ''}
     </div>`).join('')}`;
+}
+
+// ── MŮJ PROSTOR ──────────────────────────────────────
+let workspaceTab = 'notes';
+
+function myWorkspace() {
+  const uid = currentUser?.id;
+  if (!uid) return { notes: [], myBoards: [], attendance: [] };
+  if (!USER_WORKSPACE[uid]) {
+    USER_WORKSPACE[uid] = { notes: [], myBoards: [], attendance: [] };
+  }
+  const ws = USER_WORKSPACE[uid];
+  if (!Array.isArray(ws.notes))      ws.notes      = [];
+  if (!Array.isArray(ws.myBoards))   ws.myBoards   = [];
+  if (!Array.isArray(ws.attendance)) ws.attendance = [];
+  return ws;
+}
+
+function renderWorkspace() {
+  const tabs = [
+    { id: 'notes',      label: '📝 Poznámky'  },
+    { id: 'boards',     label: '🔢 Moje kusy' },
+    { id: 'attendance', label: '🕐 Docházka'  },
+  ];
+  document.getElementById('page-workspace').innerHTML = `
+    <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">📒 Můj prostor</div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      ${tabs.map(t => `
+        <button class="btn ${workspaceTab === t.id ? 'btn-primary' : 'btn-ghost'} btn-sm"
+          style="flex:1;justify-content:center;font-size:12px"
+          onclick="switchWorkspaceTab('${t.id}')">${t.label}</button>
+      `).join('')}
+    </div>
+    <div id="workspace-content"></div>
+  `;
+  renderWorkspaceContent();
+}
+
+function switchWorkspaceTab(tab) {
+  workspaceTab = tab;
+  renderWorkspace();
+}
+
+function renderWorkspaceContent() {
+  const el = document.getElementById('workspace-content');
+  if (!el) return;
+  if      (workspaceTab === 'notes')      el.innerHTML = renderWorkspaceNotes();
+  else if (workspaceTab === 'boards')     el.innerHTML = renderWorkspaceBoards();
+  else if (workspaceTab === 'attendance') el.innerHTML = renderWorkspaceAttendance();
+}
+
+// ── POZNÁMKY ──────────────────────────────────────────
+const NOTE_CATEGORIES = { general: 'Obecné', product: 'Výrobek', other: 'Jiné' };
+
+function renderWorkspaceNotes() {
+  const notes = [...myWorkspace().notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const catColors = { general: 'var(--blue,#60a5fa)', product: 'var(--gold)', other: 'var(--text2)' };
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="openAddNoteModal()">＋ Nová poznámka</button>
+    </div>
+    ${notes.length === 0 ? `
+      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
+        <div style="font-size:32px;margin-bottom:8px">📝</div>
+        <div>Zatím žádné poznámky. Přidej svou první!</div>
+      </div>` : notes.map(n => `
+      <div class="card" style="margin-bottom:10px;position:relative">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:${catColors[n.category] || 'var(--text2)'};text-transform:uppercase;letter-spacing:.5px">
+            ${NOTE_CATEGORIES[n.category] || n.category}
+          </span>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px;color:var(--red)"
+            onclick="deleteWorkspaceNote('${escapeHtml(n.id)}')">🗑️</button>
+        </div>
+        <div style="font-size:14px;color:var(--text);white-space:pre-wrap;margin:6px 0 8px">${escapeHtml(n.text)}</div>
+        <div style="font-size:11px;color:var(--text3)">${formatDateTime(n.createdAt)}</div>
+      </div>`).join('')}
+  `;
+}
+
+function openAddNoteModal() {
+  openModal('📝 Nová poznámka', `
+    <div class="input-group">
+      <div class="input-label">Kategorie</div>
+      <select class="input" id="note-cat">
+        ${Object.entries(NOTE_CATEGORIES).map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
+      </select>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Text poznámky</div>
+      <textarea class="input" id="note-text" rows="5" placeholder="Napiš cokoliv…"
+        style="resize:vertical;min-height:100px"></textarea>
+    </div>
+  `, [
+    { label: '✕ Zrušit', cls: 'btn-ghost', action: 'closeModal()' },
+    { label: '✔ Uložit', cls: 'btn-primary', action: 'saveWorkspaceNote()' },
+  ]);
+}
+
+function saveWorkspaceNote() {
+  const text = document.getElementById('note-text')?.value?.trim();
+  if (!text) { showToast('⚠️ Poznámka je prázdná'); return; }
+  const cat  = document.getElementById('note-cat')?.value || 'general';
+  const ws   = myWorkspace();
+  ws.notes.push({ id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), text, category: cat, createdAt: new Date().toISOString() });
+  saveState();
+  closeModal();
+  showToast('✅ Poznámka uložena');
+  renderWorkspaceContent();
+}
+
+function deleteWorkspaceNote(id) {
+  const ws = myWorkspace();
+  ws.notes = ws.notes.filter(n => n.id !== id);
+  saveState();
+  showToast('🗑️ Poznámka smazána');
+  renderWorkspaceContent();
+}
+
+// ── MOJE KUSY ─────────────────────────────────────────
+function renderWorkspaceBoards() {
+  const boards = [...myWorkspace().myBoards].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn btn-primary btn-sm" onclick="openAddBoardsModal()">＋ Přidat záznam</button>
+    </div>
+    ${boards.length === 0 ? `
+      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
+        <div style="font-size:32px;margin-bottom:8px">🔢</div>
+        <div>Zatím žádné záznamy o kusech.</div>
+      </div>` : boards.map(b => `
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${escapeHtml(b.orderNumber)} · ${escapeHtml(b.orderName)}</div>
+            <div style="font-size:11px;color:var(--text3)">${formatDateTime(b.recordedAt)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px;color:var(--red)"
+            onclick="deleteWorkspaceBoard('${escapeHtml(b.id)}')">🗑️</button>
+        </div>
+        <div style="display:flex;gap:14px;font-size:12px;margin-bottom:${b.note ? 6 : 0}px">
+          <span style="color:var(--green)">✅ OK: <b>${b.qtyOk}</b></span>
+          <span style="color:var(--amber)">🔧 Oprava: <b>${b.qtyRework}</b></span>
+          <span style="color:var(--red)">❌ Zmetek: <b>${b.qtyScrap}</b></span>
+        </div>
+        ${b.note ? `<div style="font-size:12px;color:var(--text2);white-space:pre-wrap">${escapeHtml(b.note)}</div>` : ''}
+      </div>`).join('')}
+  `;
+}
+
+function openAddBoardsModal() {
+  const orderOpts = ORDERS.filter(o => o.stations?.length > 0).map(o =>
+    `<option value="${escapeHtml(o.id)}">${escapeHtml(o.number)} · ${escapeHtml(o.name)}</option>`
+  ).join('');
+  if (!orderOpts) { showToast('⚠️ Žádné aktivní zakázky'); return; }
+  openModal('🔢 Moje kusy', `
+    <div class="input-group">
+      <div class="input-label">Zakázka</div>
+      <select class="input" id="board-order">${orderOpts}</select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="input-group">
+        <div class="input-label">✅ OK</div>
+        <input class="input" id="board-ok" type="number" min="0" value="0">
+      </div>
+      <div class="input-group">
+        <div class="input-label">🔧 Oprava</div>
+        <input class="input" id="board-rework" type="number" min="0" value="0">
+      </div>
+      <div class="input-group">
+        <div class="input-label">❌ Zmetek</div>
+        <input class="input" id="board-scrap" type="number" min="0" value="0">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Poznámka (volitelné)</div>
+      <input class="input" id="board-note" placeholder="např. ranní směna, stroj č.2…">
+    </div>
+  `, [
+    { label: '✕ Zrušit',  cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '✔ Uložit',  cls: 'btn-primary',  action: 'saveWorkspaceBoard()' },
+  ]);
+}
+
+function saveWorkspaceBoard() {
+  const orderId = document.getElementById('board-order')?.value;
+  const order   = ORDERS.find(o => o.id === orderId);
+  if (!order) { showToast('⚠️ Vyberte zakázku'); return; }
+  const qtyOk    = Math.max(0, parseInt(document.getElementById('board-ok')?.value)    || 0);
+  const qtyRework = Math.max(0, parseInt(document.getElementById('board-rework')?.value) || 0);
+  const qtyScrap  = Math.max(0, parseInt(document.getElementById('board-scrap')?.value)  || 0);
+  if (qtyOk + qtyRework + qtyScrap === 0) { showToast('⚠️ Zadej alespoň jeden nenulový počet'); return; }
+  const note = document.getElementById('board-note')?.value?.trim() || '';
+  const ws   = myWorkspace();
+  ws.myBoards.push({
+    id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), orderId, orderNumber: order.number, orderName: order.name,
+    qtyOk, qtyRework, qtyScrap, note, recordedAt: new Date().toISOString(),
+  });
+  saveState();
+  closeModal();
+  showToast('✅ Záznam uložen');
+  renderWorkspaceContent();
+}
+
+function deleteWorkspaceBoard(id) {
+  const ws = myWorkspace();
+  ws.myBoards = ws.myBoards.filter(b => b.id !== id);
+  saveState();
+  showToast('🗑️ Záznam smazán');
+  renderWorkspaceContent();
+}
+
+// ── DOCHÁZKA ──────────────────────────────────────────
+function todayDateStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function todayAttendance() {
+  const today = todayDateStr();
+  return myWorkspace().attendance.find(a => a.date === today) || null;
+}
+
+function renderWorkspaceAttendance() {
+  const today   = todayDateStr();
+  const todayRec = todayAttendance();
+  const past    = [...myWorkspace().attendance]
+    .filter(a => a.date !== today)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 30);
+
+  const checkedIn  = todayRec && todayRec.checkIn && !todayRec.checkOut;
+  const checkedOut = todayRec && todayRec.checkOut;
+
+  let todayBlock;
+  if (!todayRec || !todayRec.checkIn) {
+    todayBlock = `
+      <div style="text-align:center">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Dnes jsi se ještě nepřihlásil/a</div>
+        <button class="btn btn-primary" style="width:100%;font-size:15px;padding:14px"
+          onclick="workspaceCheckIn()">🟢 Příchod – zaznamenat</button>
+      </div>`;
+  } else if (checkedIn) {
+    todayBlock = `
+      <div style="text-align:center">
+        <div style="font-size:13px;color:var(--green);font-weight:700;margin-bottom:4px">✅ Dnes přihlášen/a</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Příchod: <b>${formatTime(todayRec.checkIn)}</b></div>
+        <button class="btn btn-danger" style="width:100%;font-size:15px;padding:14px"
+          onclick="workspaceCheckOut()">🔴 Odchod – zaznamenat</button>
+      </div>`;
+  } else {
+    const mins = Math.round((new Date(todayRec.checkOut) - new Date(todayRec.checkIn)) / 60000);
+    todayBlock = `
+      <div style="text-align:center">
+        <div style="font-size:13px;color:var(--text2);font-weight:700;margin-bottom:4px">Dnešní směna ukončena</div>
+        <div style="font-size:12px;color:var(--text2)">
+          Příchod: <b>${formatTime(todayRec.checkIn)}</b> · Odchod: <b>${formatTime(todayRec.checkOut)}</b>
+          · Odpracováno: <b>${Math.floor(mins/60)}h ${mins%60}m</b>
+        </div>
+      </div>`;
+  }
+
+  const historyRows = past.map(a => {
+    const mins = a.checkIn && a.checkOut
+      ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000)
+      : null;
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;color:var(--text)">${formatDate(a.date)}</span>
+        <span style="font-size:12px;color:var(--text2)">
+          ${a.checkIn ? formatTime(a.checkIn) : '–'} → ${a.checkOut ? formatTime(a.checkOut) : '⏳'}
+          ${mins !== null ? `<b style="color:var(--text);margin-left:6px">${Math.floor(mins/60)}h ${mins%60}m</b>` : ''}
+        </span>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">📅 Dnes – ${formatDate(today)}</div>
+      ${todayBlock}
+    </div>
+    ${past.length > 0 ? `
+    <div class="card">
+      <div class="card-title">📋 Posledních 30 dní</div>
+      ${historyRows}
+    </div>` : ''}
+  `;
+}
+
+function workspaceCheckIn() {
+  const ws    = myWorkspace();
+  const today = todayDateStr();
+  if (ws.attendance.find(a => a.date === today)) return;
+  ws.attendance.push({ id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), date: today, checkIn: new Date().toISOString(), checkOut: null });
+  saveState();
+  showToast('🟢 Příchod zaznamenán');
+  renderWorkspaceContent();
+}
+
+function workspaceCheckOut() {
+  const ws  = myWorkspace();
+  const rec = ws.attendance.find(a => a.date === todayDateStr());
+  if (!rec || rec.checkOut) return;
+  rec.checkOut = new Date().toISOString();
+  saveState();
+  showToast('🔴 Odchod zaznamenán');
+  renderWorkspaceContent();
+}
+
+// ── HELPERS (workspace) ───────────────────────────────
+function formatTime(iso) {
+  if (!iso) return '–';
+  return new Date(iso).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
 }
 
 // ── PROFILE ───────────────────────────────────────────
