@@ -62,6 +62,7 @@ export interface OrderStationRow {
   qty_ok: number;
   qty_rework: number;
   qty_scrap: number;
+  queue_rank: number | null;
   program_name: string | null;
   worker_user_id: string | null;
   worker_login: string | null;
@@ -200,6 +201,7 @@ function orderStationsToRows(order: Order): OrderStationRow[] {
     qty_ok: station.qtyOk || 0,
     qty_rework: station.qtyRework || 0,
     qty_scrap: station.qtyScrap || 0,
+    queue_rank: station.queueRank || null,
     program_name: order.stationPrograms?.[String(station.stId)] || null,
     worker_user_id: station.workerUserId || null,
     worker_login: station.workerLogin || null,

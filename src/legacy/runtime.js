@@ -533,10 +533,114 @@ function workQueueItems(stationId = '') {
   });
   return rows.sort((a, b) =>
     a.queueState.rank - b.queueState.rank ||
+    queueRankValue(a.station) - queueRankValue(b.station) ||
     priorityRank(a.order.priority) - priorityRank(b.order.priority) ||
     dueTime(a.order) - dueTime(b.order) ||
     String(a.order.number).localeCompare(String(b.order.number))
   );
+}
+
+function queueRankValue(station) {
+  const rank = Number(station?.queueRank) || 0;
+  return rank > 0 ? rank : Number.MAX_SAFE_INTEGER;
+}
+
+function orderStationById(orderId, stId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  const station = order?.stations?.find(s => Number(s.stId) === Number(stId));
+  return { order, station };
+}
+
+function applyStationQueueOrder(stId, orderIds) {
+  const rankByOrder = new Map(orderIds.map((orderId, index) => [String(orderId), index + 1]));
+  ORDERS.forEach(order => {
+    const station = order.stations?.find(s => Number(s.stId) === Number(stId));
+    if (!station) return;
+    const rank = rankByOrder.get(String(order.id));
+    if (rank) station.queueRank = rank;
+  });
+}
+
+function saveStationQueueOrder(stId, orderIds, summary = 'pořadí fronty upraveno') {
+  if (!can('manage_order_stations')) {
+    showToast('🚫 Pořadí fronty může měnit jen mistr, vedení nebo admin.');
+    return false;
+  }
+  const before = workQueueItems(stId).map(item => ({
+    orderId: item.order.id,
+    orderNumber: item.order.number,
+    queueRank: queueRankValue(item.station),
+  }));
+  applyStationQueueOrder(stId, orderIds);
+  const after = workQueueItems(stId).map(item => ({
+    orderId: item.order.id,
+    orderNumber: item.order.number,
+    queueRank: queueRankValue(item.station),
+  }));
+  const stInfo = STATIONS.find(st => Number(st.id) === Number(stId));
+  writeAudit(
+    'queue.reordered',
+    'station_queue',
+    String(stId),
+    `${stInfo?.name || stId}: ${summary}`,
+    before,
+    after,
+  );
+  saveState();
+  renderWorkQueue();
+  showToast('✅ Pořadí fronty uloženo', { skipSave: true });
+  return true;
+}
+
+function moveQueueItem(orderId, stId, direction) {
+  const stationId = Number(stId);
+  const items = workQueueItems(stationId).filter(item => Number(item.station.stId) === stationId);
+  const ids = items.map(item => item.order.id);
+  const index = ids.indexOf(orderId);
+  const target = index + Number(direction);
+  if (index < 0 || target < 0 || target >= ids.length) return;
+  const [id] = ids.splice(index, 1);
+  ids.splice(target, 0, id);
+  saveStationQueueOrder(stationId, ids, `zakázka ${items[index]?.order.number || orderId} posunuta ve frontě`);
+}
+
+let queueDragSource = null;
+
+function queueDragStart(event, orderId, stId) {
+  if (!can('manage_order_stations') || !queueStationFilter) return;
+  queueDragSource = { orderId, stId: Number(stId) };
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', `${orderId}:${stId}`);
+}
+
+function queueDragOver(event) {
+  if (!queueDragSource || !queueStationFilter) return;
+  event.preventDefault();
+}
+
+function queueDrop(event, targetOrderId, targetStId) {
+  event.preventDefault();
+  if (!queueDragSource || !can('manage_order_stations') || !queueStationFilter) return;
+  const stationId = Number(targetStId);
+  if (Number(queueDragSource.stId) !== stationId) {
+    showToast('⚠️ Pořadí lze měnit jen ve stejné frontě stanoviště.');
+    queueDragSource = null;
+    return;
+  }
+  const ids = workQueueItems(stationId)
+    .filter(item => Number(item.station.stId) === stationId)
+    .map(item => item.order.id);
+  const from = ids.indexOf(queueDragSource.orderId);
+  const to = ids.indexOf(targetOrderId);
+  if (from < 0 || to < 0 || from === to) {
+    queueDragSource = null;
+    return;
+  }
+  const [id] = ids.splice(from, 1);
+  ids.splice(to, 0, id);
+  const sourceNumber = ORDERS.find(o => o.id === queueDragSource.orderId)?.number || queueDragSource.orderId;
+  saveStationQueueOrder(stationId, ids, `zakázka ${sourceNumber} přesunuta přetažením`);
+  queueDragSource = null;
 }
 
 function stationWorkerLabel(station) {
@@ -1545,6 +1649,7 @@ function renderWorkQueue() {
       return `${o.number} ${o.name} ${o.customer || ''} ${st?.name || ''}`.toLowerCase().includes(q);
     })
     : allItems;
+  const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter);
 
   document.getElementById('page-queue').innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px;flex-wrap:wrap">
@@ -1572,8 +1677,20 @@ function renderWorkQueue() {
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:8px">
         ${list.length} ${list.length===1?'položka':list.length<5?'položky':'položek'} ve frontě
+        ${manualPlanning ? ` · ruční pořadí zapnuto pro vybrané stanoviště` : ''}
       </div>
     </div>
+
+    ${can('manage_order_stations') ? `
+      <div class="card" style="border-left:4px solid ${manualPlanning ? 'var(--teal)' : 'var(--amber)'};padding:10px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🧩 Plánování mistra</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.45">
+          ${manualPlanning
+            ? 'Pořadí ve frontě lze měnit přetažením karty nebo tlačítky ↑ ↓. Ukládá se ke stanovišti zakázky.'
+            : 'Vyberte konkrétní stanoviště. Potom půjde ručně seřadit frontu dané linky.'}
+        </div>
+      </div>
+    ` : ''}
 
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-val" style="color:var(--red)">${allItems.filter(i=>isOrderBlocked(i.order)).length}</div><div class="stat-lbl">Blokace</div></div>
@@ -1582,17 +1699,19 @@ function renderWorkQueue() {
     </div>
 
     <div id="queue-list">
-      ${list.length ? list.map(queueCardHtml).join('') : `<div class="card" style="text-align:center;color:var(--text2);padding:28px">Fronta je prázdná.</div>`}
+      ${list.length ? list.map((item, index) => queueCardHtml(item, index, list.length)).join('') : `<div class="card" style="text-align:center;color:var(--text2);padding:28px">Fronta je prázdná.</div>`}
     </div>
   `;
 }
 
-function queueCardHtml(item) {
+function queueCardHtml(item, position = 0, total = 0) {
   const { order, station, index, stInfo, queueState } = item;
   const meta = stationStatusMeta(station.status);
   const link = currentOrderLink(order, station.stId);
   const blockReason = orderBlockReason(order);
-  return `<div class="card" style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''}">
+  const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter) && Number(queueStationFilter) === Number(station.stId);
+  return `<div class="card" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
+    style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''};${manualPlanning?'cursor:grab':''}">
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div style="font-size:26px;line-height:1">${stInfo?.icon || '🔧'}</div>
       <div style="flex:1;min-width:0">
@@ -1602,6 +1721,7 @@ function queueCardHtml(item) {
           ${orderBlockedBadgeHtml(order)}
           ${stationWorkBadgeHtml(station)}
           <span class="badge ${meta.badge}">${meta.label}</span>
+          ${queueRankValue(station) < Number.MAX_SAFE_INTEGER ? `<span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">#${queueRankValue(station)}</span>` : ''}
         </div>
         <div style="font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(order.name)}</div>
         <div style="font-size:11px;color:var(--teal2);margin:2px 0 6px">${escapeHtml(order.customer || '')} · ${escapeHtml(stInfo?.name || 'Stanoviště')} · ${escapeHtml(queueState.label)}</div>
@@ -1609,6 +1729,10 @@ function queueCardHtml(item) {
         ${stationCardQtyHtml(order, station, index)}
         ${blockReason ? `<div style="font-size:11px;color:var(--red);margin-top:6px">⛔ ${escapeHtml(blockReason)}</div>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          ${manualPlanning ? `
+            <button class="btn btn-ghost btn-sm" onclick="moveQueueItem('${order.id}', '${station.stId}', -1)" ${position === 0 ? 'disabled style="opacity:.45"' : ''}>↑</button>
+            <button class="btn btn-ghost btn-sm" onclick="moveQueueItem('${order.id}', '${station.stId}', 1)" ${position >= total - 1 ? 'disabled style="opacity:.45"' : ''}>↓</button>
+          ` : ''}
           ${stationWorkActionButtons(order, station)}
           <button class="btn btn-primary btn-sm" onclick="openStation('${order.id}', '${station.stId}')">Otevřít stanoviště</button>
           <button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Detail zakázky</button>
@@ -5733,6 +5857,7 @@ function normalizeAppData() {
       st.qtyRework = positiveQty(st.qtyRework);
       st.qtyScrap = positiveQty(st.qtyScrap);
       st.qtyReceived = positiveQty(st.qtyReceived);
+      st.queueRank = positiveQty(st.queueRank);
       st.workerUserId = String(st.workerUserId || '');
       st.workerLogin = String(st.workerLogin || '');
       st.workerName = String(st.workerName || '');

@@ -21,7 +21,7 @@ Z aplikace postupne udelat pouzitelny vyrobni system pro dilnu i kancelar, bez k
 ## Etapa 3 - mistr a planovani
 
 - Fronty pracovist podle priority, terminu a blokaci.
-- Drag/drop zmena poradi v ramci fronty.
+- Drag/drop zmena poradi v ramci fronty. Hotovo: mistr/admin muze menit poradi fronty vybraneho stanoviste pretazenim nebo tlacitky nahoru/dolu.
 - Zobrazeni pretizenych stanovist a zakazek po terminu.
 - Rychly prehled, co stoji na materialu, dokumentaci nebo programu.
 

@@ -107,6 +107,7 @@ function orderStationsToRows(order) {
     qty_ok: Number(station.qtyOk) || 0,
     qty_rework: Number(station.qtyRework) || 0,
     qty_scrap: Number(station.qtyScrap) || 0,
+    queue_rank: Number(station.queueRank) || null,
     program_name: order.stationPrograms?.[String(station.stId)] || null,
     worker_user_id: station.workerUserId || null,
     worker_login: station.workerLogin || null,

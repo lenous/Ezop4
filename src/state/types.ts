@@ -23,6 +23,7 @@ export interface StationProgress {
   qtyRework: number;
   qtyScrap: number;
   qtyReceived: number;
+  queueRank?: number;
   workerUserId?: string;
   workerLogin?: string;
   workerName?: string;

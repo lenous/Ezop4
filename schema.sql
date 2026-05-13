@@ -105,6 +105,7 @@ create table if not exists public.order_stations (
   qty_ok integer not null default 0 check (qty_ok >= 0),
   qty_rework integer not null default 0 check (qty_rework >= 0),
   qty_scrap integer not null default 0 check (qty_scrap >= 0),
+  queue_rank integer check (queue_rank is null or queue_rank > 0),
   program_name text,
   worker_user_id uuid references auth.users(id),
   worker_login text,
@@ -266,6 +267,7 @@ alter table public.order_stations add column if not exists work_pause_reason tex
 alter table public.order_stations add column if not exists work_completed_at timestamptz;
 alter table public.order_stations add column if not exists work_completed_by uuid references auth.users(id);
 alter table public.order_stations add column if not exists work_completed_by_name text;
+alter table public.order_stations add column if not exists queue_rank integer;
 
 alter table public.production_notes add column if not exists target_station_ids integer[];
 alter table public.production_notes add column if not exists visibility text not null default 'public';
