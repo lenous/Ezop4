@@ -780,7 +780,9 @@ function cleanupAppMemory(options = {}) {
 
   LOGIN_LOGS = LOGIN_LOGS.slice(0, 80);
   PRODUCT_MEMORY = Object.fromEntries(Object.entries(PRODUCT_MEMORY || {}).filter(([, memory]) =>
-    memory?.photoDataUrl || Object.keys(memory?.stationPrograms || {}).length > 0
+    memory?.photoDataUrl ||
+    Object.keys(memory?.stationPrograms || {}).length > 0 ||
+    (Array.isArray(memory?.reusableNotes) && memory.reusableNotes.length > 0)
   ));
 
   if (options.clearLoginGuard) {
@@ -3089,17 +3091,91 @@ const NOTE_TYPES = {
   other:    { label:'Ostatní',           icon:'📝', color:'#999' },
 };
 
+function normalizeNoteVisibility(value) {
+  return value === 'private' ? 'private' : 'public';
+}
+
+function noteVisibilityLabel(note) {
+  return normalizeNoteVisibility(note?.visibility) === 'private' ? '🔒 Soukromá' : '🌐 Veřejná';
+}
+
+function noteIsPrivate(note) {
+  return normalizeNoteVisibility(note?.visibility) === 'private';
+}
+
+function normalizeProductionNote(note) {
+  if (!note || typeof note !== 'object') return null;
+  note.visibility = normalizeNoteVisibility(note.visibility);
+  note.stationIds = Array.isArray(note.stationIds)
+    ? [...new Set(note.stationIds.map(Number).filter(Boolean))]
+    : undefined;
+  note.productSticky = Boolean(note.productSticky);
+  note.productKey ||= '';
+  note.productMemoryNoteId ||= '';
+  return note;
+}
+
+function productMemoryKeyForOrder(order) {
+  if (!order) return '';
+  const key = productKey(order.customer, order.name);
+  return key.replace('::', '') ? key : '';
+}
+
+function productMemoryEntryForOrder(order) {
+  const key = productMemoryKeyForOrder(order);
+  return key ? PRODUCT_MEMORY[key] || null : null;
+}
+
+function normalizeReusableProductNote(note) {
+  if (!note || typeof note !== 'object') return null;
+  return normalizeProductionNote({
+    ...note,
+    id: String(note.id || ('pmn' + Date.now())),
+    createdAt: note.createdAt || new Date().toISOString(),
+  });
+}
+
+function productNotesForOrder(order) {
+  const memory = productMemoryEntryForOrder(order);
+  if (!order || !memory || !Array.isArray(memory.reusableNotes)) return [];
+  const key = productMemoryKeyForOrder(order);
+  return memory.reusableNotes
+    .map(normalizeReusableProductNote)
+    .filter(Boolean)
+    .filter(note => note.sourceOrderId !== order.id)
+    .map(note => ({
+      ...note,
+      id: `pm-${note.id}-${order.id}`,
+      orderId: order.id,
+      productKey: key,
+      productSticky: true,
+      inheritedProductNote: true,
+      productMemoryNoteId: note.id,
+    }));
+}
+
+function noteVisibleToCurrentUser(note) {
+  const isAuthor = noteAuthoredByCurrentUser(note);
+  if (noteIsPrivate(note) && !isAuthor) return false;
+  if (Array.isArray(note.targetRoles) && !note.targetRoles.includes(currentUser?.role) && !isAuthor) return false;
+  return true;
+}
+
+function noteMatchesStation(note, stationId) {
+  const targetStationIds = Array.isArray(note.stationIds) ? note.stationIds.map(Number) : [];
+  return note.targetScope === 'all'
+    || targetStationIds.includes(Number(stationId))
+    || Number(note.stationId) === Number(stationId)
+    || Number(note.sourceStationId) === Number(stationId);
+}
+
 function stationNotes(orderId, stationId) {
-  return PROD_NOTES.filter(n => {
-    if (n.orderId !== orderId) return false;
-    const isAuthor = noteAuthoredByCurrentUser(n);
-    const targetStationIds = Array.isArray(n.stationIds) ? n.stationIds.map(Number) : [];
-    if (Array.isArray(n.targetRoles) && !n.targetRoles.includes(currentUser?.role) && !isAuthor) return false;
-    return n.targetScope === 'all'
-      || targetStationIds.includes(Number(stationId))
-      || Number(n.stationId) === Number(stationId)
-      || Number(n.sourceStationId) === Number(stationId);
-  })
+  const order = ORDERS.find(o => o.id === orderId);
+  const directNotes = PROD_NOTES.filter(n => n.orderId === orderId);
+  return [...directNotes, ...productNotesForOrder(order)]
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(n => noteVisibleToCurrentUser(n) && noteMatchesStation(n, stationId))
     .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
@@ -3185,6 +3261,11 @@ function renderStationNotes() {
         <span style="font-size:11px;font-weight:700;color:${t.color}">${t.icon} ${t.label}</span>
         <span style="font-size:10px;color:var(--text3)">${agoTxt}</span>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="badge" style="font-size:9px;background:${noteIsPrivate(n) ? 'rgba(245,158,11,.14)' : 'rgba(34,197,94,.14)'};color:${noteIsPrivate(n) ? 'var(--amber)' : 'var(--green)'}">${noteVisibilityLabel(n)}</span>
+        ${n.productSticky ? `<span class="badge" style="font-size:9px;background:rgba(34,184,158,.14);color:var(--teal2)">📌 K výrobku</span>` : ''}
+        ${n.inheritedProductNote ? `<span class="badge" style="font-size:9px;background:rgba(59,130,246,.14);color:var(--blue)">↻ Z minulé zakázky</span>` : ''}
+      </div>
       ${noteRecipientLabel(n) ? `<div style="font-size:10px;color:var(--text2);margin-bottom:5px">${escapeHtml(noteRecipientLabel(n))}</div>` : ''}
       <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:6px">${escapeHtml(n.text)}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text2)">
@@ -3212,6 +3293,33 @@ function addNoteModal() {
         ${Object.entries(NOTE_TYPES).map(([k,v]) =>
           `<option value="${k}" ${k==='message'?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
       </select>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Viditelnost</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+          <input type="radio" name="an-visibility" value="public" checked>
+          <span>🌐 Veřejná pro adresáty</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+          <input type="radio" name="an-visibility" value="private">
+          <span>🔒 Soukromá jen pro mě</span>
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">
+        Soukromá poznámka se nepošle jako upozornění a uvidí ji jen autor. Veřejná se zobrazí vybraným adresátům.
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label style="display:flex;align-items:flex-start;gap:8px;background:rgba(34,184,158,.10);border:1px solid rgba(34,184,158,.35);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="an-product-sticky" style="margin-top:2px">
+        <span>
+          <b>📌 Uložit k výrobku</b><br>
+          <span style="font-size:11px;color:var(--text2)">Poznámka se automaticky zobrazí i u dalších zakázek stejného zákazníka a výrobku.</span>
+        </span>
+      </label>
     </div>
 
     <div class="input-group">
@@ -3259,11 +3367,45 @@ function toggleNoteAllTargets(checked) {
   });
 }
 
+function storeReusableProductNote(order, note) {
+  const memory = productMemoryForOrder(order);
+  const productKeyValue = productMemoryKeyForOrder(order);
+  if (!memory || !productKeyValue) return null;
+  memory.reusableNotes = Array.isArray(memory.reusableNotes) ? memory.reusableNotes : [];
+  const memoryNote = {
+    id: 'pmn' + Date.now(),
+    sourceNoteId: note.id,
+    sourceOrderId: order.id,
+    sourceOrderNumber: order.number,
+    productKey: productKeyValue,
+    stationId: note.stationId,
+    stationIds: note.stationIds,
+    sourceStationId: note.sourceStationId,
+    targetScope: note.targetScope,
+    visibility: normalizeNoteVisibility(note.visibility),
+    type: note.type,
+    text: note.text,
+    author: note.author,
+    authorUserId: note.authorUserId,
+    authorLogin: note.authorLogin,
+    authorRole: note.authorRole,
+    createdAt: note.createdAt,
+  };
+  memory.reusableNotes.unshift(memoryNote);
+  memory.updatedAt = new Date().toISOString();
+  note.productSticky = true;
+  note.productKey = productKeyValue;
+  note.productMemoryNoteId = memoryNote.id;
+  return memoryNote;
+}
+
 function submitNote() {
   const text = document.getElementById('an-text').value.trim();
   if (!text) { showToast('⚠️ Vyplňte text poznámky'); return; }
   const sourceStationId = selectedStation.stId;
   const targetAll = document.getElementById('an-target-all')?.checked;
+  const visibility = normalizeNoteVisibility(document.querySelector('input[name="an-visibility"]:checked')?.value);
+  const productSticky = Boolean(document.getElementById('an-product-sticky')?.checked);
   const selectedTargetIds = Array.from(document.querySelectorAll('.an-target-station:checked'))
     .map(input => Number(input.value))
     .filter(Boolean);
@@ -3281,6 +3423,8 @@ function submitNote() {
     stationIds: targetStationIds,
     sourceStationId,
     targetScope: targetAll ? 'all' : 'stations',
+    visibility,
+    productSticky: false,
     type: document.getElementById('an-type').value,
     text,
     author: currentUser.name,
@@ -3289,8 +3433,11 @@ function submitNote() {
     authorRole: currentUser.role,
     createdAt: new Date().toISOString(),
   };
+  const memoryNote = productSticky ? storeReusableProductNote(selectedOrder, note) : null;
   PROD_NOTES.unshift(note);
-  const notificationTargets = targetStationIds.filter(id => Number(id) !== Number(sourceStationId));
+  const notificationTargets = visibility === 'public'
+    ? targetStationIds.filter(id => Number(id) !== Number(sourceStationId))
+    : [];
   const notifications = notificationTargets
     .map((stationId, index) => createNoteNotification(note, sourceStationId, stationId, index))
     .filter(Boolean);
@@ -3317,12 +3464,48 @@ function submitNote() {
   const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
   renderStationDetail(stInfo);
   buildNav();
-  showToast(`✅ Poznámka odeslána pro ${noteTargetLabel(note.targetScope, targetStationIds)}`, { skipSave: true });
+  const visibilityText = visibility === 'private' ? 'soukromě uložena' : `odeslána pro ${noteTargetLabel(note.targetScope, targetStationIds)}`;
+  const stickyText = memoryNote ? ' a připnuta k výrobku' : '';
+  showToast(`✅ Poznámka ${visibilityText}${stickyText}`, { skipSave: true });
+}
+
+function removeReusableProductNote(productKeyValue, memoryNoteId) {
+  const memory = PRODUCT_MEMORY?.[productKeyValue];
+  if (!memory || !Array.isArray(memory.reusableNotes) || !memoryNoteId) return null;
+  const before = memory.reusableNotes.length;
+  const removed = memory.reusableNotes.find(note => String(note.id) === String(memoryNoteId)) || null;
+  memory.reusableNotes = memory.reusableNotes.filter(note => String(note.id) !== String(memoryNoteId));
+  if (memory.reusableNotes.length !== before) memory.updatedAt = new Date().toISOString();
+  return removed;
 }
 
 function deleteNote(id) {
   const note = PROD_NOTES.find(n => n.id === id);
+  const inherited = !note && String(id).startsWith('pm-')
+    ? stationNotes(selectedOrder.id, selectedStation.stId).find(n => n.id === id)
+    : null;
+  if (inherited?.inheritedProductNote) {
+    const removed = removeReusableProductNote(inherited.productKey, inherited.productMemoryNoteId);
+    if (removed) {
+      writeAudit(
+        'product_note.deleted',
+        'product_memory',
+        inherited.productKey,
+        `${selectedOrder?.number || 'zakázka'} · produktová poznámka smazána`,
+        cloneForAudit(removed),
+        null,
+      );
+      saveState();
+    }
+    const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+    renderStationDetail(stInfo);
+    showToast('🗑️ Produktová poznámka smazána');
+    return;
+  }
   PROD_NOTES = PROD_NOTES.filter(n => n.id !== id);
+  if (note?.productSticky && note.productKey && note.productMemoryNoteId) {
+    removeReusableProductNote(note.productKey, note.productMemoryNoteId);
+  }
   if (note) {
     writeAudit(
       'note.deleted',
@@ -5493,8 +5676,12 @@ function productMemoryForOrder(order) {
     name: order.name || '',
     stationPrograms: {},
     photoDataUrl: '',
+    reusableNotes: [],
     updatedAt: '',
   };
+  PRODUCT_MEMORY[key].reusableNotes = Array.isArray(PRODUCT_MEMORY[key].reusableNotes)
+    ? PRODUCT_MEMORY[key].reusableNotes.map(normalizeReusableProductNote).filter(Boolean)
+    : [];
   return PRODUCT_MEMORY[key];
 }
 
@@ -5511,11 +5698,22 @@ function updateProductMemory(order) {
   memory.customer = order.customer || memory.customer || '';
   memory.name = order.name || memory.name || '';
   memory.stationPrograms = { ...(memory.stationPrograms || {}), ...(order.stationPrograms || {}) };
+  memory.reusableNotes = Array.isArray(memory.reusableNotes)
+    ? memory.reusableNotes.map(normalizeReusableProductNote).filter(Boolean)
+    : [];
   if (order.productPhotoDataUrl) memory.photoDataUrl = order.productPhotoDataUrl;
   memory.updatedAt = new Date().toISOString();
 }
 
 function normalizeAppData() {
+  PROD_NOTES = PROD_NOTES.map(normalizeProductionNote).filter(Boolean);
+  Object.values(PRODUCT_MEMORY || {}).forEach(memory => {
+    if (!memory || typeof memory !== 'object') return;
+    memory.stationPrograms = memory.stationPrograms || {};
+    memory.reusableNotes = Array.isArray(memory.reusableNotes)
+      ? memory.reusableNotes.map(normalizeReusableProductNote).filter(Boolean)
+      : [];
+  });
   ORDERS.forEach(order => {
     order.purchaseOrderNumber ??= '';
     order.stencilNumber = normalizeLegacyStencilNumber(order.stencilNumber || '');

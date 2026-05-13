@@ -80,6 +80,10 @@ export interface ProductionNoteRow {
   station_id: number;
   target_scope: string;
   target_station_ids: number[] | null;
+  visibility: string;
+  product_key: string | null;
+  product_sticky: boolean;
+  product_memory_note_id: string | null;
   type: string;
   text: string;
   author_name: string;
@@ -117,6 +121,7 @@ export interface ProductMemoryRow {
   name: string;
   station_programs: Record<string, string>;
   photo_data_url: string | null;
+  reusable_notes: ProductionNote[];
   updated_at: string;
 }
 
@@ -144,6 +149,7 @@ export function appStateToEzop4Tables(state: AppState): Ezop4TableExport {
       name: value.name,
       station_programs: value.stationPrograms || {},
       photo_data_url: value.photoDataUrl || null,
+      reusable_notes: value.reusableNotes || [],
       updated_at: value.updatedAt,
     })),
   };
@@ -214,6 +220,10 @@ function noteToRow(note: ProductionNote): ProductionNoteRow {
     station_id: note.stationId,
     target_scope: note.targetScope || 'station',
     target_station_ids: note.stationIds || (note.stationId ? [note.stationId] : null),
+    visibility: note.visibility || 'public',
+    product_key: note.productKey || null,
+    product_sticky: Boolean(note.productSticky),
+    product_memory_note_id: note.productMemoryNoteId || null,
     type: note.type,
     text: note.text,
     author_name: note.author,

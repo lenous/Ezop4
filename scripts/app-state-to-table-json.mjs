@@ -25,6 +25,7 @@ const rows = {
     name: value.name || '',
     station_programs: value.stationPrograms || {},
     photo_data_url: value.photoDataUrl || null,
+    reusable_notes: Array.isArray(value.reusableNotes) ? value.reusableNotes : [],
     updated_at: value.updatedAt || new Date().toISOString(),
   })),
 };
@@ -126,6 +127,10 @@ function noteToRow(note) {
     station_id: Number(note.stationId),
     target_scope: note.targetScope || 'station',
     target_station_ids: Array.isArray(note.stationIds) ? note.stationIds.map(Number).filter(Boolean) : (note.stationId ? [Number(note.stationId)] : null),
+    visibility: note.visibility === 'private' ? 'private' : 'public',
+    product_key: note.productKey || null,
+    product_sticky: Boolean(note.productSticky),
+    product_memory_note_id: note.productMemoryNoteId || null,
     type: note.type || 'info',
     text: note.text || '',
     author_name: note.author || '',

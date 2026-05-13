@@ -144,6 +144,10 @@ create table if not exists public.production_notes (
   target_scope text not null default 'station',
   target_station_ids integer[],
   target_roles public.ezop_role[],
+  visibility text not null default 'public' check (visibility in ('public','private')),
+  product_key text,
+  product_sticky boolean not null default false,
+  product_memory_note_id text,
   type text not null default 'info',
   text text not null,
   author_id uuid references auth.users(id),
@@ -185,6 +189,7 @@ create table if not exists public.product_memory (
   name text not null,
   station_programs jsonb not null default '{}'::jsonb,
   photo_data_url text,
+  reusable_notes jsonb not null default '[]'::jsonb,
   updated_by uuid references auth.users(id),
   updated_at timestamptz not null default now()
 );
@@ -263,6 +268,17 @@ alter table public.order_stations add column if not exists work_completed_by uui
 alter table public.order_stations add column if not exists work_completed_by_name text;
 
 alter table public.production_notes add column if not exists target_station_ids integer[];
+alter table public.production_notes add column if not exists visibility text not null default 'public';
+alter table public.production_notes add column if not exists product_key text;
+alter table public.production_notes add column if not exists product_sticky boolean not null default false;
+alter table public.production_notes add column if not exists product_memory_note_id text;
+alter table public.product_memory add column if not exists reusable_notes jsonb not null default '[]'::jsonb;
+
+do $$ begin
+  alter table public.production_notes
+    add constraint production_notes_visibility_check
+    check (visibility in ('public','private'));
+exception when duplicate_object then null; end $$;
 
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
@@ -466,10 +482,16 @@ create policy "quantity events insert" on public.station_quantity_events
 
 create policy "notes read" on public.production_notes
   for select to authenticated using (
-    target_scope = 'all'
-    or (target_roles is not null and public.current_user_role() = any(target_roles))
-    or (target_station_ids is not null and target_station_ids && public.current_user_station_ids())
-    or author_id = auth.uid()
+    author_id = auth.uid()
+    or (
+      coalesce(visibility, 'public') = 'public'
+      and (
+        target_scope = 'all'
+        or (target_roles is not null and public.current_user_role() = any(target_roles))
+        or (target_station_ids is not null and target_station_ids && public.current_user_station_ids())
+        or station_id = any(public.current_user_station_ids())
+      )
+    )
   );
 create policy "notes insert production" on public.production_notes
   for insert to authenticated with check (public.has_role(array['operator','tpv','dispatcher','management','admin']::public.ezop_role[]));

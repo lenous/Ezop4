@@ -41,10 +41,10 @@ export const stations = [
 ];
 
 export const productionNotes = [
-  { id:'pn1', orderId:'o1', stationId:5, type:'storage',
+  { id:'pn1', orderId:'o1', stationId:5, visibility:'public', type:'storage',
     text:'Polotovary uloženy v sušce - budova C, regál 4.',
     author:'Marie Horáčková', authorRole:'operator', createdAt:new Date(Date.now()-3600000*4).toISOString() },
-  { id:'pn2', orderId:'o2', stationId:2, type:'material',
+  { id:'pn2', orderId:'o2', stationId:2, visibility:'public', type:'material',
     text:'Zákazník dodal náhradu za R7 (10k -> 12k, ekvivalent). Schváleno TPV.',
     author:'Petra Svobodová', authorRole:'tpv', createdAt:new Date(Date.now()-3600000*8).toISOString() },
 ];

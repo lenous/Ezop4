@@ -79,15 +79,25 @@ export interface ProductionNote {
   orderId: string;
   stationId: number;
   stationIds?: number[];
+  sourceStationId?: number;
   targetScope?: 'station' | 'stations' | 'all';
   targetRoles?: Role[];
+  visibility?: 'public' | 'private';
+  productSticky?: boolean;
+  productKey?: string;
+  productMemoryNoteId?: string;
+  inheritedProductNote?: boolean;
+  sourceOrderId?: string;
+  sourceOrderNumber?: string;
   type: string;
   text: string;
   author: string;
+  authorUserId?: string;
+  authorLogin?: string;
   authorRole: Role;
   createdAt: string;
 }
-export interface ProductMemoryEntry { customer: string; name: string; stationPrograms: Record<string, string>; photoDataUrl: string; updatedAt: string; }
+export interface ProductMemoryEntry { customer: string; name: string; stationPrograms: Record<string, string>; photoDataUrl: string; reusableNotes?: ProductionNote[]; updatedAt: string; }
 export type ProductMemory = Record<string, ProductMemoryEntry>;
 export interface LoginLog { id: string; at: string; success: boolean; login: string; userId: string | null; name: string; role: Role | null; source: Record<string, string>; }
 export interface AuditLog { id: string; at: string; userId: string | null; userName: string; role: Role | null; action: string; entityType: string; entityId: string; summary: string; }
