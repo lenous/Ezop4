@@ -307,9 +307,15 @@ function syncOrderStationFlow(order) {
     const over = stationProcessedQty(station) - available;
     if (available > 0 && over > 0) {
       const okBefore = positiveQty(station.qtyOk);
+      const reworkBefore = positiveQty(station.qtyRework);
       station.qtyOk = Math.max(0, okBefore - over);
       const remainingOver = over - (okBefore - station.qtyOk);
-      if (remainingOver > 0) station.qtyRework = Math.max(0, positiveQty(station.qtyRework) - remainingOver);
+      if (remainingOver > 0) station.qtyRework = Math.max(0, reworkBefore - remainingOver);
+      console.warn(
+        `[syncFlow] Stanice "${station.stId}" zakázky "${order.number}": ` +
+        `součet kusů přesahoval dostupné (${available} ks). ` +
+        `qtyOk: ${okBefore}→${station.qtyOk}, qtyRework: ${reworkBefore}→${station.qtyRework}`
+      );
       changed = true;
     }
   });
@@ -627,6 +633,9 @@ function completeLogin(user, loginForRemember, authSource) {
   clearLoginFailures(normalizeLogin(loginForRemember || user.login));
   updateRememberedLogin(user.login);
   recordLoginEvent(user.login, user, true);
+  if (authSource === 'demo_fallback') {
+    console.warn('[auth] Přihlášení proběhlo přes demo fallback – Supabase Auth nedostupný.');
+  }
   document.getElementById('login-error').textContent = '';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
@@ -3645,6 +3654,18 @@ function knownProducts(customer) {
   )].sort();
 }
 
+function refreshProductDatalist(customerValue) {
+  const dl = document.getElementById('dl-products');
+  if (!dl) return;
+  const products = knownProducts(customerValue);
+  // Build options safely via DOM API to prevent XSS
+  dl.replaceChildren(...products.map(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    return opt;
+  }));
+}
+
 function productKey(customer, name) {
   return `${String(customer || '').trim().toLowerCase()}::${String(name || '').trim().toLowerCase()}`;
 }
@@ -3732,13 +3753,13 @@ function newOrderModal() {
       </div>
     </div>
 
-    <datalist id="dl-customers">${knownCustomers().map(c=>`<option value="${c}">`).join('')}</datalist>
-    <datalist id="dl-products">${knownProducts().map(p=>`<option value="${p}">`).join('')}</datalist>
+    <datalist id="dl-customers">${knownCustomers().map(c=>`<option value="${escapeHtml(c)}">`).join('')}</datalist>
+    <datalist id="dl-products">${knownProducts().map(p=>`<option value="${escapeHtml(p)}">`).join('')}</datalist>
 
     <div class="input-group">
       <div class="input-label">Zákazník</div>
       <input class="input" id="nm-customer" list="dl-customers" placeholder="začněte psát…"
-        oninput="document.getElementById('dl-products').innerHTML = knownProducts(this.value).map(p=>'<option value=\\''+p+'\\'>').join('')">
+        oninput="refreshProductDatalist(this.value)">
     </div>
 
     <div class="input-group">

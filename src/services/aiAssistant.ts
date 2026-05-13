@@ -12,7 +12,18 @@ export interface OrderAiSummary {
   nextSteps: string[];
 }
 
+let _lastAiCallAt = 0;
+const AI_RATE_LIMIT_MS = 3000;
+
 export async function summarizeOrder(input: OrderAiSummaryInput): Promise<OrderAiSummary> {
+  const now = Date.now();
+  const elapsed = now - _lastAiCallAt;
+  if (elapsed < AI_RATE_LIMIT_MS) {
+    const wait = AI_RATE_LIMIT_MS - elapsed;
+    throw new Error(`Vyčkejte prosím ${Math.ceil(wait / 1000)} s před dalším voláním AI.`);
+  }
+  _lastAiCallAt = now;
+
   const response = await fetch('/api/ai/order-summary', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -21,7 +32,9 @@ export async function summarizeOrder(input: OrderAiSummaryInput): Promise<OrderA
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(parseAiErrorMessage(message) || `AI přehled se nepodařilo vytvořit (HTTP ${response.status}).`);
+    const parsed = parseAiErrorMessage(message);
+    console.error(`AI request failed (HTTP ${response.status}):`, message);
+    throw new Error(parsed || 'AI přehled se nepodařilo vytvořit. Zkuste to prosím znovu.');
   }
 
   return response.json() as Promise<OrderAiSummary>;
