@@ -1,10 +1,17 @@
 // Legacy-compatible runtime extracted from the original VyrobaIS index.html.
 // Keep behavior stable here, then migrate feature by feature into typed modules.
 // ── PWA: SERVICE WORKER ───────────────────────────────
+const IS_LOCAL_DEV_ORIGIN = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () =>
-    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW reg failed:', err))
-  );
+  window.addEventListener('load', () => {
+    if (IS_LOCAL_DEV_ORIGIN) {
+      navigator.serviceWorker.getRegistrations?.()
+        .then(registrations => registrations.forEach(registration => registration.unregister()))
+        .catch(err => console.warn('SW unregister failed:', err));
+      return;
+    }
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW reg failed:', err));
+  });
 }
 
 // PWA install prompt support
@@ -1481,6 +1488,26 @@ function completeLogin(user, loginForRemember, authSource) {
   initApp();
 }
 
+function loginFailureMessage(rawLogin, found, supabaseError = '') {
+  const login = normalizeLogin(rawLogin);
+  const authMode = ezop4AuthMode();
+  if (!found) {
+    const base = login
+      ? `Uživatel "${login}" není v ${authMode === 'supabase' ? 'Supabase profilu ani v lokálních demo účtech' : 'lokálních demo účtech této instalace'}.`
+      : 'Vyplňte přihlašovací jméno.';
+    const sourceHint = 'GitHub slouží jen pro kód/deploy, ne jako databáze uživatelů aplikace.';
+    const nextStep = authMode === 'supabase'
+      ? 'Vytvořte účet v Supabase Auth a řádek v tabulce profiles, nebo uživatele založte lokálně v Admin → Uživatelé.'
+      : 'Uživatele založte v této aplikaci přes Admin → Uživatelé, nebo přepněte Admin → Ezop4 na Supabase Auth.';
+    return supabaseError
+      ? `Supabase Auth: ${supabaseError}. ${base} ${sourceHint} ${nextStep}`
+      : `${base} ${sourceHint} ${nextStep}`;
+  }
+  return supabaseError
+    ? `Supabase Auth: ${supabaseError}. Demo fallback našel lokálního uživatele, ale heslo nesedí. Hesla jsou uložená jen v tomto prohlížeči.`
+    : 'Nesprávné heslo. V demo režimu jsou hesla uložená jen lokálně v tomto prohlížeči.';
+}
+
 function refreshTopbarUser() {
   if (!currentUser) return;
   const name = document.getElementById('tbar-name');
@@ -1523,9 +1550,7 @@ async function doLogin() {
   if (!found || passwordForUser(found) !== p) {
     registerLoginFailure(u);
     recordLoginEvent(u || '(prazdne)', null, false);
-    document.getElementById('login-error').textContent = supabaseError
-      ? `Supabase Auth: ${supabaseError} Demo fallback také neprošel.`
-      : 'Nesprávné přihlašovací jméno nebo heslo.';
+    document.getElementById('login-error').textContent = loginFailureMessage(rawLogin, found, supabaseError);
     return;
   }
   completeLogin(found, rawLogin, supabaseError ? 'demo_fallback' : 'demo');
@@ -5236,6 +5261,7 @@ function renderAdminCloud() {
       <div style="font-size:12px;color:var(--text2);line-height:1.5">
         Aktuální statická verze už neposílá do cloudu hesla, profily uživatelů ani logy přihlášení.
         Pro ostrý provoz je ale potřeba serverová autorizace: Python/FastAPI backend nebo Supabase Auth + RLS podle rolí.
+        Účty vytvořené na GitHubu se do aplikace nepřenesou; GitHub je jen repozitář kódu.
       </div>
     </div>
 
@@ -5440,8 +5466,38 @@ window.clearAuditLogFromAdmin = function() {
 
 function switchAdminTab(tab) { adminTab = tab; renderAdmin(); }
 
+function accountModeNoticeHtml(context = 'admin') {
+  const authMode = ezop4AuthMode();
+  const connected = Boolean(db);
+  const isSupabase = authMode === 'supabase';
+  const color = isSupabase && connected ? 'var(--green)' : 'var(--amber)';
+  const title = isSupabase
+    ? connected ? 'Supabase Auth je zapnutý' : 'Supabase Auth je vybraný, ale cloud není připojený'
+    : 'Demo účty jsou lokální';
+  const body = isSupabase
+    ? 'Sdílené účty musí existovat v Supabase Authentication a zároveň v tabulce profiles. Lokální seznam níže je jen fallback/demo správa.'
+    : 'Uživatelé a hesla vytvořená zde platí jen v tomto prohlížeči/zařízení. Cloud sync je záměrně neposílá kvůli bezpečnosti.';
+  const extra = context === 'modal'
+    ? 'Pokud má účet fungovat na více počítačích, vytvořte ho v Supabase Auth + profiles, ne jen tady.'
+    : 'GitHub je pouze úložiště kódu a deploy, ne přihlašovací databáze aplikace.';
+  return `<div class="card" style="background:${color}14;border:1px solid ${color}55;margin-bottom:12px">
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <div style="font-size:22px">${isSupabase ? '🔐' : '💻'}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:900;color:${color};margin-bottom:4px">${title}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.45">${body} ${extra}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <span class="badge" style="background:${color}22;color:${color}">Login: ${isSupabase ? 'Supabase Auth' : 'Demo lokálně'}</span>
+          <span class="badge" style="background:${connected ? 'rgba(34,197,94,.14)' : 'rgba(148,163,184,.14)'};color:${connected ? 'var(--green)' : 'var(--text2)'}">${connected ? 'Cloud připojen' : 'Bez cloudu'}</span>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderAdminUsers() {
-  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+  return `${accountModeNoticeHtml('admin')}
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
     <div style="font-size:13px;color:var(--text2)">${USERS.length} uživatelů v systému</div>
     <button class="btn btn-primary btn-sm" onclick="newUserModal()">+ Přidat uživatele</button>
   </div>
@@ -6752,6 +6808,7 @@ function readStationAccess(prefix) {
 
 function newUserModal() {
   openModal('Nový uživatel', `
+    ${accountModeNoticeHtml('modal')}
     <div class="input-group">
       <div class="input-label">Celé jméno</div>
       <input class="input" id="nu-name" placeholder="Jan Novák">
@@ -6763,7 +6820,9 @@ function newUserModal() {
     <div class="input-group">
       <div class="input-label">Dočasné heslo</div>
       <input class="input" id="nu-pass" type="password" value="${DEFAULT_DEMO_PASSWORD}" autocomplete="new-password">
-      <div style="font-size:11px;color:var(--text2);margin-top:5px">Heslo se ukládá pouze lokálně v tomto zařízení, ne do cloudu.</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">
+        Heslo se ukládá pouze lokálně v tomto zařízení, ne do GitHubu ani do cloudu.
+      </div>
     </div>
     <div class="input-group">
       <div class="input-label">Role</div>

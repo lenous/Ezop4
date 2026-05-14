@@ -1,5 +1,5 @@
 // EZOP 4 service worker
-const CACHE = 'ezop4-v2';
+const CACHE = 'ezop4-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -24,6 +24,13 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+  const isLocalDev = ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+
+  // Pri lokalnim vyvoji nikdy nevracet starou aplikaci z cache.
+  if (isLocalDev) {
+    e.respondWith(fetch(req).catch(() => caches.match(req)));
+    return;
+  }
 
   // Network-first pro hlavni aplikaci, aby mobil nezustal na stare verzi index.html.
   if (req.mode === 'navigate' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/Ezop4/')) {
@@ -35,6 +42,20 @@ self.addEventListener('fetch', e => {
         }
         return res;
       }).catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Network-first i pro build assety, aby se po deployi rychle nacetla nova verze.
+  if (url.origin === location.origin && /\.(js|css|json|webmanifest)$/i.test(url.pathname)) {
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy));
+        }
+        return res;
+      }).catch(() => caches.match(req))
     );
     return;
   }

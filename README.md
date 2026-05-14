@@ -43,6 +43,8 @@ UI zatím běží přes kompatibilní runtime z Ezop3. To je záměr: Ezop4 se b
 5. Do tabulky `profiles` vložte řádek s `user_id`, `login`, `role`, `name`.
 6. V aplikaci otevřete Admin → Ezop4 a přepněte režim přihlášení na Supabase Auth.
 
+Poznámka: GitHub účet ani GitHub repozitář nejsou zdroj uživatelů aplikace. GitHub slouží pro kód a deploy. Sdílené produkční účty musí být v Supabase Auth a v tabulce `profiles`; demo účty vytvořené v aplikaci jsou lokální pro konkrétní prohlížeč/zařízení.
+
 Role:
 
 - `operator`
