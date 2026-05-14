@@ -535,6 +535,23 @@ function orderHasStationName(order, pattern) {
   });
 }
 
+function warehouseStationEntry(order) {
+  return (order?.stations || []).map((station, index) => {
+    const stationInfo = STATIONS.find(st => Number(st.id) === Number(station.stId));
+    return { station, stationInfo, index };
+  }).find(({ station, stationInfo }) =>
+    Number(station?.stId) === 1 || /sklad/i.test(stationInfo?.name || '')
+  ) || null;
+}
+
+function warehouseMaterialConfirmed(order) {
+  const entry = warehouseStationEntry(order);
+  if (!entry) return false;
+  const available = stationInputQty(order, entry.station, entry.index);
+  const processed = stationProcessedQty(entry.station);
+  return entry.station.status === 'completed' || (available > 0 && processed >= available);
+}
+
 function hasStationProgramForOrder(order) {
   return Object.values(order?.stationPrograms || {}).some(value => String(value || '').trim());
 }
@@ -543,14 +560,15 @@ function defaultReadinessForOrder(order) {
   const hasDocs = (order?.documents || []).length > 0;
   const needsProgram = orderHasStationName(order, /automat|aoi|rtg|vlna|selektiv/i);
   const hasProgram = !needsProgram || hasStationProgramForOrder(order);
+  const materialReady = warehouseMaterialConfirmed(order);
   return {
     documentation: {
       status: hasDocs ? 'ok' : 'partial',
       note: hasDocs ? 'Dokumentace je připojená.' : 'Doplnit nebo ověřit výrobní dokumentaci.',
     },
     material: {
-      status: 'partial',
-      note: 'Sklad musí potvrdit připravenost materiálu.',
+      status: materialReady ? 'ok' : 'partial',
+      note: materialReady ? 'Sklad potvrdil připravenost materiálu.' : 'Sklad musí potvrdit připravenost materiálu.',
     },
     stencil: {
       status: order?.stencilNumber ? 'ok' : 'partial',
@@ -585,7 +603,32 @@ function normalizeOrderReadiness(order) {
   }));
 }
 
+function syncMaterialReadinessFromWarehouse(order, options = {}) {
+  if (!order || !Array.isArray(order.stations) || !warehouseMaterialConfirmed(order)) return false;
+  order.readiness = normalizeOrderReadiness(order);
+
+  const current = order.readiness.material || {};
+  const defaultMaterialNote = defaultReadinessForOrder({ ...order, readiness: {} }).material.note;
+  const defaultWaitingNote = 'Sklad musí potvrdit připravenost materiálu.';
+  const hasCustomNote = Boolean(current.note && ![defaultMaterialNote, defaultWaitingNote].includes(current.note));
+  const next = {
+    ...current,
+    status: 'ok',
+    note: hasCustomNote ? current.note : 'Sklad potvrdil připravenost materiálu.',
+    updatedByName: options.updatedByName ?? current.updatedByName ?? '',
+    updatedAt: options.updatedAt ?? current.updatedAt ?? '',
+  };
+
+  if (!next.updatedByName && options.fallbackUpdatedByName) next.updatedByName = options.fallbackUpdatedByName;
+  if (!next.updatedAt && options.touch !== false) next.updatedAt = new Date().toISOString();
+
+  const changed = JSON.stringify(current) !== JSON.stringify(next);
+  if (changed) order.readiness.material = next;
+  return changed;
+}
+
 function readinessEffectiveStatus(order, key) {
+  if (key === 'material') syncMaterialReadinessFromWarehouse(order, { touch: false });
   const item = READINESS_ITEMS[key];
   if (isOrderBlocked(order) && item?.blockCategory === order?.blocked?.category) return 'blocked';
   return normalizeReadinessStatus(order?.readiness?.[key]?.status);
@@ -594,6 +637,7 @@ function readinessEffectiveStatus(order, key) {
 function readinessSummary(order) {
   const readiness = normalizeOrderReadiness(order);
   order.readiness = readiness;
+  syncMaterialReadinessFromWarehouse(order, { touch: false });
   const keys = Object.keys(READINESS_ITEMS);
   const statuses = keys.map(key => readinessEffectiveStatus(order, key));
   const okCount = statuses.filter(status => status === 'ok').length;
@@ -3514,6 +3558,11 @@ function persistStationCounts(options = {}) {
   const missingCheckMessage = createMissingPreviousCheckAlert();
   const releaseMessage = autoReleaseToNextStation();
   syncOrderStationFlow(selectedOrder);
+  const readinessBefore = cloneForAudit(selectedOrder.readiness?.material || null);
+  const materialReadinessSynced = syncMaterialReadinessFromWarehouse(selectedOrder, {
+    updatedByName: currentUser?.name || selectedStation.workerName || 'Sklad',
+    updatedAt: new Date().toISOString(),
+  });
   const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
   const after = cloneForAudit(selectedStation);
   if (JSON.stringify(before) !== JSON.stringify(after)) {
@@ -3524,6 +3573,16 @@ function persistStationCounts(options = {}) {
       `${selectedOrder.number} · ${stInfo?.name || selectedStation.stId}: OK ${selectedStation.qtyOk}, oprava ${selectedStation.qtyRework}, zmetek ${selectedStation.qtyScrap}`,
       before,
       after
+    );
+  }
+  if (materialReadinessSynced) {
+    writeAudit(
+      'order.readiness.auto_material_ready',
+      'order',
+      selectedOrder.id,
+      `${selectedOrder.number} · materiál potvrzen ze skladu`,
+      readinessBefore,
+      cloneForAudit(selectedOrder.readiness?.material || null),
     );
   }
   renderStationDetail(stInfo);
@@ -6471,6 +6530,7 @@ function normalizeAppData() {
       st.workCompletedAt = st.workCompletedAt || null;
     });
     syncOrderStationFlow(order);
+    syncMaterialReadinessFromWarehouse(order, { touch: false });
     applyProductMemoryToOrder(order);
   });
 }
