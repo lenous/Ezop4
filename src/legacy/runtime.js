@@ -79,6 +79,22 @@ function setEzop4AuthMode(mode) {
   window.EZOP4_AUTH?.writeAuthMode?.(mode === 'supabase' ? 'supabase' : 'demo');
 }
 
+const EZOP4_DEMO_FALLBACK_KEY = 'ezop4-demo-fallback-enabled';
+
+function demoFallbackAllowed() {
+  try { return localStorage.getItem(EZOP4_DEMO_FALLBACK_KEY) === '1'; }
+  catch { return false; }
+}
+
+function setDemoFallbackAllowed(enabled) {
+  try {
+    if (enabled) localStorage.setItem(EZOP4_DEMO_FALLBACK_KEY, '1');
+    else localStorage.removeItem(EZOP4_DEMO_FALLBACK_KEY);
+  } catch {
+    // Nouzovy fallback je jen lokalni volba v tomto prohlizeci.
+  }
+}
+
 // ── PERSISTENCE: localStorage + Supabase ──────────────
 const LS_KEY = 'vyrobais_state_v1';
 const CLOUD_ROW_ID = 'main';
@@ -1615,7 +1631,15 @@ async function doLogin() {
       return;
     } catch (error) {
       supabaseError = error?.message || 'Supabase Auth se nezdařil.';
-      console.warn('Supabase Auth fallback:', error);
+      console.warn('Supabase Auth failed:', error);
+      if (!demoFallbackAllowed()) {
+        registerLoginFailure(u);
+        recordLoginEvent(u || '(prazdne)', null, false);
+        document.getElementById('login-error').textContent =
+          `Supabase Auth: ${supabaseError}. Demo fallback je z bezpečnostních důvodů vypnutý.`;
+        return;
+      }
+      console.warn('[auth] Nouzovy demo fallback je rucne povoleny.');
     }
   }
 
@@ -5142,7 +5166,7 @@ function renderAdminEzop4() {
       ${ezop4ChecklistRow('schema.sql', 'Tabulky pro zakázky, stanoviště, problémy, poznámky, audit a profily jsou připravené.', true)}
       ${ezop4ChecklistRow('Supabase Auth + RLS', 'Schéma obsahuje role, přiřazená stanoviště operátorů a RLS omezení podle stanoviště.', true)}
       ${ezop4ChecklistRow('Migrace app_state', 'Současná data lze převést na tabulkový JSON export.', Boolean(tableExport))}
-      ${ezop4ChecklistRow('Auth režim', authMode === 'supabase' ? 'Supabase Auth je zapnutý, demo heslo 1234 zůstává fallback.' : 'Aktivní je demo login. Supabase Auth lze zapnout níže.', authMode === 'supabase')}
+      ${ezop4ChecklistRow('Auth režim', authMode === 'supabase' ? (demoFallbackAllowed() ? 'Supabase Auth je zapnutý, ale nouzový demo fallback je povolený.' : 'Supabase Auth je zapnutý v přísném režimu bez demo hesla 1234.') : 'Aktivní je demo login. Supabase Auth lze zapnout níže.', authMode === 'supabase' && !demoFallbackAllowed())}
       ${ezop4ChecklistRow('Audit log základ', 'Změny počtů, stavů, zakázek, programů, poznámek a problémů se zapisují do auditu.', true)}
       ${ezop4ChecklistRow('Napojení UI na tabulky', 'Další krok: přepnout zakázky z app_state na orders/order_stations.', false)}
     </div>
@@ -5150,9 +5174,9 @@ function renderAdminEzop4() {
     <div class="card">
       <div class="card-title">🔐 Režim přihlášení</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
-        Demo režim používá lokální uživatele a heslo 1234. Supabase režim se nejdřív pokusí
-        přihlásit přes Supabase Auth a načíst roli z tabulky <b>profiles</b>; pokud selže,
-        uživatel se může pořád přihlásit demo účtem.
+        Demo režim používá lokální uživatele a heslo 1234 pouze pro testování. Supabase režim
+        přihlašuje přes Supabase Auth a načítá roli z tabulky <b>profiles</b>. V ostrém režimu
+        není povolen automatický návrat na demo heslo.
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn ${authMode === 'demo' ? 'btn-primary' : 'btn-ghost'}" onclick="setEzop4AuthModeFromAdmin('demo')">Demo login</button>
@@ -5160,6 +5184,12 @@ function renderAdminEzop4() {
       </div>
       <div style="margin-top:10px;font-size:11px;color:${authReady ? 'var(--green)' : 'var(--orange)'}">
         ${authReady ? '✅ Supabase klient je připravený.' : '⚠️ Supabase klient zatím není připojený.'}
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <label style="display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--text2);line-height:1.4">
+          <input type="checkbox" ${demoFallbackAllowed() ? 'checked' : ''} onchange="setDemoFallbackFromAdmin(this.checked)" style="margin-top:2px">
+          <span><b style="color:var(--text)">Nouzový demo fallback</b><br>Zapnout jen krátkodobě při výpadku Supabase. Vypnuté = bezpečnější ostrý provoz.</span>
+        </label>
       </div>
     </div>
 
@@ -5233,6 +5263,7 @@ function auditLogHtml(row) {
   const role = row.role ? ROLE_LABELS[row.role] : 'systém';
   const actionLabel = {
     'auth.mode_changed': 'Režim přihlášení',
+    'auth.demo_fallback_changed': 'Nouzový demo fallback',
     'auth.login': 'Přihlášení',
     'station.counts_saved': 'Počty uloženy',
     'station.counts_reset': 'Počty reset',
@@ -5532,8 +5563,23 @@ window.setEzop4AuthModeFromAdmin = function(mode) {
   );
   renderAdmin();
   showToast(nextMode === 'supabase'
-    ? 'Supabase Auth režim zapnutý, demo login zůstává fallback.'
+    ? 'Supabase Auth režim zapnutý v přísném režimu.'
     : 'Demo login režim zapnutý.');
+};
+
+window.setDemoFallbackFromAdmin = function(enabled) {
+  const before = { enabled: demoFallbackAllowed() };
+  setDemoFallbackAllowed(Boolean(enabled));
+  writeAudit(
+    'auth.demo_fallback_changed',
+    'app_settings',
+    'ezop4-demo-fallback',
+    `Nouzový demo fallback ${enabled ? 'zapnut' : 'vypnut'}`,
+    before,
+    { enabled: demoFallbackAllowed() },
+  );
+  renderAdmin();
+  showToast(enabled ? '⚠️ Nouzový demo fallback zapnutý' : '🔐 Nouzový demo fallback vypnutý');
 };
 
 window.saveLupaNetConfig = function() {

@@ -543,8 +543,8 @@ create policy "login events admin read" on public.login_events
 
 create policy "audit admin read" on public.audit_logs
   for select to authenticated using (public.has_role(array['admin','management']::public.ezop_role[]));
-create policy "audit insert authenticated" on public.audit_logs
-  for insert to authenticated with check (true);
+create policy "audit insert own identity" on public.audit_logs
+  for insert to authenticated with check (user_id is null or user_id = auth.uid());
 
 create policy "integration settings admin read" on public.integration_settings
   for select to authenticated using (public.has_role(array['admin','management']::public.ezop_role[]));
