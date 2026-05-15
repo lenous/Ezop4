@@ -204,6 +204,15 @@
     #app .app-list-toolbar { padding: 4px 0 10px; align-items: flex-start; }
     #app .app-page-title { font-size: 18px; line-height: 1.2; }
     #app .app-page-subtitle { font-size: 11px; line-height: 1.35; }
+    #app .app-cockpit { grid-template-columns: 1fr; gap: 10px; }
+    #app .app-cockpit-left,
+    #app .app-cockpit-main { padding: 12px; }
+    #app .app-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .app-kpi-tile { min-height: 78px; padding: 10px; }
+    #app .app-kpi-tile strong { font-size: 23px; }
+    #app .app-current-grid { grid-template-columns: 1fr; gap: 8px; }
+    #app .app-issue-row { grid-template-columns: auto minmax(0, 1fr); padding: 8px 0; }
+    #app .app-issue-row em { grid-column: 2; max-width: 100%; }
     #app .card { padding: 12px; border-radius: 8px; margin-bottom: 10px; }
     #app .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     #app .stat-card { padding: 12px 10px; min-width: 0; }

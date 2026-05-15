@@ -339,3 +339,266 @@
   #app .app-queue-card {
     background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.01)), rgba(14,23,27,.94);
   }
+
+  #app .app-cockpit {
+    display: grid;
+    grid-template-columns: minmax(280px, .9fr) minmax(0, 1.45fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  #app .app-cockpit-left,
+  #app .app-cockpit-main {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(168,180,189,.17);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)),
+      rgba(11,18,22,.94);
+    box-shadow: 0 20px 52px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+
+  #app .app-cockpit-left {
+    padding: 16px;
+    border-left: 3px solid var(--cyan);
+  }
+
+  #app .app-cockpit-main {
+    padding: 16px;
+  }
+
+  #app .app-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  #app .app-panel-head .card-title {
+    margin: 0;
+    color: var(--text);
+  }
+
+  #app .app-muted {
+    color: var(--text2);
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  #app .app-station-list {
+    display: grid;
+    gap: 7px;
+  }
+
+  #app .app-station-row {
+    appearance: none;
+    border: 1px solid rgba(168,180,189,.11);
+    border-radius: 7px;
+    background: rgba(255,255,255,.028);
+    color: var(--text);
+    min-height: 52px;
+    padding: 0 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: transform .15s, border-color .2s, background .2s;
+  }
+
+  #app .app-station-row:hover {
+    transform: translateY(-1px);
+    border-color: rgba(125,214,210,.34);
+    background: rgba(125,214,210,.055);
+  }
+
+  #app .app-station-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  #app .app-station-row strong {
+    color: var(--cyan);
+    font-size: 18px;
+    font-weight: 900;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+
+  #app .app-station-row em {
+    color: var(--gold);
+    font-size: 10px;
+    font-style: normal;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  #app .app-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+    margin-bottom: 12px;
+  }
+
+  #app .app-kpi-tile {
+    appearance: none;
+    border: 1px solid rgba(168,180,189,.11);
+    border-radius: 7px;
+    background: rgba(255,255,255,.028);
+    color: var(--text);
+    padding: 12px;
+    min-height: 88px;
+    text-align: left;
+    cursor: pointer;
+    transition: transform .15s, border-color .2s, background .2s;
+  }
+
+  #app .app-kpi-tile:hover {
+    transform: translateY(-1px);
+    border-color: rgba(226,184,32,.35);
+    background: rgba(226,184,32,.055);
+  }
+
+  #app .app-kpi-tile span,
+  #app .app-kpi-tile em {
+    display: block;
+    color: var(--text2);
+    font-size: 11px;
+    font-style: normal;
+  }
+
+  #app .app-kpi-tile strong {
+    display: block;
+    color: var(--green);
+    font-size: 27px;
+    line-height: 1.12;
+    margin: 6px 0 2px;
+    font-weight: 900;
+  }
+
+  #app .app-kpi-tile strong.blue { color: var(--blue); }
+  #app .app-kpi-tile strong.red { color: var(--red); }
+  #app .app-kpi-tile strong.amber { color: var(--amber); }
+  #app .app-kpi-tile strong.green { color: var(--green); }
+
+  #app .app-current-work,
+  #app .app-issue-strip {
+    border: 1px solid rgba(168,180,189,.17);
+    border-radius: 7px;
+    background: rgba(255,255,255,.025);
+    padding: 13px;
+  }
+
+  #app .app-current-work {
+    cursor: pointer;
+    margin-bottom: 12px;
+  }
+
+  #app .app-current-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  #app .app-current-title span,
+  #app .app-current-grid span {
+    display: block;
+    color: var(--text2);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .55px;
+    font-weight: 800;
+  }
+
+  #app .app-current-title strong {
+    display: block;
+    color: var(--gold);
+    font-size: 20px;
+    font-family: 'SF Mono', Menlo, monospace;
+    margin-top: 4px;
+  }
+
+  #app .app-current-title em {
+    display: block;
+    color: var(--text);
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 800;
+    margin-top: 2px;
+  }
+
+  #app .app-current-title b {
+    color: var(--green);
+    font-size: 20px;
+  }
+
+  #app .app-current-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  #app .app-current-grid strong {
+    display: block;
+    color: var(--text);
+    font-size: 12px;
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #app .app-issue-strip {
+    cursor: pointer;
+  }
+
+  #app .app-issue-strip .app-panel-head span {
+    color: var(--cyan);
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  #app .app-issue-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    min-height: 34px;
+    border-top: 1px solid rgba(168,180,189,.09);
+    color: var(--text2);
+    font-size: 11px;
+  }
+
+  #app .app-issue-row strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 12px;
+  }
+
+  #app .app-issue-row em {
+    max-width: 210px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text3);
+    font-style: normal;
+  }
+
+  #app .app-empty {
+    color: var(--text2);
+    font-size: 13px;
+    padding: 16px 8px;
+    text-align: center;
+  }
