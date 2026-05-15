@@ -2,6 +2,7 @@ import './styles/theme.css';
 import './styles/layout.css';
 import './styles/components.css';
 import './styles/mobile.css';
+import './styles/ux.css';
 
 import { shellHtml } from './ui/shell';
 import { defaults } from './domain/defaultData';
@@ -11,6 +12,7 @@ import { appStateToEzop4Tables } from './services/appStateMigration';
 import * as ezop4Auth from './auth/supabaseAuth';
 import * as lupaNetIntegration from './services/lupaNetIntegration';
 import * as ezop4Ai from './services/aiAssistant';
+import { initUx } from './features/ux';
 import legacyRuntimeSource from './legacy/runtime.js?raw';
 
 declare global {
@@ -44,3 +46,5 @@ const runtimeScript = document.createElement('script');
 runtimeScript.dataset.ezopRuntime = 'legacy-compatible';
 runtimeScript.textContent = legacyRuntimeSource;
 document.body.appendChild(runtimeScript);
+
+initUx();
