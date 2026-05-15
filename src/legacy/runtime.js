@@ -1514,6 +1514,34 @@ function updateRememberedLogin(login) {
   }
 }
 
+function shouldOpenLoginFirst() {
+  const params = new URLSearchParams(location.search);
+  return Boolean(params.get('go') || params.get('order') || params.get('code') || params.get('qr') || params.get('source') === 'pwa');
+}
+
+function showLandingScreen() {
+  document.getElementById('landing-screen').style.display = 'block';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-error').textContent = '';
+}
+
+function showLoginScreen() {
+  document.getElementById('landing-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  applyRememberedLogin();
+}
+
+function openDemoLogin() {
+  showLoginScreen();
+  const userInput = document.getElementById('login-user');
+  const passInput = document.getElementById('login-pass');
+  userInput.value = 'admin';
+  passInput.value = '';
+  passInput.focus();
+}
+
 function completeLogin(user, loginForRemember, authSource) {
   currentUser = user;
   currentAuthSource = authSource || 'demo';
@@ -1526,6 +1554,7 @@ function completeLogin(user, loginForRemember, authSource) {
     console.warn('[auth] Přihlášení proběhlo přes demo fallback – Supabase Auth nedostupný.');
   }
   document.getElementById('login-error').textContent = '';
+  document.getElementById('landing-screen').style.display = 'none';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('app').style.flexDirection = 'column';
@@ -1605,7 +1634,8 @@ document.getElementById('login-user').addEventListener('keydown', e => { if(e.ke
 document.getElementById('remember-user').addEventListener('change', () => {
   if (!document.getElementById('remember-user').checked) updateRememberedLogin('');
 });
-applyRememberedLogin();
+if (shouldOpenLoginFirst()) showLoginScreen();
+else showLandingScreen();
 
 async function doLogout(options = {}) {
   // Reminder: pokud je uživatel přihlášený na směnu a ještě se neodhlásil,
@@ -1638,11 +1668,11 @@ async function doLogout(options = {}) {
   currentUser = null;
   currentAuthSource = 'demo';
   document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('landing-screen').style.display = 'block';
+  document.getElementById('login-screen').style.display = 'none';
   document.getElementById('login-pass').value = '';
   const ind = document.getElementById('tbar-attendance');
   if (ind) ind.style.display = 'none';
-  applyRememberedLogin();
 }
 
 // ── ROLE PERMISSIONS ──────────────────────────────────
@@ -1983,14 +2013,16 @@ function renderDashboard() {
   const urgent = orders.filter(o => o.priority === 'urgent').length;
 
   document.getElementById('page-dashboard').innerHTML = `
-    <div style="padding:16px 0 4px">
-      <div style="font-size:20px;font-weight:800;color:var(--gold);margin-bottom:2px">
-        Dobrý den, ${escapeHtml(currentUser.name.split(' ')[0])}! 👋
+    <div class="app-page-hero">
+      <div>
+      <div class="app-page-title">
+        Dobrý den, <strong>${escapeHtml(currentUser.name.split(' ')[0])}</strong>! 👋
       </div>
-      <div style="font-size:12px;color:var(--text2)">
+      <div class="app-page-subtitle">
         ${new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long'})}
         &nbsp;·&nbsp; ${escapeHtml(APP_SETTINGS.companyName || '')}
         ${currentUser.role === 'operator' ? `&nbsp;·&nbsp; ${escapeHtml(stationAccessLabel())}` : ''}
+      </div>
       </div>
     </div>
     <div class="divider"></div>
@@ -2130,15 +2162,15 @@ function renderWorkQueue() {
   const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter);
 
   document.getElementById('page-queue').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px;flex-wrap:wrap">
+    <div class="app-list-toolbar">
       <div>
-        <div style="font-size:16px;font-weight:800;color:var(--gold)">🧭 Fronty pracovišť</div>
-        <div style="font-size:11px;color:var(--text2);margin-top:2px">Řazeno podle blokace, problému, priority a termínu.</div>
+        <div class="app-page-title"><strong>🧭 Fronty pracovišť</strong></div>
+        <div class="app-page-subtitle">Řazeno podle blokace, problému, priority a termínu.</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="quickOpenOrderModal()">📎 QR / kód</button>
     </div>
 
-    <div class="card" style="padding:10px;margin-bottom:10px">
+    <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
           <div class="input-label">Stanoviště</div>
@@ -2188,7 +2220,7 @@ function queueCardHtml(item, position = 0, total = 0) {
   const link = currentOrderLink(order, station.stId);
   const blockReason = orderBlockReason(order);
   const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter) && Number(queueStationFilter) === Number(station.stId);
-  return `<div class="card" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
+  return `<div class="card app-queue-card" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
     style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''};${manualPlanning?'cursor:grab':''}">
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div style="font-size:26px;line-height:1">${stInfo?.icon || '🔧'}</div>
@@ -2303,12 +2335,12 @@ function renderOrders() {
   const list = filterOrders(orderSearch);
   const activeFilter = orderFilterLabel(orderFilter);
   document.getElementById('page-orders').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px;flex-wrap:wrap">
-      <div style="font-size:16px;font-weight:800;color:var(--gold)">📋 Zakázky</div>
+    <div class="app-list-toolbar">
+      <div class="app-page-title"><strong>📋 Zakázky</strong></div>
       ${can('create_order') ? `<button class="btn btn-primary btn-sm" onclick="newOrderModal()">+ Nová zakázka</button>` : ''}
     </div>
 
-    <div class="card" style="padding:10px;margin-bottom:10px">
+    <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:16px">🔎</span>
         <input id="ord-search" class="input" style="flex:1" placeholder="Hledat: číslo zakázky (např. 261100), výrobek, zákazník..."
@@ -2343,7 +2375,7 @@ function ordersListHtml(list) {
     const done = o.stations.filter(s=>s.status==='completed').length;
     const pct = Math.round(done/o.stations.length*100);
     const hasIssue = o.stations.some(s=>s.status==='issue');
-    return `<div class="card" style="cursor:pointer;padding:14px;margin-bottom:8px" onclick="openOrder('${o.id}')">
+    return `<div class="card app-order-card" style="cursor:pointer;padding:14px;margin-bottom:8px" onclick="openOrder('${o.id}')">
       <div style="display:flex;align-items:flex-start;gap:12px">
         <div style="background:var(--card2);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;text-align:center;min-width:84px">
           <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:1px">Zakázka</div>
@@ -2410,7 +2442,7 @@ function openOrder(orderId, options = {}) {
       <span style="color:var(--text2);font-size:20px">←</span>
       <span style="font-size:12px;color:var(--text2)">Zpět na zakázky</span>
     </div>
-    <div class="card" style="border-left:3px solid var(--gold)">
+    <div class="card app-order-card" style="border-left:3px solid var(--gold)">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px">
         <div style="flex:1">
           <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">Číslo zakázky</div>
@@ -2463,7 +2495,7 @@ function openOrder(orderId, options = {}) {
       const stInfo = STATIONS.find(x => x.id === s.stId);
       const meta = stationStatusMeta(s.status);
       const nCount = stationNotes(selectedOrder.id, s.stId).length;
-      return `<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="openStation('${selectedOrder.id}','${s.stId}')">
+      return `<div class="card app-queue-card" style="cursor:pointer;margin-bottom:8px" onclick="openStation('${selectedOrder.id}','${s.stId}')">
         <div style="display:flex;align-items:center;gap:12px">
           <div style="font-size:24px">${stInfo?.icon ?? '🔧'}</div>
           <div style="flex:1">
