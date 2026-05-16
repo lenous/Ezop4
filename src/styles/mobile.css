@@ -196,6 +196,7 @@
     #app .topbar { height: auto; min-height: 58px; padding: 8px 10px; gap: 8px; }
     #app .topbar-logo { flex: 1 1 auto; font-size: clamp(16px, 5vw, 21px); letter-spacing: .2px; }
     #app .topbar-user, #app .logout-btn { display: none; }
+    #app .notification-btn { min-width: 36px; width: 36px; height: 34px; padding: 0; }
     #app .role-badge { max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0; padding: 3px 7px; }
     #tbar-cloud { max-width: 78px; }
     #app .navtabs { padding: 0 8px; }

@@ -1337,6 +1337,7 @@ let NEXT_ORDER_CODE = DEFAULTS.nextOrderCode || 261104;
 let ORDERS = cloneDefault('orders') || [];
 
 const LOGIN_LOG_KEY = 'vyrobais-login-log-v1';
+const NOTIFICATION_READ_KEY = 'ezop4-notification-read-v1';
 let LOGIN_LOGS = loadLoginLogs();
 let PRODUCT_MEMORY = {};
 
@@ -1676,6 +1677,199 @@ function refreshTopbarUser() {
     rb.textContent = ROLE_LABELS[currentUser.role] || currentUser.role || '';
     rb.className = 'role-badge role-' + currentUser.role;
   }
+  refreshNotificationBadge();
+}
+
+function notificationReadStorageKey() {
+  const userKey = normalizeLogin(currentUser?.login || currentUser?.id || 'anonymous') || 'anonymous';
+  return `${NOTIFICATION_READ_KEY}:${userKey}`;
+}
+
+function readNotificationIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(notificationReadStorageKey()) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveNotificationIds(ids) {
+  localStorage.setItem(notificationReadStorageKey(), JSON.stringify([...ids].slice(-500)));
+}
+
+function notificationTime(value) {
+  try { return new Date(value || Date.now()).toISOString(); }
+  catch { return new Date().toISOString(); }
+}
+
+function notificationAge(value) {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000));
+  if (minutes < 1) return 'teď';
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 1440) return `${Math.round(minutes / 60)} h`;
+  return `${Math.round(minutes / 1440)} d`;
+}
+
+function noteTargetsCurrentUser(note) {
+  if (!noteVisibleToCurrentUser(note) || noteAuthoredByCurrentUser(note)) return false;
+  if (currentUser?.role !== 'operator') return true;
+  const allowed = accessibleStations().map(st => Number(st.id)).filter(Boolean);
+  if (note.targetScope === 'all') return true;
+  const stationIds = Array.isArray(note.stationIds) ? note.stationIds.map(Number) : [Number(note.stationId)];
+  return stationIds.some(id => allowed.includes(id));
+}
+
+function blockedNotificationId(order) {
+  return `blocked:${order.id}:${order.blocked?.at || order.blocked?.createdAt || 'active'}`;
+}
+
+function buildNotifications() {
+  if (!currentUser) return [];
+  const read = readNotificationIds();
+  const items = [];
+
+  visibleIssues().filter(issue => !issue.resolved).forEach(issue => {
+    items.push({
+      id: `issue:${issue.id}`,
+      type: 'Problém',
+      icon: issue.severity === 'high' ? '🚨' : '⚠️',
+      tone: issue.severity === 'high' ? 'danger' : 'warning',
+      title: `${issue.stationName || 'Stanoviště'} · ${issue.orderNumber || ''}`,
+      body: issue.description || 'Nahlášený problém čeká na řešení.',
+      at: notificationTime(issue.reportedAt),
+      action: `markNotificationRead('issue:${issue.id}');openIssueTarget('${issue.id}')`,
+    });
+  });
+
+  PROD_NOTES
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(noteTargetsCurrentUser)
+    .forEach(note => {
+      const order = ORDERS.find(o => o.id === note.orderId);
+      const station = STATIONS.find(st => Number(st.id) === Number(note.stationId));
+      const ready = String(note.autoKey || '').startsWith('auto-ready:');
+      items.push({
+        id: `note:${note.id}`,
+        type: ready ? 'Připraveno' : 'Poznámka',
+        icon: ready ? '✅' : '📝',
+        tone: ready ? 'success' : 'info',
+        title: `${order?.number || 'Zakázka'} · ${station?.name || 'vzkaz'}`,
+        body: note.text || 'Nový vzkaz k výrobě.',
+        at: notificationTime(note.createdAt),
+        action: order && station
+          ? `markNotificationRead('note:${note.id}');openStation('${order.id}','${station.id}')`
+          : `markNotificationRead('note:${note.id}');navigateTo('orders')`,
+      });
+    });
+
+  visibleAnnouncements().forEach(a => {
+    items.push({
+      id: `announcement:${a.id}`,
+      type: 'Oznámení',
+      icon: ANNOUNCE_TYPES[a.type]?.icon || '📢',
+      tone: a.type === 'urgent' ? 'danger' : a.type === 'warning' ? 'warning' : 'info',
+      title: a.title || ANNOUNCE_TYPES[a.type]?.label || 'Oznámení',
+      body: a.text || '',
+      at: notificationTime(a.createdAt),
+      action: `markNotificationRead('announcement:${a.id}')`,
+    });
+  });
+
+  unseenHandovers(20).forEach(h => {
+    items.push({
+      id: `handover:${h.id}`,
+      type: 'Předání směny',
+      icon: '🔄',
+      tone: 'info',
+      title: h.title || 'Předání směny',
+      body: h.text || '',
+      at: notificationTime(h.createdAt),
+      action: `markNotificationRead('handover:${h.id}');markHandoverSeen('${h.id}')`,
+    });
+  });
+
+  ORDERS.filter(isOrderBlocked).forEach(order => {
+    if (currentUser.role === 'operator' && !orderVisibleToCurrentUser(order)) return;
+    const id = blockedNotificationId(order);
+    items.push({
+      id,
+      type: 'Blokace',
+      icon: '⛔',
+      tone: 'danger',
+      title: `${order.number} · ${order.name}`,
+      body: orderBlockReason(order) || 'Zakázka je blokovaná.',
+      at: notificationTime(order.blocked?.at || order.blocked?.createdAt || order.due),
+      action: `markNotificationRead('${id}');openOrder('${order.id}')`,
+    });
+  });
+
+  return items
+    .map(item => ({ ...item, read: read.has(item.id) }))
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+function unreadNotifications() {
+  return buildNotifications().filter(item => !item.read);
+}
+
+function refreshNotificationBadge() {
+  const btn = document.getElementById('tbar-notifications');
+  const count = document.getElementById('notification-count');
+  if (!btn || !count) return;
+  if (!currentUser) {
+    btn.style.display = 'none';
+    return;
+  }
+  const unread = unreadNotifications().length;
+  btn.style.display = '';
+  btn.classList.toggle('has-unread', unread > 0);
+  count.textContent = unread > 0 ? String(Math.min(unread, 99)) : '';
+}
+
+function markNotificationRead(id) {
+  const read = readNotificationIds();
+  read.add(id);
+  saveNotificationIds(read);
+  refreshNotificationBadge();
+}
+
+function markAllNotificationsRead() {
+  const read = readNotificationIds();
+  buildNotifications().forEach(item => read.add(item.id));
+  saveNotificationIds(read);
+  refreshNotificationBadge();
+  openNotificationsModal('all');
+}
+
+function openNotificationsModal(filter = 'new') {
+  const all = buildNotifications();
+  const unread = all.filter(item => !item.read);
+  const list = filter === 'all' ? all : unread;
+  openModal('🔔 Upozornění', `
+    <div class="notification-tabs">
+      <button class="${filter === 'new' ? 'active' : ''}" onclick="openNotificationsModal('new')">Nové (${unread.length})</button>
+      <button class="${filter === 'all' ? 'active' : ''}" onclick="openNotificationsModal('all')">Vše (${all.length})</button>
+    </div>
+    ${list.length === 0
+      ? `<div style="text-align:center;color:var(--text2);padding:28px 12px">Žádná upozornění.</div>`
+      : `<div class="notification-list">${list.slice(0, 30).map(notificationItemHtml).join('')}</div>`}
+  `, [
+    { label: 'Označit přečtené', cls: 'btn-ghost', action: 'markAllNotificationsRead()' },
+    { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ]);
+}
+
+function notificationItemHtml(item) {
+  return `<button class="notification-item ${item.read ? 'read' : ''} ${item.tone || 'info'}" onclick="closeModal();${item.action}">
+    <span class="notification-icon">${item.icon}</span>
+    <span class="notification-copy">
+      <strong>${escapeHtml(item.title)}</strong>
+      <em>${escapeHtml(item.type)} · ${notificationAge(item.at)}</em>
+      <small>${escapeHtml(item.body)}</small>
+    </span>
+    ${item.read ? '<span class="notification-state">přečteno</span>' : '<span class="notification-dot"></span>'}
+  </button>`;
 }
 
 async function doLogin() {
@@ -1767,6 +1961,8 @@ async function doLogout(options = {}) {
   document.getElementById('login-pass').value = '';
   const ind = document.getElementById('tbar-attendance');
   if (ind) ind.style.display = 'none';
+  const notif = document.getElementById('tbar-notifications');
+  if (notif) notif.style.display = 'none';
 }
 
 // ── ROLE PERMISSIONS ──────────────────────────────────
@@ -1966,6 +2162,7 @@ function buildNav() {
         <span class="bn-icon">⋯</span><span>Více</span>
       </div>` : '') +
     `</div>`;
+  refreshNotificationBadge();
 }
 
 function openMobileMoreNav() {

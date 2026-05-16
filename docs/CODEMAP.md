@@ -14,6 +14,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Role menu visibility: `src/legacy/runtime.js`, search `renderRoleNavVisibility` and `navVisibleForCurrentUser`
 - Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
+- Notification center: `src/legacy/runtime.js`, search `buildNotifications` and `openNotificationsModal`; styles in `src/styles/components.css`
 - Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
 - Admin grouped navigation: `src/legacy/runtime.js`, search `adminGroups`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`
