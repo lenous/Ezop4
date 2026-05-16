@@ -1974,6 +1974,7 @@ function buildNotifications() {
     items.push({
       id: `issue:${issue.id}`,
       type: 'Problém',
+      category: 'issues',
       icon: issue.severity === 'high' ? '🚨' : '⚠️',
       tone: issue.severity === 'high' ? 'danger' : 'warning',
       title: `${issue.stationName || 'Stanoviště'} · ${issue.orderNumber || ''}`,
@@ -1987,6 +1988,7 @@ function buildNotifications() {
     items.push({
       id: `direct:${message.id}`,
       type: 'Přímá zpráva',
+      category: 'messages',
       icon: '💬',
       tone: 'info',
       title: message.fromName || 'Zpráva',
@@ -2007,6 +2009,7 @@ function buildNotifications() {
       items.push({
         id: `note:${note.id}`,
         type: ready ? 'Připraveno' : 'Poznámka',
+        category: 'production',
         icon: ready ? '✅' : '📝',
         tone: ready ? 'success' : 'info',
         title: `${order?.number || 'Zakázka'} · ${station?.name || 'vzkaz'}`,
@@ -2022,6 +2025,7 @@ function buildNotifications() {
     items.push({
       id: `announcement:${a.id}`,
       type: 'Oznámení',
+      category: 'production',
       icon: ANNOUNCE_TYPES[a.type]?.icon || '📢',
       tone: a.type === 'urgent' ? 'danger' : a.type === 'warning' ? 'warning' : 'info',
       title: a.title || ANNOUNCE_TYPES[a.type]?.label || 'Oznámení',
@@ -2035,6 +2039,7 @@ function buildNotifications() {
     items.push({
       id: `handover:${h.id}`,
       type: 'Předání směny',
+      category: 'production',
       icon: '🔄',
       tone: 'info',
       title: h.title || 'Předání směny',
@@ -2050,6 +2055,7 @@ function buildNotifications() {
     items.push({
       id,
       type: 'Blokace',
+      category: 'production',
       icon: '⛔',
       tone: 'danger',
       title: `${order.number} · ${order.name}`,
@@ -2066,6 +2072,16 @@ function buildNotifications() {
 
 function unreadNotifications() {
   return buildNotifications().filter(item => !item.read);
+}
+
+function notificationFilterLabel(filter) {
+  return {
+    new: 'Nové',
+    production: 'Výroba',
+    issues: 'Problémy',
+    messages: 'Zprávy',
+    all: 'Vše',
+  }[filter] || filter;
 }
 
 function refreshNotificationBadge() {
@@ -2100,14 +2116,28 @@ function markAllNotificationsRead() {
 function openNotificationsModal(filter = 'new') {
   const all = buildNotifications();
   const unread = all.filter(item => !item.read);
-  const list = filter === 'all' ? all : unread;
+  const filters = ['new', 'production', 'issues', 'messages', 'all'];
+  const safeFilter = filters.includes(filter) ? filter : 'new';
+  const list = safeFilter === 'all'
+    ? all
+    : safeFilter === 'new'
+      ? unread
+      : all.filter(item => item.category === safeFilter);
+  const countForFilter = key => {
+    if (key === 'all') return all.length;
+    if (key === 'new') return unread.length;
+    return all.filter(item => item.category === key).length;
+  };
   openModal('🔔 Upozornění', `
     <div class="notification-tabs">
-      <button class="${filter === 'new' ? 'active' : ''}" onclick="openNotificationsModal('new')">Nové (${unread.length})</button>
-      <button class="${filter === 'all' ? 'active' : ''}" onclick="openNotificationsModal('all')">Vše (${all.length})</button>
+      ${filters.map(key => `
+        <button class="${safeFilter === key ? 'active' : ''}" onclick="openNotificationsModal('${key}')">
+          ${notificationFilterLabel(key)} (${countForFilter(key)})
+        </button>
+      `).join('')}
     </div>
     ${list.length === 0
-      ? `<div style="text-align:center;color:var(--text2);padding:28px 12px">Žádná upozornění.</div>`
+      ? `<div style="text-align:center;color:var(--text2);padding:28px 12px">Žádná upozornění v kategorii ${escapeHtml(notificationFilterLabel(safeFilter).toLowerCase())}.</div>`
       : `<div class="notification-list">${list.slice(0, 30).map(notificationItemHtml).join('')}</div>`}
   `, [
     { label: 'Označit přečtené', cls: 'btn-ghost', action: 'markAllNotificationsRead()' },
@@ -2123,7 +2153,7 @@ function notificationItemHtml(item) {
       <em>${escapeHtml(item.type)} · ${notificationAge(item.at)}</em>
       <small>${escapeHtml(item.body)}</small>
     </span>
-    ${item.read ? '<span class="notification-state">přečteno</span>' : '<span class="notification-dot"></span>'}
+    <span class="notification-action">${item.read ? 'přečteno' : 'otevřít'}</span>
   </button>`;
 }
 
