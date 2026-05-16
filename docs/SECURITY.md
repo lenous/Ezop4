@@ -9,6 +9,7 @@
 - Databazove pristupy musi byt chranene pres Supabase RLS v `schema.sql`.
 - Audit log v databazi smi zapisovat jen zaznam za aktualniho prihlaseneho uzivatele.
 - Relace se automaticky uzamkne po neaktivite podle `APP_SETTINGS.lockTimeout`.
+- Admin muze funkce skryt pres feature flags, ale produkcni ochrana prav musi byt porad v RLS/backendu.
 
 ## Co nedavat do GitHubu
 

@@ -348,6 +348,28 @@ function stationAccessLabel(user = currentUser) {
   return names.length ? names.join(', ') : 'bez přiřazeného stanoviště';
 }
 
+function featureEnabled(key) {
+  return APP_SETTINGS?.[key] !== false;
+}
+
+function compactAdvancedUi() {
+  return APP_SETTINGS?.compactAdvancedUi !== false;
+}
+
+function advancedPanelHtml(title, body, options = {}) {
+  const content = String(body || '').trim();
+  if (!content) return '';
+  if (!compactAdvancedUi() || options.forceOpen) return content;
+  const subtitle = options.subtitle ? `<span class="advanced-panel-subtitle">${escapeHtml(options.subtitle)}</span>` : '';
+  return `<details class="advanced-panel">
+    <summary>
+      <span>${title}</span>
+      ${subtitle}
+    </summary>
+    <div class="advanced-panel-body">${content}</div>
+  </details>`;
+}
+
 function sessionLockTimeoutMs() {
   const hours = Number(APP_SETTINGS?.lockTimeout);
   if (!Number.isFinite(hours) || hours <= 0) return 0;
@@ -1743,6 +1765,13 @@ async function doLogout(options = {}) {
 // ── ROLE PERMISSIONS ──────────────────────────────────
 function can(action) {
   const r = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  const gatedFeatures = {
+    edit_product_memory: 'featureProductMemory',
+    manage_scrap: 'featureScrapManagement',
+    block_order: 'featureOrderBlocking',
+  };
+  const gate = gatedFeatures[action];
+  if (gate && !featureEnabled(gate) && r !== 'admin') return false;
   const perms = {
     view_orders:    ['operator','tpv','dispatcher','management','admin'],
     edit_qty:       ['operator','tpv','dispatcher','management','admin'],
@@ -1816,7 +1845,9 @@ function getNavItems() {
     { id:'issues',    label:'Problémy' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
   ];
   if (can('app_settings')) items.push({ id:'admin', label:'Správa',   icon:'⚙️' });
-  items.push({ id:'workspace', label:'Můj prostor', icon:'📒' });
+  if (featureEnabled('featureAttendance') || currentUser?.role === 'admin') {
+    items.push({ id:'workspace', label:'Můj prostor', icon:'📒' });
+  }
   items.push({ id:'profile',   label:'Profil',      icon:'👤' });
   return items;
 }
@@ -2564,8 +2595,8 @@ function openOrder(orderId, options = {}) {
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
           <span class="badge badge-${selectedOrder.priority}">${priorityLabel(selectedOrder.priority)}</span>
-          ${orderBlockedBadgeHtml(selectedOrder)}
-          ${orderReadinessBadgeHtml(selectedOrder)}
+          ${featureEnabled('featureOrderBlocking') ? orderBlockedBadgeHtml(selectedOrder) : ''}
+          ${featureEnabled('featureReadiness') ? orderReadinessBadgeHtml(selectedOrder) : ''}
           <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(currentOrderLink(selectedOrder))}')">🔗 Odkaz</button>
           ${can('block_order') ? (isOrderBlocked(selectedOrder)
             ? `<button class="btn btn-teal btn-sm" onclick="unblockOrderModal('${selectedOrder.id}')">Odblokovat</button>`
@@ -2592,12 +2623,14 @@ function openOrder(orderId, options = {}) {
       </div>
     </div>
 
-    ${orderBlockCardHtml(selectedOrder)}
-    ${orderReadinessCardHtml(selectedOrder)}
+    ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
+    ${featureEnabled('featureReadiness') ? orderReadinessCardHtml(selectedOrder) : ''}
     ${orderInfoCardHtml(selectedOrder)}
-    ${productPhotoCardHtml(selectedOrder)}
-    ${orderDocsCardHtml(selectedOrder)}
-    ${orderAiCardHtml(selectedOrder)}
+    ${advancedPanelHtml('Další informace k zakázce', `
+      ${featureEnabled('featureProductMemory') ? productPhotoCardHtml(selectedOrder) : ''}
+      ${orderDocsCardHtml(selectedOrder)}
+      ${featureEnabled('featureAiSummary') ? orderAiCardHtml(selectedOrder) : ''}
+    `, { subtitle: 'foto, dokumenty, AI' })}
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
       <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Stanoviště výroby</div>
@@ -3535,7 +3568,7 @@ function renderStationDetail(stInfo) {
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
       </div>
-      ${scrapControlHtml()}
+      ${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
     </div>
 
     <!-- STATUS ACTIONS -->
@@ -3559,8 +3592,10 @@ function renderStationDetail(stInfo) {
       ${renderStationNotes()}
     </div>
 
-    ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
-    ${productPhotoCardHtml(selectedOrder, true)}
+    ${featureEnabled('featureProductMemory') ? advancedPanelHtml('Program a foto výrobku', `
+      ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
+      ${productPhotoCardHtml(selectedOrder, true)}
+    `, { subtitle: 'opakovaná výroba' }) : ''}
   `;
   updateQtySummary();
 }
@@ -5110,6 +5145,8 @@ function renderAdmin() {
     showToast('🚫 Nemáte oprávnění ke správě aplikace.');
     return;
   }
+  if (adminTab === 'lupanet' && !featureEnabled('featureLupaNet')) adminTab = 'settings';
+  if (adminTab === 'team_attendance' && !featureEnabled('featureAttendance')) adminTab = 'settings';
   document.getElementById('page-admin').innerHTML = `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">⚙️ Správa aplikace</div>
     <div class="admin-tabs">
@@ -5121,10 +5158,10 @@ function renderAdmin() {
       <div class="admin-tab ${adminTab==='orders_mgmt'?'active':''}" onclick="switchAdminTab('orders_mgmt')">📋 Zakázky</div>
       <div class="admin-tab ${adminTab==='kpi_report'?'active':''}" onclick="switchAdminTab('kpi_report')">📊 KPI</div>
       <div class="admin-tab ${adminTab==='cloud'?'active':''}" onclick="switchAdminTab('cloud')">☁️ Cloud</div>
-      <div class="admin-tab ${adminTab==='lupanet'?'active':''}" onclick="switchAdminTab('lupanet')">🔌 Lupa NET</div>
+      ${featureEnabled('featureLupaNet') ? `<div class="admin-tab ${adminTab==='lupanet'?'active':''}" onclick="switchAdminTab('lupanet')">🔌 Lupa NET</div>` : ''}
       <div class="admin-tab ${adminTab==='ezop4'?'active':''}" onclick="switchAdminTab('ezop4')">🚀 Ezop4</div>
       <div class="admin-tab ${adminTab==='announcements'?'active':''}" onclick="switchAdminTab('announcements')">📢 Oznámení</div>
-      <div class="admin-tab ${adminTab==='team_attendance'?'active':''}" onclick="switchAdminTab('team_attendance')">🕐 Docházka týmu</div>
+      ${featureEnabled('featureAttendance') ? `<div class="admin-tab ${adminTab==='team_attendance'?'active':''}" onclick="switchAdminTab('team_attendance')">🕐 Docházka týmu</div>` : ''}
     </div>
 
     <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
@@ -5151,18 +5188,18 @@ function renderAdmin() {
     <div class="admin-section ${adminTab==='cloud'?'active':''}" id="adm-cloud">
       ${renderAdminCloud()}
     </div>
-    <div class="admin-section ${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
+    ${featureEnabled('featureLupaNet') ? `<div class="admin-section ${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
       ${renderAdminLupaNet()}
-    </div>
+    </div>` : ''}
     <div class="admin-section ${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
       ${renderAdminEzop4()}
     </div>
     <div class="admin-section ${adminTab==='announcements'?'active':''}" id="adm-announcements">
       ${renderAdminAnnouncements()}
     </div>
-    <div class="admin-section ${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
+    ${featureEnabled('featureAttendance') ? `<div class="admin-section ${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
       ${renderAdminTeamAttendance()}
-    </div>
+    </div>` : ''}
   `;
 }
 
@@ -5835,14 +5872,25 @@ function formatDateTime(value) {
 }
 
 function renderAdminSettings() {
-  return Object.entries({
+  const generalSettings = Object.entries({
     companyName:        { label:'Název firmy', desc:'Zobrazuje se v záhlaví aplikace', type:'text' },
     lockTimeout:        { label:'Timeout zamčení (hod)', desc:'Po jaké době neaktivity se zamkne', type:'number' },
     showKpiOperator:    { label:'KPI pro operátory', desc:'Operátoři vidí KPI záložku', type:'toggle' },
     requireNoteOnIssue: { label:'Poznámka povinná u problému', desc:'Při nahlášení problému vyžadovat text', type:'toggle' },
     notifyOnIssue:      { label:'Notifikovat při problému', desc:'Zasílat notifikace mistrovi', type:'toggle' },
     shiftHours:         { label:'Délka směny (hod)', desc:'Pro výpočet KPI a kapacity', type:'number' },
-  }).map(([key, cfg]) => `
+  });
+  const featureSettings = Object.entries({
+    compactAdvancedUi:       { label:'Kompaktní obrazovky', desc:'Méně používané karty schovat do rozbalovacích sekcí', type:'toggle' },
+    featureProductMemory:    { label:'Programy a fotky výrobku', desc:'Programy strojů, fotka výrobku a paměť pro opakovanou výrobu', type:'toggle' },
+    featureAiSummary:        { label:'AI přehled zakázky', desc:'Stručné shrnutí zakázky a rizik', type:'toggle' },
+    featureReadiness:        { label:'Připravenost zakázky', desc:'Materiál, dokumentace, program a další semafory připravenosti', type:'toggle' },
+    featureOrderBlocking:    { label:'Blokování zakázek', desc:'Možnost dočasně zastavit zakázku kvůli materiálu nebo dokumentaci', type:'toggle' },
+    featureScrapManagement:  { label:'Správa zmetků', desc:'Vyjmutí zmetků a detailní práce s neshodnými kusy', type:'toggle' },
+    featureAttendance:       { label:'Docházka a můj prostor', desc:'Osobní pracovní prostor, docházka a předávky směn', type:'toggle' },
+    featureLupaNet:          { label:'Lupa NET integrace', desc:'Admin příprava exportů a propojení s Lupa NET', type:'toggle' },
+  });
+  const rowHtml = ([key, cfg]) => `
     <div class="settings-row">
       <div>
         <div class="settings-label">${cfg.label}</div>
@@ -5853,7 +5901,19 @@ function renderAdminSettings() {
         : `<input class="input" style="width:140px" type="${cfg.type}" value="${APP_SETTINGS[key]}"
              onchange="APP_SETTINGS['${key}']=(this.type==='number'?Number(this.value):this.value);showToast('Uloženo')">`
       }
-    </div>`).join('');
+    </div>`;
+  return `
+    <div class="card">
+      <div class="card-title">⚙️ Základní nastavení</div>
+      ${generalSettings.map(rowHtml).join('')}
+    </div>
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧩 Viditelnost funkcí</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
+        Funkce zůstanou v aplikaci, ale běžným uživatelům se nebudou zobrazovat. Admin je může kdykoliv znovu zapnout.
+      </div>
+      ${featureSettings.map(rowHtml).join('')}
+    </div>`;
 }
 
 function toggleSetting(key) {

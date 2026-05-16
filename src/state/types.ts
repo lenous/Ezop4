@@ -17,7 +17,25 @@ export type Permission =
   | 'app_settings';
 
 export interface UserProfile { id: string; login: string; role: Role; name: string; avatar: string; color: string; stationIds?: number[]; }
-export interface AppSettings { companyName: string; lockTimeout: number; allowOperatorQty: boolean; showKpiOperator: boolean; requireNoteOnIssue: boolean; notifyOnIssue: boolean; darkMode: boolean; language: string; shiftHours: number; }
+export interface AppSettings {
+  companyName: string;
+  lockTimeout: number;
+  allowOperatorQty: boolean;
+  showKpiOperator: boolean;
+  requireNoteOnIssue: boolean;
+  notifyOnIssue: boolean;
+  darkMode: boolean;
+  language: string;
+  shiftHours: number;
+  compactAdvancedUi?: boolean;
+  featureProductMemory?: boolean;
+  featureAiSummary?: boolean;
+  featureReadiness?: boolean;
+  featureOrderBlocking?: boolean;
+  featureScrapManagement?: boolean;
+  featureAttendance?: boolean;
+  featureLupaNet?: boolean;
+}
 export interface StationProgress {
   stId: number;
   status: StationStatus;

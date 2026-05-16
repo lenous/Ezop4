@@ -26,6 +26,14 @@ export const appSettings = {
   darkMode: true,
   language: 'cs',
   shiftHours: 8,
+  compactAdvancedUi: true,
+  featureProductMemory: true,
+  featureAiSummary: true,
+  featureReadiness: true,
+  featureOrderBlocking: true,
+  featureScrapManagement: true,
+  featureAttendance: true,
+  featureLupaNet: true,
 };
 
 export const stations = [
