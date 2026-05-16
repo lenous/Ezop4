@@ -1684,7 +1684,18 @@ function refreshTopbarUser() {
 }
 
 function directMessagePeers() {
-  return (USERS || []).filter(u => u.id !== currentUser?.id);
+  return (USERS || [])
+    .filter(u => u.id !== currentUser?.id)
+    .filter(u => userCanUseMessenger(u));
+}
+
+function userCanUseMessenger(user) {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(user?.login)] || user?.role;
+  if (!role) return false;
+  if (role === 'admin') return true;
+  return featureEnabled('featureMessenger')
+    && (BASE_ROLE_PERMISSIONS.use_messenger?.includes(role) ?? false)
+    && rolePermissionAllowed(role, 'use_messenger');
 }
 
 function messageTouchesUser(message, userId = currentUser?.id) {
@@ -1722,8 +1733,10 @@ function refreshMessengerBadge() {
   const btn = document.getElementById('tbar-messenger');
   const count = document.getElementById('messenger-count');
   if (!btn || !count) return;
-  if (!currentUser) {
+  if (!currentUser || !can('use_messenger')) {
     btn.style.display = 'none';
+    btn.classList.remove('has-unread');
+    count.textContent = '';
     return;
   }
   const unread = unreadDirectMessages().length;
@@ -1753,6 +1766,10 @@ function markDirectThreadRead(peerId) {
 }
 
 function openMessengerModal(peerId = '') {
+  if (!can('use_messenger')) {
+    showToast('Messenger není pro tuto roli povolený');
+    return;
+  }
   const peers = directMessagePeers();
   if (!peers.length) {
     openModal('💬 Messenger', '<div style="color:var(--text2);padding:20px;text-align:center">V aplikaci zatím nejsou další uživatelé.</div>', [
@@ -1797,7 +1814,7 @@ function openMessengerModal(peerId = '') {
         </div>
         <div class="messenger-compose">
           <input type="hidden" id="dm-to" value="${escapeHtml(selectedPeer.id)}">
-          <textarea class="input" id="dm-text" rows="3" placeholder="Napiš zprávu pro ${escapeHtml(selectedPeer.name)}..."></textarea>
+          <textarea class="input" id="dm-text" rows="3" maxlength="${messengerMaxLength()}" placeholder="Napiš zprávu pro ${escapeHtml(selectedPeer.name)}..."></textarea>
           <button class="btn btn-primary" onclick="sendDirectMessage()">Odeslat</button>
         </div>
       </div>
@@ -1810,22 +1827,43 @@ function openMessengerModal(peerId = '') {
 
 function messengerMessageHtml(message) {
   const mine = message.fromUserId === currentUser?.id;
+  const canDelete = APP_SETTINGS.messengerAllowDeleteOwn && (mine || currentUser?.role === 'admin');
   return `<div class="messenger-message ${mine ? 'mine' : 'theirs'}">
     <div>${escapeHtml(message.text || '')}</div>
-    <small>${mine ? 'Já' : escapeHtml(message.fromName || 'Uživatel')} · ${formatDateTime(message.createdAt)}</small>
+    <small>
+      ${mine ? 'Já' : escapeHtml(message.fromName || 'Uživatel')} · ${formatDateTime(message.createdAt)}
+      ${canDelete ? ` · <button class="link-btn" onclick="deleteDirectMessage('${escapeHtml(message.id)}')">smazat</button>` : ''}
+    </small>
   </div>`;
 }
 
+function messengerMaxLength() {
+  return Math.max(50, Number(APP_SETTINGS.messengerMaxLength) || 500);
+}
+
 function sendDirectMessage() {
+  if (!can('use_messenger')) {
+    showToast('Messenger není pro tuto roli povolený');
+    return;
+  }
   const toUserId = document.getElementById('dm-to')?.value;
   const text = document.getElementById('dm-text')?.value?.trim();
   const to = USERS.find(u => u.id === toUserId);
   if (!to || !currentUser) return;
+  if (!userCanUseMessenger(to)) {
+    showToast('Příjemce nemá Messenger povolený');
+    return;
+  }
   if (!text) {
     showToast('Zpráva je prázdná');
     return;
   }
-  DIRECT_MESSAGES.push({
+  const maxLen = messengerMaxLength();
+  if (text.length > maxLen) {
+    showToast(`Zpráva je moc dlouhá (${text.length}/${maxLen})`);
+    return;
+  }
+  const message = {
     id: 'dm' + Date.now() + Math.random().toString(36).slice(2, 6),
     fromUserId: currentUser.id,
     fromLogin: currentUser.login,
@@ -1836,12 +1874,52 @@ function sendDirectMessage() {
     text,
     createdAt: new Date().toISOString(),
     readBy: [currentUser.id],
-  });
+  };
+  DIRECT_MESSAGES.push(message);
+  writeAudit(
+    'direct_message.sent',
+    'direct_message',
+    message.id,
+    `${currentUser.name} → ${to.name}`,
+    null,
+    {
+      id: message.id,
+      fromUserId: currentUser.id,
+      toUserId: to.id,
+      createdAt: message.createdAt,
+      textLength: text.length,
+    }
+  );
   saveState();
   refreshMessengerBadge();
   refreshNotificationBadge();
   openMessengerModal(to.id);
   showToast('Zpráva odeslána');
+}
+
+function deleteDirectMessage(id) {
+  const message = DIRECT_MESSAGES.find(item => item.id === id);
+  if (!message || !currentUser) return;
+  const allowed = message.fromUserId === currentUser.id || currentUser.role === 'admin';
+  if (!APP_SETTINGS.messengerAllowDeleteOwn || !allowed) {
+    showToast('Mazání zpráv není povolené');
+    return;
+  }
+  const peerId = directMessagePeerId(message);
+  DIRECT_MESSAGES = DIRECT_MESSAGES.filter(item => item.id !== id);
+  writeAudit(
+    'direct_message.deleted',
+    'direct_message',
+    id,
+    `Smazána přímá zpráva (${message.fromName} → ${message.toName})`,
+    { id, fromUserId: message.fromUserId, toUserId: message.toUserId, textLength: (message.text || '').length },
+    null
+  );
+  saveState();
+  refreshMessengerBadge();
+  refreshNotificationBadge();
+  openMessengerModal(peerId);
+  showToast('Zpráva smazána');
 }
 
 function notificationReadStorageKey() {
@@ -2156,6 +2234,7 @@ const ROLE_PERMISSION_LABELS = {
   edit_product_memory: 'Programy a fotky',
   manage_scrap: 'Správa zmetků',
   block_order: 'Blokuje zakázky',
+  use_messenger: 'Messenger',
   view_kpi: 'Vidí KPI',
   manage_users: 'Správa uživatelů',
   app_settings: 'Nastavení aplikace',
@@ -2172,6 +2251,7 @@ const BASE_ROLE_PERMISSIONS = {
   edit_product_memory:['tpv','dispatcher','management','admin'],
   manage_scrap:   ['tpv','dispatcher','management','admin'],
   block_order:    ['tpv','dispatcher','management','admin'],
+  use_messenger:  ['operator','tpv','dispatcher','management','admin'],
   view_kpi:       ['dispatcher','management','admin'],
   manage_users:   ['admin'],
   app_settings:   ['admin'],
@@ -2188,6 +2268,7 @@ const ROLE_PERMISSION_ACTIONS = [
   'edit_product_memory',
   'manage_scrap',
   'block_order',
+  'use_messenger',
   'view_kpi',
 ];
 
@@ -2217,6 +2298,7 @@ function can(action) {
     edit_product_memory: 'featureProductMemory',
     manage_scrap: 'featureScrapManagement',
     block_order: 'featureOrderBlocking',
+    use_messenger: 'featureMessenger',
   };
   const gate = gatedFeatures[action];
   if (gate && !featureEnabled(gate) && r !== 'admin') return false;
@@ -6155,6 +6237,9 @@ function auditLogHtml(row) {
     'role.permission_changed': 'Oprávnění role',
     'nav.visibility_changed': 'Viditelnost menu',
     'app.display_mode_changed': 'Režim aplikace',
+    'app.setting_changed': 'Nastavení aplikace',
+    'direct_message.sent': 'Přímá zpráva odeslána',
+    'direct_message.deleted': 'Přímá zpráva smazána',
     'station.counts_saved': 'Počty uloženy',
     'station.counts_reset': 'Počty reset',
     'station.completed': 'Stanoviště hotovo',
@@ -6704,6 +6789,9 @@ function renderAdminSettings() {
     featureScrapManagement:  { label:'Správa zmetků', desc:'Vyjmutí zmetků a detailní práce s neshodnými kusy', type:'toggle' },
     featureAttendance:       { label:'Docházka a můj prostor', desc:'Osobní pracovní prostor, docházka a předávky směn', type:'toggle' },
     featureLupaNet:          { label:'Lupa NET integrace', desc:'Admin příprava exportů a propojení s Lupa NET', type:'toggle' },
+    featureMessenger:        { label:'Messenger', desc:'Přímé zprávy mezi uživateli a upozornění na nepřečtené zprávy', type:'toggle' },
+    messengerAllowDeleteOwn: { label:'Mazání vlastních zpráv', desc:'Uživatel může odstranit vlastní odeslané zprávy; admin může odstranit každou', type:'toggle' },
+    messengerMaxLength:      { label:'Max délka zprávy', desc:'Limit znaků pro jednu přímou zprávu', type:'number' },
   });
   const rowHtml = ([key, cfg]) => `
     <div class="settings-row">
@@ -6714,7 +6802,7 @@ function renderAdminSettings() {
       ${cfg.type === 'toggle'
         ? `<div class="toggle ${APP_SETTINGS[key]?'on':''}" onclick="toggleSetting('${key}')"></div>`
         : `<input class="input" style="width:140px" type="${cfg.type}" value="${APP_SETTINGS[key]}"
-             onchange="APP_SETTINGS['${key}']=(this.type==='number'?Number(this.value):this.value);showToast('Uloženo')">`
+             onchange="updateSetting('${key}', this.value, '${cfg.type}')">`
       }
     </div>`;
   return `
@@ -6743,8 +6831,34 @@ function renderAdminSettings() {
 }
 
 function toggleSetting(key) {
+  const before = APP_SETTINGS[key];
   APP_SETTINGS[key] = !APP_SETTINGS[key];
+  saveSettingChange(key, before, APP_SETTINGS[key]);
   renderAdmin();
+}
+
+function updateSetting(key, rawValue, type = 'text') {
+  const before = APP_SETTINGS[key];
+  let value = type === 'number' ? Number(rawValue) : rawValue;
+  if (key === 'messengerMaxLength') value = Math.max(50, Math.min(2000, Number(value) || 500));
+  APP_SETTINGS[key] = value;
+  saveSettingChange(key, before, value);
+  renderAdmin();
+}
+
+function saveSettingChange(key, before, after) {
+  if (before === after) return;
+  writeAudit(
+    'app.setting_changed',
+    'app_settings',
+    key,
+    `${key}: ${String(before)} → ${String(after)}`,
+    { value: before },
+    { value: after }
+  );
+  saveState();
+  buildNav();
+  refreshTopbarUser();
   showToast('Nastavení uloženo');
 }
 

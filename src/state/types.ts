@@ -12,6 +12,7 @@ export type Permission =
   | 'edit_product_memory'
   | 'manage_scrap'
   | 'block_order'
+  | 'use_messenger'
   | 'view_kpi'
   | 'manage_users'
   | 'app_settings';
@@ -36,6 +37,9 @@ export interface AppSettings {
   featureScrapManagement?: boolean;
   featureAttendance?: boolean;
   featureLupaNet?: boolean;
+  featureMessenger?: boolean;
+  messengerAllowDeleteOwn?: boolean;
+  messengerMaxLength?: number;
   rolePermissionOverrides?: Partial<Record<Role, Partial<Record<Permission, boolean>>>>;
   hiddenNavByRole?: Partial<Record<Role, string[]>>;
   appDisplayMode?: 'simple' | 'standard' | 'service';

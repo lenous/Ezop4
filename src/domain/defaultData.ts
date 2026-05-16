@@ -35,6 +35,9 @@ export const appSettings = {
   featureScrapManagement: true,
   featureAttendance: true,
   featureLupaNet: true,
+  featureMessenger: true,
+  messengerAllowDeleteOwn: false,
+  messengerMaxLength: 500,
   rolePermissionOverrides: {},
   hiddenNavByRole: {
     operator: ['kpi', 'workspace'],
