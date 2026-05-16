@@ -104,7 +104,7 @@
   @media(max-width: 600px) {
     #app .bottom-nav { display: block; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
     #app .navtabs { display: none; }
-    body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+    body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
     body:has(#landing-screen[style*="block"]),
     body:has(#login-screen[style*="flex"]) { padding-bottom: 0; }
     .landing-header {
@@ -250,6 +250,8 @@
     #app .qty-grid { gap: 5px; }
     #app .qty-field { padding: 9px 4px; min-height: 108px; }
     #app .qty-field-val { font-size: 28px; }
+    .bottom-nav-inner { gap: 4px; }
+    .bn-item { min-height: 49px; padding-left: 2px; padding-right: 2px; }
     .bn-item .bn-icon { font-size: 18px; }
     .bn-item span { font-size: 8px; }
     #app .card [style*="min-width:84px"] { min-width: 72px !important; padding-left: 7px !important; padding-right: 7px !important; }

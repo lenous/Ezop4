@@ -34,6 +34,7 @@ Hotovo v prvním milníku:
 - admin přepínače viditelnosti funkcí a kompaktní zobrazení pokročilých karet
 - admin správa rolí a vypínání vybraných oprávnění bez úpravy kódu
 - admin nastavení viditelnosti menu podle role a režim aplikace pro jednodušší provoz
+- rozdílná navigace pro mobil a PC: desktop má plnou horní navigaci, mobil kratší spodní lištu s tlačítkem Více
 - jednoduchý režim operátora se sbalenými podpůrnými kartami
 - admin správa rozdělená do skupin: Uživatelé, Výroba, Data, Integrace a Systém
 - audit log základ v Admin → Audit pro počty, stavy, poznámky, problémy, programy a úpravy zakázek

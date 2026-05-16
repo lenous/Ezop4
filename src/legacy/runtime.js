@@ -1922,8 +1922,29 @@ function getNavItems() {
   return items.filter(item => navVisibleForCurrentUser(item.id));
 }
 
+function bottomNavPriority() {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  if (role === 'admin') return ['dashboard', 'orders', 'issues', 'admin', 'profile'];
+  if (['dispatcher', 'management', 'tpv'].includes(role)) return ['dashboard', 'orders', 'queue', 'issues', 'profile'];
+  return ['dashboard', 'queue', 'orders', 'issues', 'profile'];
+}
+
+function getBottomNavModel(items) {
+  const priority = bottomNavPriority();
+  const sorted = [...items].sort((a, b) => {
+    const ai = priority.includes(a.id) ? priority.indexOf(a.id) : 99;
+    const bi = priority.includes(b.id) ? priority.indexOf(b.id) : 99;
+    return ai - bi;
+  });
+  if (sorted.length <= 5) return { visible: sorted, more: [] };
+  const visible = sorted.slice(0, 4);
+  const more = sorted.filter(item => !visible.some(v => v.id === item.id));
+  return { visible, more };
+}
+
 function buildNav() {
   const items = getNavItems();
+  const bottom = getBottomNavModel(items);
   const nt = document.getElementById('navtabs');
   const bn = document.getElementById('bottom-nav');
   nt.innerHTML = items.map(i =>
@@ -1932,11 +1953,33 @@ function buildNav() {
     </div>`
   ).join('');
   bn.innerHTML = `<div class="bottom-nav-inner">` +
-    items.map(i =>
+    bottom.visible.map(i =>
       `<div class="bn-item" id="bn-${i.id}" onclick="navigateTo('${i.id}')">
         <span class="bn-icon">${i.icon}</span><span>${i.label}</span>
       </div>`
-    ).join('') + `</div>`;
+    ).join('') +
+    (bottom.more.length ? `
+      <div class="bn-item bn-more" id="bn-more" onclick="openMobileMoreNav()">
+        <span class="bn-icon">⋯</span><span>Více</span>
+      </div>` : '') +
+    `</div>`;
+}
+
+function openMobileMoreNav() {
+  const { more } = getBottomNavModel(getNavItems());
+  if (!more.length) return;
+  openModal('Více možností', `
+    <div class="mobile-more-grid">
+      ${more.map(item => `
+        <button class="mobile-more-item" onclick="closeModal();navigateTo('${item.id}')">
+          <span>${item.icon}</span>
+          <strong>${escapeHtml(item.label)}</strong>
+        </button>
+      `).join('')}
+    </div>
+  `, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
 }
 
 function navigateTo(page) {
