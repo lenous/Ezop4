@@ -121,9 +121,8 @@
   #app .station-title-block { min-width: 0; }
   #app .station-title { font-size: 18px; font-weight: 900; color: var(--text); line-height: 1.16; }
   #app .station-subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; overflow-wrap: anywhere; }
-  #app .station-status-pill { margin-left: auto; white-space: nowrap; }
   #app .station-work-summary {
-    display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .9fr) auto; gap: 12px; align-items: stretch;
+    display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .9fr) minmax(150px, auto); gap: 12px; align-items: stretch;
   }
   #app .station-summary-main,
   #app .station-summary-stats,

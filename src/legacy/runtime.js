@@ -4194,7 +4194,6 @@ function stationWorkSummaryHtml(order, station, stInfo) {
   const remaining = Math.max(0, available - processed);
   const nextStation = (order.stations || [])[index + 1];
   const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
-  const status = stationStatusMeta(station.status);
   return `<div class="station-work-summary" style="--summary-color:${state.color}">
     <div class="station-summary-main">
       <span class="station-summary-icon">${state.icon}</span>
@@ -4209,7 +4208,6 @@ function stationWorkSummaryHtml(order, station, stInfo) {
       <div><b>${remaining}</b><span>Zbývá</span></div>
     </div>
     <div class="station-summary-route">
-      <span class="badge ${status.badge}">${status.label}</span>
       <span class="badge" style="background:rgba(59,130,246,.14);color:var(--blue)">
         ${nextInfo ? `Další: ${nextInfo.icon} ${escapeHtml(nextInfo.name)}` : '🏁 Poslední stanoviště'}
       </span>
@@ -4219,7 +4217,6 @@ function stationWorkSummaryHtml(order, station, stInfo) {
 
 function renderStationDetail(stInfo) {
   const s = selectedStation;
-  const statusMeta = stationStatusMeta(s.status);
   const stationSupportCards = `
     ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
   `;
@@ -4257,7 +4254,6 @@ function renderStationDetail(stInfo) {
           <div class="station-title">${stInfo?.name ?? 'Stanoviště'}</div>
           <div class="station-subtitle">${selectedOrder.number} · ${selectedOrder.name}</div>
         </div>
-        <span class="badge ${statusMeta.badge} station-status-pill">${statusMeta.label}</span>
       </div>
       ${stationWorkSummaryHtml(selectedOrder, selectedStation, stInfo)}
     </div>

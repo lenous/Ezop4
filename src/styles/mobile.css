@@ -235,7 +235,6 @@
     #app .station-badge { width: 42px; height: 42px; min-width: 42px; font-size: 20px; }
     #app .station-title { font-size: 18px; }
     #app .station-subtitle { font-size: 11px; line-height: 1.3; }
-    #app .station-status-pill { margin-left: 0; }
     #app .station-work-summary { grid-template-columns: 1fr; gap: 8px; }
     #app .station-summary-main { padding: 10px; }
     #app .station-summary-main strong { font-size: 14px; }
