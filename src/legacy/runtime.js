@@ -4208,9 +4208,13 @@ function stationWorkSummaryHtml(order, station, stInfo) {
       <div><b>${remaining}</b><span>Zbývá</span></div>
     </div>
     <div class="station-summary-route">
-      <span class="badge" style="background:rgba(59,130,246,.14);color:var(--blue)">
-        ${nextInfo ? `Další: ${nextInfo.icon} ${escapeHtml(nextInfo.name)}` : '🏁 Poslední stanoviště'}
-      </span>
+      ${nextInfo
+        ? `<button class="station-next-btn" onclick="openStation('${escapeHtml(order.id)}','${nextStation.stId}')">
+            <span>Další stanoviště</span>
+            <strong>${nextInfo.icon} ${escapeHtml(nextInfo.name)}</strong>
+            <b>Otevřít →</b>
+          </button>`
+        : `<span class="station-route-final">🏁 Poslední stanoviště</span>`}
     </div>
   </div>`;
 }

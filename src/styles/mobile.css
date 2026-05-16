@@ -241,6 +241,8 @@
     #app .station-summary-main span:last-child { font-size: 11px; }
     #app .station-summary-stats b { font-size: 20px; }
     #app .station-summary-route { flex-direction: row; flex-wrap: wrap; padding: 9px; }
+    #app .station-next-btn { min-height: 52px; }
+    #app .station-next-btn strong { font-size: 12px; }
     #app .station-workspace-grid { grid-template-columns: 1fr; gap: 10px; }
     #app .station-workspace-side { gap: 8px; }
     .modal-overlay { padding: 10px; align-items: flex-end; }
