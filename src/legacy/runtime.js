@@ -1426,6 +1426,9 @@ let currentPage = 'dashboard';
 let detailView = null;
 let selectedOrder = null;
 let selectedStation = null;
+let pageBackStack = [];
+let navigationSkipHistory = false;
+let mobileSwipe = null;
 
 // Numpad state
 let numpadValue = '';
@@ -1982,7 +1985,44 @@ function openMobileMoreNav() {
   ]);
 }
 
-function navigateTo(page) {
+function scrollAppToTop() {
+  const reset = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.scrollingElement?.scrollTo?.({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const active = document.querySelector('#app .page.active');
+    if (active) active.scrollTop = 0;
+  };
+  requestAnimationFrame(() => {
+    reset();
+    setTimeout(reset, 40);
+  });
+}
+
+function mobileBackStep() {
+  if (document.getElementById('numpad-overlay')?.classList.contains('visible')) return false;
+  if (document.getElementById('modal-overlay')?.classList.contains('visible')) {
+    closeModal();
+    return true;
+  }
+  if (detailView?.type === 'station' && detailView.orderId) {
+    openOrder(detailView.orderId, { skipHistory: true });
+    return true;
+  }
+  if (detailView?.type === 'order') {
+    navigateTo('orders', { skipHistory: true });
+    return true;
+  }
+  const previous = pageBackStack.pop();
+  if (previous && previous !== currentPage) {
+    navigateTo(previous, { skipHistory: true });
+    return true;
+  }
+  return false;
+}
+
+function navigateTo(page, options = {}) {
   // Při přechodu pryč ze stránky zakázek (mimo přes showOrdersFiltered) zruš filtr
   if (currentPage === 'orders' && page !== 'orders') orderFilter = null;
   detailView = null;
@@ -1991,6 +2031,10 @@ function navigateTo(page) {
   document.querySelectorAll('.navtab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
 
+  if (!options.skipHistory && !navigationSkipHistory && currentPage && currentPage !== page) {
+    pageBackStack.push(currentPage);
+    pageBackStack = pageBackStack.slice(-12);
+  }
   currentPage = page;
   let pg = document.getElementById('page-' + page);
   if (!pg && page === 'queue') {
@@ -2023,6 +2067,7 @@ function navigateTo(page) {
   document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + page)?.classList.add('active');
   document.getElementById('bn-' + page)?.classList.add('active');
+  scrollAppToTop();
 }
 
 function refreshCurrentView() {
@@ -2778,6 +2823,7 @@ function openOrder(orderId, options = {}) {
       </div>`;
     }).join('')}
   `;
+  scrollAppToTop();
 }
 
 function orderInfoCardHtml(o) {
@@ -3502,6 +3548,7 @@ function openStation(orderId, stId, options = {}) {
   pg.classList.add('active');
 
   renderStationDetail(stInfo);
+  scrollAppToTop();
 }
 
 function stationWorkPanelHtml(order, station) {
@@ -7763,3 +7810,39 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 document.getElementById('numpad-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeNumpad();
 });
+
+function isInteractiveSwipeTarget(target) {
+  return Boolean(target?.closest?.('input, textarea, select, button, a, [contenteditable="true"], .qty-field, .numpad-box, .modal-box'));
+}
+
+document.addEventListener('touchstart', function(e) {
+  if (!currentUser || window.innerWidth > 700 || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  if (t.clientX > 28 || isInteractiveSwipeTarget(e.target)) return;
+  mobileSwipe = {
+    startX: t.clientX,
+    startY: t.clientY,
+    active: true,
+    moved: false,
+  };
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+  if (!mobileSwipe?.active || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  const dx = t.clientX - mobileSwipe.startX;
+  const dy = Math.abs(t.clientY - mobileSwipe.startY);
+  if (dx > 24 && dy < 55) {
+    mobileSwipe.moved = true;
+    e.preventDefault();
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', function(e) {
+  if (!mobileSwipe?.active) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - mobileSwipe.startX;
+  const dy = Math.abs(t.clientY - mobileSwipe.startY);
+  mobileSwipe = null;
+  if (dx > 86 && dy < 70) mobileBackStep();
+}, { passive: true });
