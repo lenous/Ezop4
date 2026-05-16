@@ -33,6 +33,7 @@ Hotovo v prvním milníku:
 - automatické uzamčení relace po neaktivitě podle nastavení aplikace
 - admin přepínače viditelnosti funkcí a kompaktní zobrazení pokročilých karet
 - jednoduchý režim operátora se sbalenými podpůrnými kartami
+- admin správa rozdělená do skupin: Uživatelé, Výroba, Data, Integrace a Systém
 - audit log základ v Admin → Audit pro počty, stavy, poznámky, problémy, programy a úpravy zakázek
 - integrační příprava pro Lupa NET v Admin → Lupa NET
 

@@ -219,6 +219,22 @@
     transition: all .2s; text-align: center;
   }
   #app .admin-tab.active { background: linear-gradient(135deg, var(--gold2), var(--gold)); color: #111; border-color: var(--gold); }
+  #app .admin-group-tabs {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+    gap: 8px; margin: 8px 0 10px;
+  }
+  #app .admin-group-tab {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--card2); color: var(--text2); padding: 10px 8px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    font-size: 12px; cursor: pointer; min-height: 42px;
+  }
+  #app .admin-group-tab b { color: inherit; font-size: 12px; }
+  #app .admin-group-tab.active {
+    border-color: rgba(54,176,174,.65);
+    background: rgba(54,176,174,.16);
+    color: var(--teal2);
+  }
   .admin-section { display: none; }
   .admin-section.active { display: block; }
 

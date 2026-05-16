@@ -4837,6 +4837,68 @@ function rerenderKpiLocation() {
 
 // ── ADMIN ─────────────────────────────────────────────
 let adminTab = 'users';
+let adminGroup = 'people';
+
+function adminGroups() {
+  return [
+    { id:'people', label:'Uživatelé', icon:'👥', tabs:[
+      { id:'users', label:'Uživatelé', icon:'👥' },
+      { id:'login_logs', label:'Přihlášení', icon:'🔐' },
+      ...(featureEnabled('featureAttendance') ? [{ id:'team_attendance', label:'Docházka týmu', icon:'🕐' }] : []),
+    ] },
+    { id:'production', label:'Výroba', icon:'🏭', tabs:[
+      { id:'orders_mgmt', label:'Zakázky', icon:'📋' },
+      { id:'stations', label:'Stanoviště', icon:'🏭' },
+      { id:'kpi_report', label:'KPI', icon:'📊' },
+      { id:'announcements', label:'Oznámení', icon:'📢' },
+    ] },
+    { id:'data', label:'Data', icon:'🧾', tabs:[
+      { id:'audit', label:'Audit', icon:'🧾' },
+      { id:'cloud', label:'Cloud', icon:'☁️' },
+    ] },
+    { id:'integrations', label:'Integrace', icon:'🔌', tabs:[
+      ...(featureEnabled('featureLupaNet') ? [{ id:'lupanet', label:'Lupa NET', icon:'🔌' }] : []),
+    ] },
+    { id:'system', label:'Systém', icon:'⚙️', tabs:[
+      { id:'settings', label:'Nastavení', icon:'⚙️' },
+      { id:'ezop4', label:'Ezop4', icon:'🚀' },
+    ] },
+  ].filter(group => group.tabs.length);
+}
+
+function adminTabGroupId(tab = adminTab) {
+  return adminGroups().find(group => group.tabs.some(item => item.id === tab))?.id || 'people';
+}
+
+function normalizeAdminSelection() {
+  const groups = adminGroups();
+  const currentGroup = groups.find(group => group.id === adminGroup) || groups[0];
+  if (!currentGroup) return;
+  adminGroup = currentGroup.id;
+  if (!currentGroup.tabs.some(item => item.id === adminTab)) {
+    adminTab = currentGroup.tabs[0]?.id || 'users';
+  }
+}
+
+function renderAdminGroupTabs() {
+  return `<div class="admin-group-tabs">
+    ${adminGroups().map(group => `
+      <button class="admin-group-tab ${adminGroup === group.id ? 'active' : ''}" onclick="switchAdminGroup('${group.id}')">
+        <span>${group.icon}</span><b>${group.label}</b>
+      </button>
+    `).join('')}
+  </div>`;
+}
+
+function renderAdminSubTabs() {
+  const group = adminGroups().find(item => item.id === adminGroup);
+  return `<div class="admin-tabs">
+    ${(group?.tabs || []).map(tab => `
+      <div class="admin-tab ${adminTab === tab.id ? 'active' : ''}" onclick="switchAdminTab('${tab.id}')">${tab.icon} ${tab.label}</div>
+    `).join('')}
+  </div>`;
+}
+
 // ── OZNÁMENÍ ──────────────────────────────────────────
 const ANNOUNCE_TYPES = {
   info:    { label: 'Informace', color: 'var(--blue,#60a5fa)', icon: 'ℹ️'  },
@@ -5168,22 +5230,12 @@ function renderAdmin() {
   }
   if (adminTab === 'lupanet' && !featureEnabled('featureLupaNet')) adminTab = 'settings';
   if (adminTab === 'team_attendance' && !featureEnabled('featureAttendance')) adminTab = 'settings';
+  if (adminTab === 'settings' && adminGroup !== 'system') adminGroup = adminTabGroupId(adminTab);
+  normalizeAdminSelection();
   document.getElementById('page-admin').innerHTML = `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">⚙️ Správa aplikace</div>
-    <div class="admin-tabs">
-      <div class="admin-tab ${adminTab==='users'?'active':''}" onclick="switchAdminTab('users')">👥 Uživatelé</div>
-      <div class="admin-tab ${adminTab==='login_logs'?'active':''}" onclick="switchAdminTab('login_logs')">🔐 Přihlášení</div>
-      <div class="admin-tab ${adminTab==='audit'?'active':''}" onclick="switchAdminTab('audit')">🧾 Audit</div>
-      <div class="admin-tab ${adminTab==='settings'?'active':''}" onclick="switchAdminTab('settings')">⚙️ Nastavení</div>
-      <div class="admin-tab ${adminTab==='stations'?'active':''}" onclick="switchAdminTab('stations')">🏭 Stanoviště</div>
-      <div class="admin-tab ${adminTab==='orders_mgmt'?'active':''}" onclick="switchAdminTab('orders_mgmt')">📋 Zakázky</div>
-      <div class="admin-tab ${adminTab==='kpi_report'?'active':''}" onclick="switchAdminTab('kpi_report')">📊 KPI</div>
-      <div class="admin-tab ${adminTab==='cloud'?'active':''}" onclick="switchAdminTab('cloud')">☁️ Cloud</div>
-      ${featureEnabled('featureLupaNet') ? `<div class="admin-tab ${adminTab==='lupanet'?'active':''}" onclick="switchAdminTab('lupanet')">🔌 Lupa NET</div>` : ''}
-      <div class="admin-tab ${adminTab==='ezop4'?'active':''}" onclick="switchAdminTab('ezop4')">🚀 Ezop4</div>
-      <div class="admin-tab ${adminTab==='announcements'?'active':''}" onclick="switchAdminTab('announcements')">📢 Oznámení</div>
-      ${featureEnabled('featureAttendance') ? `<div class="admin-tab ${adminTab==='team_attendance'?'active':''}" onclick="switchAdminTab('team_attendance')">🕐 Docházka týmu</div>` : ''}
-    </div>
+    ${renderAdminGroupTabs()}
+    ${renderAdminSubTabs()}
 
     <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
       ${renderAdminUsers()}
@@ -5763,7 +5815,19 @@ window.clearAuditLogFromAdmin = function() {
   showToast('Audit log vymazán');
 };
 
-function switchAdminTab(tab) { adminTab = tab; renderAdmin(); }
+function switchAdminGroup(group) {
+  const found = adminGroups().find(item => item.id === group);
+  if (!found) return;
+  adminGroup = found.id;
+  adminTab = found.tabs[0]?.id || adminTab;
+  renderAdmin();
+}
+
+function switchAdminTab(tab) {
+  adminTab = tab;
+  adminGroup = adminTabGroupId(tab);
+  renderAdmin();
+}
 
 function accountModeNoticeHtml(context = 'admin') {
   const authMode = ezop4AuthMode();
