@@ -4156,15 +4156,44 @@ function operatorStationTaskPanelHtml(order, station, stInfo) {
   </div>`;
 }
 
+function stationWorkSummaryHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const available = stationInputQty(order, station, index);
+  const processed = stationProcessedQty(station);
+  const remaining = Math.max(0, available - processed);
+  const nextStation = (order.stations || [])[index + 1];
+  const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  const status = stationStatusMeta(station.status);
+  return `<div class="station-work-summary" style="--summary-color:${state.color}">
+    <div class="station-summary-main">
+      <span class="station-summary-icon">${state.icon}</span>
+      <div>
+        <strong>${escapeHtml(state.label)}</strong>
+        <span>${escapeHtml(state.action)}</span>
+      </div>
+    </div>
+    <div class="station-summary-stats">
+      <div><b>${available}</b><span>${index > 0 ? 'Přišlo' : 'Objednáno'}</span></div>
+      <div><b>${processed}</b><span>Zpracováno</span></div>
+      <div><b>${remaining}</b><span>Zbývá</span></div>
+    </div>
+    <div class="station-summary-route">
+      <span class="badge ${status.badge}">${status.label}</span>
+      <span class="badge" style="background:rgba(59,130,246,.14);color:var(--blue)">
+        ${nextInfo ? `Další: ${nextInfo.icon} ${escapeHtml(nextInfo.name)}` : '🏁 Poslední stanoviště'}
+      </span>
+    </div>
+  </div>`;
+}
+
 function renderStationDetail(stInfo) {
   const s = selectedStation;
   const statusMeta = stationStatusMeta(s.status);
   const stationSupportCards = `
     ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
   `;
-  const stationSupportHtml = operatorSimpleMode()
-    ? advancedPanelHtml('Upozornění zakázky', stationSupportCards, { subtitle: 'blokace' })
-    : stationSupportCards;
+  const stationSupportHtml = advancedPanelHtml('Upozornění zakázky', stationSupportCards, { subtitle: 'blokace' });
   const stationNotesCard = `
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -4174,64 +4203,71 @@ function renderStationDetail(stInfo) {
       ${renderStationNotes()}
     </div>
   `;
-  const stationNotesHtml = operatorSimpleMode()
-    ? advancedPanelHtml('Poznámky a vzkazy', stationNotesCard, { subtitle: 'volitelné' })
-    : stationNotesCard;
+  const stationNotesHtml = stationNotesCard;
+  const stationProgramPhotoHtml = featureEnabled('featureProductMemory')
+    ? advancedPanelHtml('Program a foto výrobku', `
+      ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
+      ${productPhotoCardHtml(selectedOrder, true)}
+    `, { subtitle: 'opakovaná výroba' })
+    : '';
+  const stationAccessHtml = advancedPanelHtml('Převzetí práce', stationWorkPanelHtml(selectedOrder, selectedStation), { subtitle: 'přístup' });
 
   const pg = document.getElementById('page-station');
   pg.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;cursor:pointer"
+    <div class="station-back-link"
          onclick="openOrder('${selectedOrder.id}')">
       <span style="color:var(--text2);font-size:20px">←</span>
       <span style="font-size:12px;color:var(--text2)">Zpět na zakázku</span>
     </div>
 
-    <div class="station-header">
-      <div class="station-badge">${stInfo?.icon ?? '🔧'}</div>
-      <div>
-        <div style="font-size:16px;font-weight:800;color:var(--text)">${stInfo?.name ?? 'Stanoviště'}</div>
-        <div style="font-size:12px;color:var(--text2)">${selectedOrder.name}</div>
+    <div class="station-hero">
+      <div class="station-header">
+        <div class="station-badge">${stInfo?.icon ?? '🔧'}</div>
+        <div class="station-title-block">
+          <div class="station-title">${stInfo?.name ?? 'Stanoviště'}</div>
+          <div class="station-subtitle">${selectedOrder.number} · ${selectedOrder.name}</div>
+        </div>
+        <span class="badge ${statusMeta.badge} station-status-pill">${statusMeta.label}</span>
       </div>
-      <span class="badge ${statusMeta.badge}" style="margin-left:auto">${statusMeta.label}</span>
+      ${stationWorkSummaryHtml(selectedOrder, selectedStation, stInfo)}
     </div>
 
-    ${operatorStationTaskPanelHtml(selectedOrder, selectedStation, stInfo)}
-    ${stationSupportHtml}
-    ${stationWorkPanelHtml(selectedOrder, selectedStation)}
+    <div class="station-workspace-grid">
+      <div class="station-workspace-main">
+        <div class="card station-primary-card station-qty-card">
+          <div class="card-title">📦 Počty kusů</div>
+          <div class="qty-grid" id="qty-grid">
+            ${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
+            ${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
+            ${qtyFieldHtml('scrap',  'Zmetek',  s.qtyScrap,  'scrap-color')}
+          </div>
+          <div id="qty-summary"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
+          </div>
+          ${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
+        </div>
 
-    <!-- QTY -->
-    <div class="card">
-      <div class="card-title">📦 Počty kusů</div>
-      <div class="qty-grid" id="qty-grid">
-        ${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
-        ${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
-        ${qtyFieldHtml('scrap',  'Zmetek',  s.qtyScrap,  'scrap-color')}
+        <div class="card station-primary-card station-status-card">
+          <div class="card-title">🔄 Změnit stav</div>
+          <div class="action-grid">
+            ${stationStatusButton('waiting', '🧰 Příprava')}
+            ${stationStatusButton('in_progress', '▶ Rozpracováno')}
+            ${stationStatusButton('partial', '◐ Částečně hotovo')}
+            ${stationStatusButton('completed', '✅ Hotovo')}
+          </div>
+          <button class="action-btn issue" style="margin-top:8px;width:100%;justify-content:center" onclick="reportIssueModal()">⚠️ Nahlásit problém</button>
+        </div>
+
+        ${stationNotesHtml}
       </div>
-      <div id="qty-summary"></div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
+
+      <div class="station-workspace-side">
+        ${stationProgramPhotoHtml}
+        ${stationAccessHtml}
+        ${stationSupportHtml}
       </div>
-      ${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
     </div>
-
-    <!-- STATUS ACTIONS -->
-    <div class="card">
-      <div class="card-title">🔄 Změnit stav</div>
-      <div class="action-grid">
-        ${stationStatusButton('waiting', '🧰 Příprava')}
-        ${stationStatusButton('in_progress', '▶ Rozpracováno')}
-        ${stationStatusButton('partial', '◐ Částečně hotovo')}
-        ${stationStatusButton('completed', '✅ Hotovo')}
-      </div>
-      <button class="action-btn issue" style="margin-top:8px;width:100%;justify-content:center" onclick="reportIssueModal()">⚠️ Nahlásit problém</button>
-    </div>
-
-    ${stationNotesHtml}
-
-    ${featureEnabled('featureProductMemory') ? advancedPanelHtml('Program a foto výrobku', `
-      ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
-      ${productPhotoCardHtml(selectedOrder, true)}
-    `, { subtitle: 'opakovaná výroba' }) : ''}
   `;
   updateQtySummary();
 }
