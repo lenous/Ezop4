@@ -1813,6 +1813,17 @@ const ROLE_PERMISSION_ACTIONS = [
   'view_kpi',
 ];
 
+const ROLE_NAV_ITEMS = [
+  { id:'dashboard', label:'Přehled', icon:'🏠', lockedFor:['admin'] },
+  { id:'queue', label:'Fronty', icon:'🧭' },
+  { id:'orders', label:'Zakázky', icon:'📋' },
+  { id:'issues', label:'Problémy', icon:'⚠️' },
+  { id:'kpi', label:'KPI', icon:'📊' },
+  { id:'workspace', label:'Můj prostor', icon:'📒' },
+  { id:'admin', label:'Správa', icon:'⚙️', lockedFor:['admin'] },
+  { id:'profile', label:'Profil', icon:'👤', lockedFor:['admin','dispatcher','tpv','management','operator'] },
+];
+
 function rolePermissionOverride(role, action) {
   return APP_SETTINGS?.rolePermissionOverrides?.[role]?.[action];
 }
@@ -1832,6 +1843,18 @@ function can(action) {
   const gate = gatedFeatures[action];
   if (gate && !featureEnabled(gate) && r !== 'admin') return false;
   return (BASE_ROLE_PERMISSIONS[action]?.includes(r) ?? false) && rolePermissionAllowed(r, action);
+}
+
+function navHiddenForRole(role, navId) {
+  return Array.isArray(APP_SETTINGS?.hiddenNavByRole?.[role]) && APP_SETTINGS.hiddenNavByRole[role].includes(navId);
+}
+
+function navVisibleForCurrentUser(navId) {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  if (!role) return false;
+  const meta = ROLE_NAV_ITEMS.find(item => item.id === navId);
+  if (meta?.lockedFor?.includes(role)) return true;
+  return !navHiddenForRole(role, navId);
 }
 
 // ── INIT ──────────────────────────────────────────────
@@ -1888,12 +1911,15 @@ function getNavItems() {
     { id:'orders',    label:'Zakázky',  icon:'📋' },
     { id:'issues',    label:'Problémy' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
   ];
+  if (can('view_kpi') || (currentUser?.role === 'operator' && APP_SETTINGS.showKpiOperator)) {
+    items.push({ id:'kpi', label:'KPI', icon:'📊' });
+  }
   if (can('app_settings')) items.push({ id:'admin', label:'Správa',   icon:'⚙️' });
   if (featureEnabled('featureAttendance') || currentUser?.role === 'admin') {
     items.push({ id:'workspace', label:'Můj prostor', icon:'📒' });
   }
   items.push({ id:'profile',   label:'Profil',      icon:'👤' });
-  return items;
+  return items.filter(item => navVisibleForCurrentUser(item.id));
 }
 
 function buildNav() {
@@ -5355,6 +5381,8 @@ function renderAdminRolePermissions() {
       `).join('')}
     </div>
 
+    ${renderRoleNavVisibility()}
+
     <div class="card">
       <div class="card-title">📌 Aktivní omezení</div>
       ${activeOverrides.length === 0
@@ -5367,6 +5395,85 @@ function renderAdminRolePermissions() {
         `).join('')}
     </div>
   `;
+}
+
+function renderRoleNavVisibility() {
+  const roles = ['operator', 'tpv', 'dispatcher', 'management', 'admin'];
+  const activeHidden = Object.entries(APP_SETTINGS.hiddenNavByRole || {})
+    .filter(([role]) => roles.includes(role))
+    .flatMap(([role, items]) => (Array.isArray(items) ? items : [])
+      .filter(navId => ROLE_NAV_ITEMS.some(item => item.id === navId))
+      .map(navId => ({ role, navId })));
+  return `
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧭 Menu podle role</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Tohle pouze uklízí navigaci. Skryté položky nezmizí z aplikace; skutečné zákazy se řídí oprávněními výše.
+      </div>
+      <div class="role-permission-list">
+        ${ROLE_NAV_ITEMS.map(item => `
+          <div class="role-permission-row">
+            <div class="role-permission-name">
+              <strong>${item.icon} ${escapeHtml(item.label)}</strong>
+              <span>${escapeHtml(item.id)}</span>
+            </div>
+            <div class="role-permission-cells">
+              ${roles.map(role => roleNavCellHtml(role, item)).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      ${activeHidden.length === 0
+        ? `<div style="font-size:12px;color:var(--text2)">Žádná položka menu není ručně skrytá.</div>`
+        : `<div style="font-size:12px;color:var(--text2);margin-bottom:8px">Skryté položky: ${
+            activeHidden.map(item => `${ROLE_LABELS[item.role] || item.role} · ${ROLE_NAV_ITEMS.find(nav => nav.id === item.navId)?.label || item.navId}`).join(', ')
+          }</div>`}
+    </div>
+  `;
+}
+
+function roleNavCellHtml(role, item) {
+  const locked = item.lockedFor?.includes(role);
+  const hidden = navHiddenForRole(role, item.id);
+  const label = ROLE_LABELS[role] || role;
+  if (locked) {
+    return `<button class="role-permission-cell locked" disabled title="Tuto položku menu nelze pro roli skrýt">
+      <span>${escapeHtml(label)}</span><b>Vždy</b>
+    </button>`;
+  }
+  return `<button class="role-permission-cell ${hidden ? 'disabled' : 'enabled'}"
+    onclick="toggleRoleNav('${role}','${item.id}')"
+    title="${hidden ? 'Kliknutím vrátit do menu' : 'Kliknutím skrýt v menu'}">
+    <span>${escapeHtml(label)}</span><b>${hidden ? 'Skryto' : 'Vidí'}</b>
+  </button>`;
+}
+
+function toggleRoleNav(role, navId) {
+  if (!can('app_settings')) return;
+  const item = ROLE_NAV_ITEMS.find(nav => nav.id === navId);
+  if (!item) return;
+  if (item.lockedFor?.includes(role)) {
+    showToast('Tuto položku menu nelze skrýt');
+    return;
+  }
+  if (!APP_SETTINGS.hiddenNavByRole) APP_SETTINGS.hiddenNavByRole = {};
+  const current = Array.isArray(APP_SETTINGS.hiddenNavByRole[role]) ? [...APP_SETTINGS.hiddenNavByRole[role]] : [];
+  const hidden = current.includes(navId);
+  APP_SETTINGS.hiddenNavByRole[role] = hidden
+    ? current.filter(id => id !== navId)
+    : [...current, navId];
+  if (APP_SETTINGS.hiddenNavByRole[role].length === 0) {
+    delete APP_SETTINGS.hiddenNavByRole[role];
+  }
+  writeAudit(
+    'nav.visibility_changed',
+    'app_settings',
+    'role-navigation',
+    `${ROLE_LABELS[role] || role}: ${item.label} ${hidden ? 'zobrazeno v menu' : 'skryto z menu'}`
+  );
+  buildNav();
+  renderAdmin();
+  showToast(hidden ? 'Položka menu obnovena' : 'Položka menu skryta');
 }
 
 function rolePermissionCellHtml(role, action) {
@@ -5579,6 +5686,8 @@ function auditLogHtml(row) {
     'auth.login': 'Přihlášení',
     'auth.session_locked': 'Relace uzamčena',
     'role.permission_changed': 'Oprávnění role',
+    'nav.visibility_changed': 'Viditelnost menu',
+    'app.display_mode_changed': 'Režim aplikace',
     'station.counts_saved': 'Počty uloženy',
     'station.counts_reset': 'Počty reset',
     'station.completed': 'Stanoviště hotovo',
@@ -6104,6 +6213,12 @@ function formatDateTime(value) {
 }
 
 function renderAdminSettings() {
+  const displayMode = APP_SETTINGS.appDisplayMode || 'standard';
+  const displayModes = [
+    { id:'simple', label:'Jednoduchý provoz', desc:'Maximum věcí je sbalené, operátor má nejklidnější obrazovku.' },
+    { id:'standard', label:'Standard', desc:'Doporučený režim: kompaktní zobrazení a plné manažerské možnosti.' },
+    { id:'service', label:'Servisní režim', desc:'Vše je víc otevřené pro nastavování, testování a ladění.' },
+  ];
   const generalSettings = Object.entries({
     companyName:        { label:'Název firmy', desc:'Zobrazuje se v záhlaví aplikace', type:'text' },
     lockTimeout:        { label:'Timeout zamčení (hod)', desc:'Po jaké době neaktivity se zamkne', type:'number' },
@@ -6136,6 +6251,17 @@ function renderAdminSettings() {
       }
     </div>`;
   return `
+    <div class="card" style="border-left:4px solid var(--gold)">
+      <div class="card-title">🎚️ Režim aplikace</div>
+      <div class="display-mode-grid">
+        ${displayModes.map(mode => `
+          <button class="display-mode-card ${displayMode === mode.id ? 'active' : ''}" onclick="setAppDisplayMode('${mode.id}')">
+            <strong>${mode.label}</strong>
+            <span>${mode.desc}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
     <div class="card">
       <div class="card-title">⚙️ Základní nastavení</div>
       ${generalSettings.map(rowHtml).join('')}
@@ -6153,6 +6279,31 @@ function toggleSetting(key) {
   APP_SETTINGS[key] = !APP_SETTINGS[key];
   renderAdmin();
   showToast('Nastavení uloženo');
+}
+
+function setAppDisplayMode(mode) {
+  const valid = ['simple', 'standard', 'service'];
+  if (!valid.includes(mode)) return;
+  const before = APP_SETTINGS.appDisplayMode || 'standard';
+  APP_SETTINGS.appDisplayMode = mode;
+  if (mode === 'simple') {
+    APP_SETTINGS.compactAdvancedUi = true;
+    APP_SETTINGS.operatorSimpleMode = true;
+  } else if (mode === 'standard') {
+    APP_SETTINGS.compactAdvancedUi = true;
+    APP_SETTINGS.operatorSimpleMode = true;
+  } else if (mode === 'service') {
+    APP_SETTINGS.compactAdvancedUi = false;
+    APP_SETTINGS.operatorSimpleMode = false;
+  }
+  writeAudit(
+    'app.display_mode_changed',
+    'app_settings',
+    'display-mode',
+    `Režim aplikace změněn: ${before} → ${mode}`
+  );
+  renderAdmin();
+  showToast('Režim aplikace uložen');
 }
 
 function renderAdminStations() {

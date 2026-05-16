@@ -36,6 +36,10 @@ export const appSettings = {
   featureAttendance: true,
   featureLupaNet: true,
   rolePermissionOverrides: {},
+  hiddenNavByRole: {
+    operator: ['kpi', 'workspace'],
+  },
+  appDisplayMode: 'standard',
 };
 
 export const stations = [

@@ -37,6 +37,8 @@ export interface AppSettings {
   featureAttendance?: boolean;
   featureLupaNet?: boolean;
   rolePermissionOverrides?: Partial<Record<Role, Partial<Record<Permission, boolean>>>>;
+  hiddenNavByRole?: Partial<Record<Role, string[]>>;
+  appDisplayMode?: 'simple' | 'standard' | 'service';
 }
 export interface StationProgress {
   stId: number;

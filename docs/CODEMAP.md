@@ -11,6 +11,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Session lock rules: `src/legacy/runtime.js`, search `sessionLockTimeoutMs`
 - Feature visibility flags: `src/legacy/runtime.js`, search `featureEnabled`; defaults in `src/domain/defaultData.ts`
 - Role permission overrides: `src/legacy/runtime.js`, search `renderAdminRolePermissions`; defaults in `src/domain/defaultData.ts`
+- Role menu visibility: `src/legacy/runtime.js`, search `renderRoleNavVisibility` and `navVisibleForCurrentUser`
 - Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
 - Admin grouped navigation: `src/legacy/runtime.js`, search `adminGroups`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`

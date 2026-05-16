@@ -33,6 +33,7 @@ Hotovo v prvním milníku:
 - automatické uzamčení relace po neaktivitě podle nastavení aplikace
 - admin přepínače viditelnosti funkcí a kompaktní zobrazení pokročilých karet
 - admin správa rolí a vypínání vybraných oprávnění bez úpravy kódu
+- admin nastavení viditelnosti menu podle role a režim aplikace pro jednodušší provoz
 - jednoduchý režim operátora se sbalenými podpůrnými kartami
 - admin správa rozdělená do skupin: Uživatelé, Výroba, Data, Integrace a Systém
 - audit log základ v Admin → Audit pro počty, stavy, poznámky, problémy, programy a úpravy zakázek
