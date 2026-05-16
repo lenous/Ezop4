@@ -10,6 +10,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Memory cleanup rules: `src/legacy/runtime.js`, search `cleanupAppMemory`
 - Session lock rules: `src/legacy/runtime.js`, search `sessionLockTimeoutMs`
 - Feature visibility flags: `src/legacy/runtime.js`, search `featureEnabled`; defaults in `src/domain/defaultData.ts`
+- Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`
 - Shell HTML only: `src/ui/shell.ts`
 - Visual styling: `src/styles/`

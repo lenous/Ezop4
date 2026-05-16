@@ -27,6 +27,7 @@ export const appSettings = {
   language: 'cs',
   shiftHours: 8,
   compactAdvancedUi: true,
+  operatorSimpleMode: true,
   featureProductMemory: true,
   featureAiSummary: true,
   featureReadiness: true,

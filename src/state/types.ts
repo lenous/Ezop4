@@ -28,6 +28,7 @@ export interface AppSettings {
   language: string;
   shiftHours: number;
   compactAdvancedUi?: boolean;
+  operatorSimpleMode?: boolean;
   featureProductMemory?: boolean;
   featureAiSummary?: boolean;
   featureReadiness?: boolean;

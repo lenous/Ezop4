@@ -356,6 +356,10 @@ function compactAdvancedUi() {
   return APP_SETTINGS?.compactAdvancedUi !== false;
 }
 
+function operatorSimpleMode() {
+  return currentUser?.role === 'operator' && APP_SETTINGS?.operatorSimpleMode !== false;
+}
+
 function advancedPanelHtml(title, body, options = {}) {
   const content = String(body || '').trim();
   if (!content) return '';
@@ -2579,6 +2583,13 @@ function openOrder(orderId, options = {}) {
   const totalOk = orderGoodQty(selectedOrder);
   const doneSt  = selectedOrder.stations.filter(s=>s.status==='completed').length;
   const pct     = Math.round(doneSt / selectedOrder.stations.length * 100);
+  const orderControlCards = `
+    ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
+    ${featureEnabled('featureReadiness') ? orderReadinessCardHtml(selectedOrder) : ''}
+  `;
+  const orderControlHtml = operatorSimpleMode()
+    ? advancedPanelHtml('Řízení a připravenost', orderControlCards, { subtitle: 'pokročilé' })
+    : orderControlCards;
 
   pg.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;cursor:pointer" onclick="navigateTo('orders')">
@@ -2623,8 +2634,7 @@ function openOrder(orderId, options = {}) {
       </div>
     </div>
 
-    ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
-    ${featureEnabled('featureReadiness') ? orderReadinessCardHtml(selectedOrder) : ''}
+    ${orderControlHtml}
     ${orderInfoCardHtml(selectedOrder)}
     ${advancedPanelHtml('Další informace k zakázce', `
       ${featureEnabled('featureProductMemory') ? productPhotoCardHtml(selectedOrder) : ''}
@@ -3534,6 +3544,24 @@ function operatorStationTaskPanelHtml(order, station, stInfo) {
 function renderStationDetail(stInfo) {
   const s = selectedStation;
   const statusMeta = stationStatusMeta(s.status);
+  const stationSupportCards = `
+    ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
+  `;
+  const stationSupportHtml = operatorSimpleMode()
+    ? advancedPanelHtml('Upozornění zakázky', stationSupportCards, { subtitle: 'blokace' })
+    : stationSupportCards;
+  const stationNotesCard = `
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="card-title" style="margin:0">📝 Poznámky k výrobě (${stationNotes(selectedOrder.id, selectedStation.stId).length})</div>
+        <button class="btn btn-teal btn-sm" onclick="addNoteModal()">+ Přidat</button>
+      </div>
+      ${renderStationNotes()}
+    </div>
+  `;
+  const stationNotesHtml = operatorSimpleMode()
+    ? advancedPanelHtml('Poznámky a vzkazy', stationNotesCard, { subtitle: 'volitelné' })
+    : stationNotesCard;
 
   const pg = document.getElementById('page-station');
   pg.innerHTML = `
@@ -3553,7 +3581,7 @@ function renderStationDetail(stInfo) {
     </div>
 
     ${operatorStationTaskPanelHtml(selectedOrder, selectedStation, stInfo)}
-    ${orderBlockCardHtml(selectedOrder)}
+    ${stationSupportHtml}
     ${stationWorkPanelHtml(selectedOrder, selectedStation)}
 
     <!-- QTY -->
@@ -3583,14 +3611,7 @@ function renderStationDetail(stInfo) {
       <button class="action-btn issue" style="margin-top:8px;width:100%;justify-content:center" onclick="reportIssueModal()">⚠️ Nahlásit problém</button>
     </div>
 
-    <!-- PRODUCTION NOTES -->
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="card-title" style="margin:0">📝 Poznámky k výrobě (${stationNotes(selectedOrder.id, selectedStation.stId).length})</div>
-        <button class="btn btn-teal btn-sm" onclick="addNoteModal()">+ Přidat</button>
-      </div>
-      ${renderStationNotes()}
-    </div>
+    ${stationNotesHtml}
 
     ${featureEnabled('featureProductMemory') ? advancedPanelHtml('Program a foto výrobku', `
       ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
@@ -5882,6 +5903,7 @@ function renderAdminSettings() {
   });
   const featureSettings = Object.entries({
     compactAdvancedUi:       { label:'Kompaktní obrazovky', desc:'Méně používané karty schovat do rozbalovacích sekcí', type:'toggle' },
+    operatorSimpleMode:      { label:'Jednoduchý režim operátora', desc:'Operátor vidí hlavně úkol, počty a stav; podpůrné karty jsou sbalené', type:'toggle' },
     featureProductMemory:    { label:'Programy a fotky výrobku', desc:'Programy strojů, fotka výrobku a paměť pro opakovanou výrobu', type:'toggle' },
     featureAiSummary:        { label:'AI přehled zakázky', desc:'Stručné shrnutí zakázky a rizik', type:'toggle' },
     featureReadiness:        { label:'Připravenost zakázky', desc:'Materiál, dokumentace, program a další semafory připravenosti', type:'toggle' },

@@ -32,6 +32,7 @@ Hotovo v prvním milníku:
 - přísný Supabase Auth režim bez automatického demo fallbacku
 - automatické uzamčení relace po neaktivitě podle nastavení aplikace
 - admin přepínače viditelnosti funkcí a kompaktní zobrazení pokročilých karet
+- jednoduchý režim operátora se sbalenými podpůrnými kartami
 - audit log základ v Admin → Audit pro počty, stavy, poznámky, problémy, programy a úpravy zakázek
 - integrační příprava pro Lupa NET v Admin → Lupa NET
 
