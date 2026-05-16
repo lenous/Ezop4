@@ -36,6 +36,7 @@ export interface AppSettings {
   featureScrapManagement?: boolean;
   featureAttendance?: boolean;
   featureLupaNet?: boolean;
+  rolePermissionOverrides?: Partial<Record<Role, Partial<Record<Permission, boolean>>>>;
 }
 export interface StationProgress {
   stId: number;

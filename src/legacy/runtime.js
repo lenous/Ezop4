@@ -1767,6 +1767,61 @@ async function doLogout(options = {}) {
 }
 
 // ── ROLE PERMISSIONS ──────────────────────────────────
+const ROLE_PERMISSION_LABELS = {
+  view_orders: 'Vidí zakázky',
+  edit_qty: 'Zadává počty',
+  change_status: 'Mění stav stanoviště',
+  create_order: 'Vytváří zakázky',
+  delete_order: 'Maže zakázky',
+  manage_order_stations: 'Řídí stanoviště',
+  edit_order_info: 'Upravuje údaje zakázky',
+  edit_product_memory: 'Programy a fotky',
+  manage_scrap: 'Správa zmetků',
+  block_order: 'Blokuje zakázky',
+  view_kpi: 'Vidí KPI',
+  manage_users: 'Správa uživatelů',
+  app_settings: 'Nastavení aplikace',
+};
+
+const BASE_ROLE_PERMISSIONS = {
+  view_orders:    ['operator','tpv','dispatcher','management','admin'],
+  edit_qty:       ['operator','tpv','dispatcher','management','admin'],
+  change_status:  ['operator','tpv','dispatcher','management','admin'],
+  create_order:   ['dispatcher','management','admin'],
+  delete_order:   ['tpv','dispatcher','management','admin'],
+  manage_order_stations:['dispatcher','management','admin'],
+  edit_order_info:['dispatcher','management','admin'],
+  edit_product_memory:['tpv','dispatcher','management','admin'],
+  manage_scrap:   ['tpv','dispatcher','management','admin'],
+  block_order:    ['tpv','dispatcher','management','admin'],
+  view_kpi:       ['dispatcher','management','admin'],
+  manage_users:   ['admin'],
+  app_settings:   ['admin'],
+};
+
+const ROLE_PERMISSION_ACTIONS = [
+  'view_orders',
+  'edit_qty',
+  'change_status',
+  'create_order',
+  'delete_order',
+  'manage_order_stations',
+  'edit_order_info',
+  'edit_product_memory',
+  'manage_scrap',
+  'block_order',
+  'view_kpi',
+];
+
+function rolePermissionOverride(role, action) {
+  return APP_SETTINGS?.rolePermissionOverrides?.[role]?.[action];
+}
+
+function rolePermissionAllowed(role, action) {
+  if (role === 'admin') return true;
+  return rolePermissionOverride(role, action) !== false;
+}
+
 function can(action) {
   const r = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
   const gatedFeatures = {
@@ -1776,22 +1831,7 @@ function can(action) {
   };
   const gate = gatedFeatures[action];
   if (gate && !featureEnabled(gate) && r !== 'admin') return false;
-  const perms = {
-    view_orders:    ['operator','tpv','dispatcher','management','admin'],
-    edit_qty:       ['operator','tpv','dispatcher','management','admin'],
-    change_status:  ['operator','tpv','dispatcher','management','admin'],
-    create_order:   ['dispatcher','management','admin'],
-    delete_order:   ['tpv','dispatcher','management','admin'],
-    manage_order_stations:['dispatcher','management','admin'],
-    edit_order_info:['dispatcher','management','admin'],
-    edit_product_memory:['tpv','dispatcher','management','admin'],
-    manage_scrap:   ['tpv','dispatcher','management','admin'],
-    block_order:    ['tpv','dispatcher','management','admin'],
-    view_kpi:       ['dispatcher','management','admin'],
-    manage_users:   ['admin'],
-    app_settings:   ['admin'],
-  };
-  return perms[action]?.includes(r) ?? false;
+  return (BASE_ROLE_PERMISSIONS[action]?.includes(r) ?? false) && rolePermissionAllowed(r, action);
 }
 
 // ── INIT ──────────────────────────────────────────────
@@ -4843,6 +4883,7 @@ function adminGroups() {
   return [
     { id:'people', label:'Uživatelé', icon:'👥', tabs:[
       { id:'users', label:'Uživatelé', icon:'👥' },
+      { id:'role_permissions', label:'Role a práva', icon:'🛡️' },
       { id:'login_logs', label:'Přihlášení', icon:'🔐' },
       ...(featureEnabled('featureAttendance') ? [{ id:'team_attendance', label:'Docházka týmu', icon:'🕐' }] : []),
     ] },
@@ -5240,6 +5281,9 @@ function renderAdmin() {
     <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
       ${renderAdminUsers()}
     </div>
+    <div class="admin-section ${adminTab==='role_permissions'?'active':''}" id="adm-role-permissions">
+      ${renderAdminRolePermissions()}
+    </div>
     <div class="admin-section ${adminTab==='login_logs'?'active':''}" id="adm-login-logs">
       ${renderAdminLoginLogs()}
     </div>
@@ -5274,6 +5318,108 @@ function renderAdmin() {
       ${renderAdminTeamAttendance()}
     </div>` : ''}
   `;
+}
+
+function renderAdminRolePermissions() {
+  const roles = ['operator', 'tpv', 'dispatcher', 'management', 'admin'];
+  const activeOverrides = Object.entries(APP_SETTINGS.rolePermissionOverrides || {})
+    .filter(([role]) => roles.includes(role))
+    .flatMap(([role, actions]) => Object.entries(actions || {})
+      .filter(([action, value]) => ROLE_PERMISSION_ACTIONS.includes(action) && value === false)
+      .map(([action]) => ({ role, action })));
+  return `
+    <div class="card" style="border-left:4px solid var(--gold)">
+      <div class="card-title">🛡️ Role a oprávnění</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Tady admin vypíná méně používané nebo citlivé funkce pro jednotlivé role. Tabulka práva jen ubírá:
+        role nedostane funkci, kterou v základu nemá. Admin zůstává vždy s plnými právy.
+      </div>
+      <div class="role-permission-legend">
+        <span><i class="perm-dot on"></i> povoleno</span>
+        <span><i class="perm-dot off"></i> vypnuto adminem</span>
+        <span><i class="perm-dot none"></i> mimo roli</span>
+      </div>
+    </div>
+
+    <div class="role-permission-list">
+      ${ROLE_PERMISSION_ACTIONS.map(action => `
+        <div class="role-permission-row">
+          <div class="role-permission-name">
+            <strong>${escapeHtml(ROLE_PERMISSION_LABELS[action] || action)}</strong>
+            <span>${escapeHtml(action)}</span>
+          </div>
+          <div class="role-permission-cells">
+            ${roles.map(role => rolePermissionCellHtml(role, action)).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">📌 Aktivní omezení</div>
+      ${activeOverrides.length === 0
+        ? `<div style="font-size:13px;color:var(--text2)">Žádné roli teď není ručně vypnuté oprávnění.</div>`
+        : activeOverrides.map(item => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:13px;color:var(--text)">${escapeHtml(ROLE_LABELS[item.role] || item.role)} · ${escapeHtml(ROLE_PERMISSION_LABELS[item.action] || item.action)}</span>
+            <button class="btn btn-ghost btn-sm" onclick="toggleRolePermission('${item.role}','${item.action}')">Vrátit</button>
+          </div>
+        `).join('')}
+    </div>
+  `;
+}
+
+function rolePermissionCellHtml(role, action) {
+  const baseAllowed = BASE_ROLE_PERMISSIONS[action]?.includes(role) ?? false;
+  const disabled = rolePermissionOverride(role, action) === false;
+  const effective = role === 'admin' || (baseAllowed && !disabled);
+  const label = ROLE_LABELS[role] || role;
+  if (role === 'admin') {
+    return `<button class="role-permission-cell locked" disabled title="Admin má vždy kompletní práva">
+      <span>${escapeHtml(label)}</span><b>Vždy</b>
+    </button>`;
+  }
+  if (!baseAllowed) {
+    return `<button class="role-permission-cell unavailable" disabled title="Tato role nemá právo v základním modelu">
+      <span>${escapeHtml(label)}</span><b>—</b>
+    </button>`;
+  }
+  return `<button class="role-permission-cell ${effective ? 'enabled' : 'disabled'}"
+    onclick="toggleRolePermission('${role}','${action}')"
+    title="${effective ? 'Kliknutím vypnout pro roli' : 'Kliknutím vrátit roli'}">
+    <span>${escapeHtml(label)}</span><b>${effective ? 'Zapnuto' : 'Vypnuto'}</b>
+  </button>`;
+}
+
+function toggleRolePermission(role, action) {
+  if (!can('app_settings')) return;
+  if (role === 'admin') {
+    showToast('Admin má vždy kompletní práva');
+    return;
+  }
+  if (!BASE_ROLE_PERMISSIONS[action]?.includes(role)) {
+    showToast('Tato role nemá právo v základním modelu');
+    return;
+  }
+  if (!APP_SETTINGS.rolePermissionOverrides) APP_SETTINGS.rolePermissionOverrides = {};
+  if (!APP_SETTINGS.rolePermissionOverrides[role]) APP_SETTINGS.rolePermissionOverrides[role] = {};
+  const disabled = rolePermissionOverride(role, action) === false;
+  if (disabled) {
+    delete APP_SETTINGS.rolePermissionOverrides[role][action];
+  } else {
+    APP_SETTINGS.rolePermissionOverrides[role][action] = false;
+  }
+  if (Object.keys(APP_SETTINGS.rolePermissionOverrides[role]).length === 0) {
+    delete APP_SETTINGS.rolePermissionOverrides[role];
+  }
+  writeAudit(
+    'role.permission_changed',
+    'app_settings',
+    'role-permissions',
+    `${ROLE_LABELS[role] || role}: ${ROLE_PERMISSION_LABELS[action] || action} ${disabled ? 'zapnuto' : 'vypnuto'}`
+  );
+  renderAdmin();
+  showToast(disabled ? 'Oprávnění role obnoveno' : 'Oprávnění role vypnuto');
 }
 
 function renderAdminEzop4() {
@@ -5432,6 +5578,7 @@ function auditLogHtml(row) {
     'auth.demo_fallback_changed': 'Nouzový demo fallback',
     'auth.login': 'Přihlášení',
     'auth.session_locked': 'Relace uzamčena',
+    'role.permission_changed': 'Oprávnění role',
     'station.counts_saved': 'Počty uloženy',
     'station.counts_reset': 'Počty reset',
     'station.completed': 'Stanoviště hotovo',
@@ -6724,6 +6871,8 @@ function renderProfile() {
         ['manage_order_stations','Správa a pořadí stanovišť'],
         ['edit_order_info','Úprava údajů zakázky'],
         ['edit_product_memory','Programy a fotky výrobku'],
+        ['manage_scrap','Správa zmetků'],
+        ['block_order','Blokování zakázek'],
         ['view_kpi','Přístup ke KPI'],
         ['manage_users','Správa uživatelů'],
         ['app_settings','Nastavení aplikace'],

@@ -231,6 +231,9 @@
     .modal-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }
     .modal-actions .btn { width: 100%; }
     #app .admin-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .role-permission-name { align-items: flex-start; flex-direction: column; gap: 2px; }
+    #app .role-permission-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .role-permission-cell { min-height: 48px; }
     #toast { max-width: calc(100vw - 24px); white-space: normal; text-align: center; left: 12px; right: 12px; transform: none; }
     #app .card [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
     #app .card [style*="grid-template-columns:repeat(3,1fr)"] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }

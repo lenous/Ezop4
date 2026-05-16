@@ -35,6 +35,7 @@ export const appSettings = {
   featureScrapManagement: true,
   featureAttendance: true,
   featureLupaNet: true,
+  rolePermissionOverrides: {},
 };
 
 export const stations = [
