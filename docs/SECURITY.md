@@ -8,6 +8,7 @@
 - Role pro ostrou verzi se berou z tabulky `profiles`, ne z GitHubu ani z lokalniho seznamu uzivatelu.
 - Databazove pristupy musi byt chranene pres Supabase RLS v `schema.sql`.
 - Audit log v databazi smi zapisovat jen zaznam za aktualniho prihlaseneho uzivatele.
+- Relace se automaticky uzamkne po neaktivite podle `APP_SETTINGS.lockTimeout`.
 
 ## Co nedavat do GitHubu
 
@@ -24,8 +25,9 @@
 3. Doplnit tabulku `profiles` s rolemi a aktivnimi ucty.
 4. Zapnout Supabase Auth v Admin -> Ezop4.
 5. Nechat nouzovy demo fallback vypnuty.
-6. Pravidelne kontrolovat Admin -> Audit a login logy.
-7. GitHub repozitar pro ostrou firmu drzet jako private, pokud obsahuje interni procesy.
+6. Nastavit automaticke zamceni relace v Admin -> Nastaveni.
+7. Pravidelne kontrolovat Admin -> Audit a login logy.
+8. GitHub repozitar pro ostrou firmu drzet jako private, pokud obsahuje interni procesy.
 
 ## Zbyvajici rizika
 

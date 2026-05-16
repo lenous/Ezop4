@@ -30,6 +30,7 @@ Hotovo v prvním milníku:
 - Auth port a helpery pro Supabase Auth přihlášení
 - přepínač Demo login / Supabase Auth v Admin → Ezop4
 - přísný Supabase Auth režim bez automatického demo fallbacku
+- automatické uzamčení relace po neaktivitě podle nastavení aplikace
 - audit log základ v Admin → Audit pro počty, stavy, poznámky, problémy, programy a úpravy zakázek
 - integrační příprava pro Lupa NET v Admin → Lupa NET
 

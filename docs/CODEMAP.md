@@ -8,6 +8,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Demo users, orders, stations and seed notes: `src/domain/defaultData.ts`
 - Order station sequence UI: `src/legacy/runtime.js`, search `manageStationsModal`
 - Memory cleanup rules: `src/legacy/runtime.js`, search `cleanupAppMemory`
+- Session lock rules: `src/legacy/runtime.js`, search `sessionLockTimeoutMs`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`
 - Shell HTML only: `src/ui/shell.ts`
 - Visual styling: `src/styles/`

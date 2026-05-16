@@ -218,6 +218,8 @@ let USER_PASSWORDS = loadUserPasswords();
 let USER_WORKSPACE = {};
 let ANNOUNCEMENTS = [];
 let SHIFT_HANDOVERS = [];
+let lastUserActivityAt = Date.now();
+let inactivityMonitorStarted = false;
 
 function normalizeLogin(login) {
   return String(login || '').trim().toLowerCase();
@@ -344,6 +346,43 @@ function stationAccessLabel(user = currentUser) {
   if (isManagerRole(user.role)) return 'všechna stanoviště';
   const names = accessibleStations(user).map(st => `${st.icon} ${st.name}`);
   return names.length ? names.join(', ') : 'bez přiřazeného stanoviště';
+}
+
+function sessionLockTimeoutMs() {
+  const hours = Number(APP_SETTINGS?.lockTimeout);
+  if (!Number.isFinite(hours) || hours <= 0) return 0;
+  return hours * 60 * 60 * 1000;
+}
+
+function markUserActivity() {
+  if (currentUser) lastUserActivityAt = Date.now();
+}
+
+function startInactivityMonitor() {
+  if (inactivityMonitorStarted) return;
+  inactivityMonitorStarted = true;
+  ['pointerdown','keydown','touchstart','scroll'].forEach(eventName => {
+    document.addEventListener(eventName, markUserActivity, { passive: true });
+  });
+  setInterval(checkSessionLockTimeout, 60000);
+}
+
+function checkSessionLockTimeout() {
+  if (!currentUser) return;
+  const timeoutMs = sessionLockTimeoutMs();
+  if (!timeoutMs) return;
+  if (Date.now() - lastUserActivityAt < timeoutMs) return;
+  const lockedUser = currentUser;
+  writeAudit(
+    'auth.session_locked',
+    'user',
+    lockedUser.id,
+    `Relace uzamčena po ${APP_SETTINGS.lockTimeout} h neaktivity`,
+    { lastActivityAt: new Date(lastUserActivityAt).toISOString() },
+    { lockedAt: new Date().toISOString() },
+  );
+  showToast('🔐 Relace byla uzamčena po neaktivitě', { skipSave: true });
+  doLogout({ skipCheckoutPrompt: true });
 }
 
 function orderVisibleToCurrentUser(order) {
@@ -1561,6 +1600,8 @@ function openDemoLogin() {
 function completeLogin(user, loginForRemember, authSource) {
   currentUser = user;
   currentAuthSource = authSource || 'demo';
+  lastUserActivityAt = Date.now();
+  startInactivityMonitor();
   const lockedRole = currentAuthSource === 'demo' ? BUILTIN_USER_ROLES[normalizeLogin(user.login)] : null;
   if (lockedRole) currentUser.role = lockedRole;
   clearLoginFailures(normalizeLogin(loginForRemember || user.login));
@@ -5133,6 +5174,8 @@ function renderAdminEzop4() {
   const totalRows = tableExport
     ? Object.values(tableExport).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0)
     : 0;
+  const sessionLockHours = Number(APP_SETTINGS?.lockTimeout) || 0;
+  const strictSupabaseAuth = authMode === 'supabase' && !demoFallbackAllowed();
   const cards = [
     ['Profily', count('profiles'), 'profiles'],
     ['Zakázky', count('orders'), 'orders'],
@@ -5166,9 +5209,22 @@ function renderAdminEzop4() {
       ${ezop4ChecklistRow('schema.sql', 'Tabulky pro zakázky, stanoviště, problémy, poznámky, audit a profily jsou připravené.', true)}
       ${ezop4ChecklistRow('Supabase Auth + RLS', 'Schéma obsahuje role, přiřazená stanoviště operátorů a RLS omezení podle stanoviště.', true)}
       ${ezop4ChecklistRow('Migrace app_state', 'Současná data lze převést na tabulkový JSON export.', Boolean(tableExport))}
-      ${ezop4ChecklistRow('Auth režim', authMode === 'supabase' ? (demoFallbackAllowed() ? 'Supabase Auth je zapnutý, ale nouzový demo fallback je povolený.' : 'Supabase Auth je zapnutý v přísném režimu bez demo hesla 1234.') : 'Aktivní je demo login. Supabase Auth lze zapnout níže.', authMode === 'supabase' && !demoFallbackAllowed())}
+      ${ezop4ChecklistRow('Auth režim', authMode === 'supabase' ? (demoFallbackAllowed() ? 'Supabase Auth je zapnutý, ale nouzový demo fallback je povolený.' : 'Supabase Auth je zapnutý v přísném režimu bez demo hesla 1234.') : 'Aktivní je demo login. Supabase Auth lze zapnout níže.', strictSupabaseAuth)}
+      ${ezop4ChecklistRow('Automatické zamčení', sessionLockHours > 0 ? `Relace se uzamkne po ${sessionLockHours} h neaktivity.` : 'Automatické zamčení je vypnuté. Nastavte timeout v Admin → Nastavení.', sessionLockHours > 0)}
       ${ezop4ChecklistRow('Audit log základ', 'Změny počtů, stavů, zakázek, programů, poznámek a problémů se zapisují do auditu.', true)}
       ${ezop4ChecklistRow('Napojení UI na tabulky', 'Další krok: přepnout zakázky z app_state na orders/order_stations.', false)}
+    </div>
+
+    <div class="card" style="border-left:4px solid ${strictSupabaseAuth && sessionLockHours > 0 ? 'var(--green)' : 'var(--orange)'}">
+      <div class="card-title">🛡️ Bezpečnost relace</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${authMode === 'supabase' ? 'AUTH' : 'DEMO'}</div><div class="stat-lbl">Login režim</div></div>
+        <div class="stat-card"><div class="stat-val">${demoFallbackAllowed() ? 'ON' : 'OFF'}</div><div class="stat-lbl">Demo fallback</div></div>
+        <div class="stat-card"><div class="stat-val">${sessionLockHours > 0 ? `${sessionLockHours}h` : 'OFF'}</div><div class="stat-lbl">Auto lock</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:10px">
+        Pro ostrý provoz má být aktivní Supabase Auth, nouzový demo fallback vypnutý a automatické zamčení zapnuté.
+      </div>
     </div>
 
     <div class="card">
@@ -5265,6 +5321,7 @@ function auditLogHtml(row) {
     'auth.mode_changed': 'Režim přihlášení',
     'auth.demo_fallback_changed': 'Nouzový demo fallback',
     'auth.login': 'Přihlášení',
+    'auth.session_locked': 'Relace uzamčena',
     'station.counts_saved': 'Počty uloženy',
     'station.counts_reset': 'Počty reset',
     'station.completed': 'Stanoviště hotovo',
