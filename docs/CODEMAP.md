@@ -15,6 +15,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
 - Notification center: `src/legacy/runtime.js`, search `buildNotifications` and `openNotificationsModal`; styles in `src/styles/components.css`
+- Direct messenger: `src/legacy/runtime.js`, search `openMessengerModal` and `sendDirectMessage`; topbar button in `src/ui/shell.ts`
 - Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
 - Admin grouped navigation: `src/legacy/runtime.js`, search `adminGroups`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`

@@ -108,7 +108,7 @@ function localState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
     USERS: userProfilesForStorage(),
-    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS,
+    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, DIRECT_MESSAGES,
     securityVersion: SECURITY_VERSION,
   };
 }
@@ -116,7 +116,7 @@ function localState() {
 function cloudState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
-    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, SHIFT_HANDOVERS,
+    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, SHIFT_HANDOVERS, DIRECT_MESSAGES,
     securityVersion: SECURITY_VERSION,
     securityNote: 'Cloud state intentionally excludes user profiles, credentials and login logs.',
   };
@@ -137,6 +137,7 @@ function applyState(s, options = {}) {
   if (s.USER_WORKSPACE && typeof s.USER_WORKSPACE === 'object') USER_WORKSPACE = s.USER_WORKSPACE;
   if (Array.isArray(s.ANNOUNCEMENTS)) ANNOUNCEMENTS = s.ANNOUNCEMENTS;
   if (Array.isArray(s.SHIFT_HANDOVERS)) SHIFT_HANDOVERS = s.SHIFT_HANDOVERS;
+  if (Array.isArray(s.DIRECT_MESSAGES)) DIRECT_MESSAGES = s.DIRECT_MESSAGES;
   if (s.APP_SETTINGS) APP_SETTINGS = { ...APP_SETTINGS, ...s.APP_SETTINGS };
   if (s.NEXT_ORDER_CODE) NEXT_ORDER_CODE = s.NEXT_ORDER_CODE;
   normalizeAppData();
@@ -218,6 +219,7 @@ let USER_PASSWORDS = loadUserPasswords();
 let USER_WORKSPACE = {};
 let ANNOUNCEMENTS = [];
 let SHIFT_HANDOVERS = [];
+let DIRECT_MESSAGES = [];
 let lastUserActivityAt = Date.now();
 let inactivityMonitorStarted = false;
 
@@ -1678,6 +1680,168 @@ function refreshTopbarUser() {
     rb.className = 'role-badge role-' + currentUser.role;
   }
   refreshNotificationBadge();
+  refreshMessengerBadge();
+}
+
+function directMessagePeers() {
+  return (USERS || []).filter(u => u.id !== currentUser?.id);
+}
+
+function messageTouchesUser(message, userId = currentUser?.id) {
+  return Boolean(userId && (message.fromUserId === userId || message.toUserId === userId));
+}
+
+function directMessagesForCurrentUser() {
+  return (DIRECT_MESSAGES || [])
+    .filter(message => messageTouchesUser(message))
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function unreadDirectMessages() {
+  const uid = currentUser?.id;
+  if (!uid) return [];
+  return (DIRECT_MESSAGES || []).filter(message =>
+    message.toUserId === uid && !(Array.isArray(message.readBy) && message.readBy.includes(uid))
+  );
+}
+
+function directMessagePeerId(message) {
+  if (!currentUser) return '';
+  return message.fromUserId === currentUser.id ? message.toUserId : message.fromUserId;
+}
+
+function latestDirectMessageByPeer() {
+  const map = new Map();
+  directMessagesForCurrentUser().forEach(message => {
+    map.set(directMessagePeerId(message), message);
+  });
+  return map;
+}
+
+function refreshMessengerBadge() {
+  const btn = document.getElementById('tbar-messenger');
+  const count = document.getElementById('messenger-count');
+  if (!btn || !count) return;
+  if (!currentUser) {
+    btn.style.display = 'none';
+    return;
+  }
+  const unread = unreadDirectMessages().length;
+  btn.style.display = '';
+  btn.classList.toggle('has-unread', unread > 0);
+  count.textContent = unread > 0 ? String(Math.min(unread, 99)) : '';
+}
+
+function markDirectThreadRead(peerId) {
+  const uid = currentUser?.id;
+  if (!uid || !peerId) return;
+  let changed = false;
+  DIRECT_MESSAGES.forEach(message => {
+    if (message.fromUserId === peerId && message.toUserId === uid) {
+      if (!Array.isArray(message.readBy)) message.readBy = [];
+      if (!message.readBy.includes(uid)) {
+        message.readBy.push(uid);
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    saveState();
+    refreshMessengerBadge();
+    refreshNotificationBadge();
+  }
+}
+
+function openMessengerModal(peerId = '') {
+  const peers = directMessagePeers();
+  if (!peers.length) {
+    openModal('💬 Messenger', '<div style="color:var(--text2);padding:20px;text-align:center">V aplikaci zatím nejsou další uživatelé.</div>', [
+      { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+    ]);
+    return;
+  }
+  const latest = latestDirectMessageByPeer();
+  const sortedPeers = [...peers].sort((a, b) => {
+    const atA = latest.get(a.id)?.createdAt || '';
+    const atB = latest.get(b.id)?.createdAt || '';
+    return atB.localeCompare(atA) || a.name.localeCompare(b.name, 'cs');
+  });
+  const selectedPeerId = peerId || sortedPeers[0]?.id || '';
+  const selectedPeer = sortedPeers.find(u => u.id === selectedPeerId) || sortedPeers[0];
+  markDirectThreadRead(selectedPeer.id);
+  const messages = directMessagesForCurrentUser()
+    .filter(message => directMessagePeerId(message) === selectedPeer.id)
+    .slice(-80);
+  openModal('💬 Messenger', `
+    <div class="messenger-layout">
+      <div class="messenger-peers">
+        ${sortedPeers.map(peer => {
+          const last = latest.get(peer.id);
+          const unread = unreadDirectMessages().filter(message => message.fromUserId === peer.id).length;
+          return `<button class="messenger-peer ${peer.id === selectedPeer.id ? 'active' : ''}" onclick="openMessengerModal('${escapeHtml(peer.id)}')">
+            <span class="messenger-avatar" style="background:${escapeHtml(peer.color || '#64748b')}22;color:${escapeHtml(peer.color || '#64748b')}">${escapeHtml(peer.avatar || '👤')}</span>
+            <span><strong>${escapeHtml(peer.name)}</strong><em>${escapeHtml(last?.text || ROLE_LABELS[peer.role] || peer.role)}</em></span>
+            ${unread ? `<b>${unread}</b>` : ''}
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="messenger-thread">
+        <div class="messenger-thread-head">
+          <span class="messenger-avatar" style="background:${escapeHtml(selectedPeer.color || '#64748b')}22;color:${escapeHtml(selectedPeer.color || '#64748b')}">${escapeHtml(selectedPeer.avatar || '👤')}</span>
+          <div><strong>${escapeHtml(selectedPeer.name)}</strong><em>${escapeHtml(ROLE_LABELS[selectedPeer.role] || selectedPeer.role)}</em></div>
+        </div>
+        <div class="messenger-messages">
+          ${messages.length === 0
+            ? `<div class="messenger-empty">Zatím žádná přímá zpráva.</div>`
+            : messages.map(message => messengerMessageHtml(message)).join('')}
+        </div>
+        <div class="messenger-compose">
+          <input type="hidden" id="dm-to" value="${escapeHtml(selectedPeer.id)}">
+          <textarea class="input" id="dm-text" rows="3" placeholder="Napiš zprávu pro ${escapeHtml(selectedPeer.name)}..."></textarea>
+          <button class="btn btn-primary" onclick="sendDirectMessage()">Odeslat</button>
+        </div>
+      </div>
+    </div>
+  `, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+  setTimeout(() => document.getElementById('dm-text')?.focus(), 50);
+}
+
+function messengerMessageHtml(message) {
+  const mine = message.fromUserId === currentUser?.id;
+  return `<div class="messenger-message ${mine ? 'mine' : 'theirs'}">
+    <div>${escapeHtml(message.text || '')}</div>
+    <small>${mine ? 'Já' : escapeHtml(message.fromName || 'Uživatel')} · ${formatDateTime(message.createdAt)}</small>
+  </div>`;
+}
+
+function sendDirectMessage() {
+  const toUserId = document.getElementById('dm-to')?.value;
+  const text = document.getElementById('dm-text')?.value?.trim();
+  const to = USERS.find(u => u.id === toUserId);
+  if (!to || !currentUser) return;
+  if (!text) {
+    showToast('Zpráva je prázdná');
+    return;
+  }
+  DIRECT_MESSAGES.push({
+    id: 'dm' + Date.now() + Math.random().toString(36).slice(2, 6),
+    fromUserId: currentUser.id,
+    fromLogin: currentUser.login,
+    fromName: currentUser.name,
+    toUserId: to.id,
+    toLogin: to.login,
+    toName: to.name,
+    text,
+    createdAt: new Date().toISOString(),
+    readBy: [currentUser.id],
+  });
+  saveState();
+  refreshMessengerBadge();
+  refreshNotificationBadge();
+  openMessengerModal(to.id);
+  showToast('Zpráva odeslána');
 }
 
 function notificationReadStorageKey() {
@@ -1738,6 +1902,19 @@ function buildNotifications() {
       body: issue.description || 'Nahlášený problém čeká na řešení.',
       at: notificationTime(issue.reportedAt),
       action: `markNotificationRead('issue:${issue.id}');openIssueTarget('${issue.id}')`,
+    });
+  });
+
+  unreadDirectMessages().forEach(message => {
+    items.push({
+      id: `direct:${message.id}`,
+      type: 'Přímá zpráva',
+      icon: '💬',
+      tone: 'info',
+      title: message.fromName || 'Zpráva',
+      body: message.text || '',
+      at: notificationTime(message.createdAt),
+      action: `markNotificationRead('direct:${message.id}');openMessengerModal('${message.fromUserId}')`,
     });
   });
 
@@ -1963,6 +2140,8 @@ async function doLogout(options = {}) {
   if (ind) ind.style.display = 'none';
   const notif = document.getElementById('tbar-notifications');
   if (notif) notif.style.display = 'none';
+  const messenger = document.getElementById('tbar-messenger');
+  if (messenger) messenger.style.display = 'none';
 }
 
 // ── ROLE PERMISSIONS ──────────────────────────────────
@@ -2163,6 +2342,7 @@ function buildNav() {
       </div>` : '') +
     `</div>`;
   refreshNotificationBadge();
+  refreshMessengerBadge();
 }
 
 function openMobileMoreNav() {

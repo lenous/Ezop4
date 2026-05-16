@@ -260,6 +260,7 @@ export const shellHtml = `<!-- ════════════════�
     <span id="tbar-role" class="role-badge"></span>
     <span id="tbar-attendance" class="role-badge" style="font-size:10px;cursor:pointer;display:none" onclick="navigateTo('workspace')"></span>
     <button id="tbar-notifications" class="notification-btn" style="display:none" title="Upozornění" onclick="openNotificationsModal()">🔔<span id="notification-count"></span></button>
+    <button id="tbar-messenger" class="notification-btn messenger-btn" style="display:none" title="Messenger" onclick="openMessengerModal()">💬<span id="messenger-count"></span></button>
     <button id="tbar-search" class="logout-btn" style="background:transparent;display:none" title="Hledat (Ctrl+K)" onclick="openGlobalSearch()">🔎</button>
     <button id="tbar-install" class="logout-btn" style="background:rgba(226,184,32,.15);color:var(--gold);display:none" title="Nainstalovat aplikaci" onclick="triggerPwaInstall()">📥 Instalovat</button>
     <button class="logout-btn" onclick="doLogout()">Odhlásit</button>
