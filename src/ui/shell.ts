@@ -238,6 +238,10 @@ export const shellHtml = `<!-- ════════════════�
     </label>
 
     <button class="login-btn" onclick="doLogin()">Přihlásit se</button>
+    <button id="passkey-login-btn" class="login-passkey-btn" type="button" onclick="loginWithPasskey()">
+      🔐 Přihlásit biometrií / passkey
+    </button>
+    <div id="passkey-login-hint" class="login-passkey-hint"></div>
     <div id="login-error" class="login-error"></div>
   </div>
 </div>

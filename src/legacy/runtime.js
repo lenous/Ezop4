@@ -160,6 +160,7 @@ function resetState() {
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(USER_CREDENTIALS_KEY);
   localStorage.removeItem(LOGIN_GUARD_KEY);
+  localStorage.removeItem(PASSKEYS_KEY);
   location.reload();
 }
 
@@ -1529,6 +1530,7 @@ function stationAuditId(order, station) {
 // ── LOGIN / LOGOUT ─────────────────────────────────────
 const REMEMBER_USER_KEY = 'vyrobais-remember-user';
 const LOGIN_GUARD_KEY = 'vyrobais-login-guard-v1';
+const PASSKEYS_KEY = 'ezop4-passkeys-v1';
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MS = 60 * 1000;
 
@@ -1585,12 +1587,74 @@ function savedLoginUser() {
   catch { return ''; }
 }
 
+function passkeySupported() {
+  return Boolean(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
+}
+
+function bytesToBase64Url(bytes) {
+  const binary = Array.from(new Uint8Array(bytes)).map(b => String.fromCharCode(b)).join('');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBytes(value) {
+  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+}
+
+function randomChallenge() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function readPasskeys() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PASSKEYS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(item => item?.id && item?.login) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePasskeys(items) {
+  try { localStorage.setItem(PASSKEYS_KEY, JSON.stringify(items.slice(-20))); }
+  catch { /* Passkey map is device-local convenience only. */ }
+}
+
+function passkeysForLogin(login = '') {
+  const normalized = normalizeLogin(login);
+  return readPasskeys().filter(item => !normalized || normalizeLogin(item.login) === normalized);
+}
+
+function passkeyForCurrentUser() {
+  return passkeysForLogin(currentUser?.login).find(item => item.userId === currentUser?.id) || null;
+}
+
+function updatePasskeyLoginHint() {
+  const hint = document.getElementById('passkey-login-hint');
+  const btn = document.getElementById('passkey-login-btn');
+  if (!hint || !btn) return;
+  if (!passkeySupported()) {
+    btn.disabled = true;
+    hint.textContent = 'Biometrie/passkey vyžaduje HTTPS nebo localhost a podporovaný telefon či prohlížeč.';
+    return;
+  }
+  const login = normalizeLogin(document.getElementById('login-user')?.value);
+  const count = passkeysForLogin(login).length;
+  btn.disabled = count === 0;
+  hint.textContent = count
+    ? (login ? `Pro účet ${login} je na tomto zařízení aktivní passkey.` : 'Na tomto zařízení je aktivní passkey.')
+    : 'Nejdřív se přihlaste heslem a v Profilu zapněte biometrii pro toto zařízení.';
+}
+
 function applyRememberedLogin() {
   const saved = savedLoginUser();
   const userInput = document.getElementById('login-user');
   const remember = document.getElementById('remember-user');
   userInput.value = saved;
   remember.checked = !!saved;
+  updatePasskeyLoginHint();
   if (saved) document.getElementById('login-pass').focus();
   else userInput.focus();
 }
@@ -1630,6 +1694,7 @@ function openDemoLogin() {
   const passInput = document.getElementById('login-pass');
   userInput.value = 'admin';
   passInput.value = '';
+  updatePasskeyLoginHint();
   passInput.focus();
 }
 
@@ -2218,6 +2283,116 @@ function notificationItemHtml(item, filter = 'new') {
   </div>`;
 }
 
+async function registerCurrentUserPasskey() {
+  if (!currentUser) return;
+  if (!passkeySupported()) {
+    showToast('Biometrie/passkey není v tomto prohlížeči dostupná');
+    return;
+  }
+  try {
+    const existing = passkeysForLogin(currentUser.login);
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge: randomChallenge(),
+        rp: { name: 'EZOP4' },
+        user: {
+          id: new TextEncoder().encode(currentUser.id || currentUser.login).slice(0, 64),
+          name: currentUser.login,
+          displayName: currentUser.name,
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 },
+        ],
+        timeout: 60000,
+        attestation: 'none',
+        authenticatorSelection: {
+          residentKey: 'preferred',
+          userVerification: 'required',
+        },
+        excludeCredentials: existing.map(item => ({
+          type: 'public-key',
+          id: base64UrlToBytes(item.id),
+        })),
+      },
+    });
+    if (!credential?.rawId) throw new Error('Passkey nebyl vytvořen.');
+    const id = bytesToBase64Url(credential.rawId);
+    const items = readPasskeys().filter(item => item.id !== id && normalizeLogin(item.login) !== normalizeLogin(currentUser.login));
+    items.push({
+      id,
+      userId: currentUser.id,
+      login: normalizeLogin(currentUser.login),
+      name: currentUser.name,
+      role: currentUser.role,
+      createdAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+    });
+    savePasskeys(items);
+    writeAudit('auth.passkey_registered', 'user', currentUser.id, `${currentUser.name} zapnul/a passkey na zařízení`);
+    renderProfile();
+    showToast('🔐 Biometrie/passkey je zapnutá pro toto zařízení');
+  } catch (error) {
+    console.warn('Passkey registration failed:', error);
+    showToast(error?.name === 'NotAllowedError' ? 'Registrace biometrie byla zrušena' : 'Passkey se nepodařilo zapnout');
+  }
+}
+
+async function loginWithPasskey() {
+  const errorBox = document.getElementById('login-error');
+  if (!passkeySupported()) {
+    errorBox.textContent = 'Biometrie/passkey není v tomto prohlížeči dostupná. Použijte HTTPS, localhost a podporované zařízení.';
+    return;
+  }
+  const login = normalizeLogin(document.getElementById('login-user')?.value);
+  const candidates = passkeysForLogin(login);
+  if (!candidates.length) {
+    errorBox.textContent = login
+      ? `Pro účet ${login} není na tomto zařízení zapnutá biometrie/passkey. Přihlaste se heslem a zapněte ji v Profilu.`
+      : 'Na tomto zařízení zatím není uložený žádný passkey pro EZOP4.';
+    updatePasskeyLoginHint();
+    return;
+  }
+  try {
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: randomChallenge(),
+        timeout: 60000,
+        userVerification: 'required',
+        allowCredentials: candidates.map(item => ({
+          type: 'public-key',
+          id: base64UrlToBytes(item.id),
+        })),
+      },
+    });
+    const matchedId = bytesToBase64Url(assertion.rawId);
+    const passkey = candidates.find(item => item.id === matchedId);
+    const user = passkey ? resolveLoginUser(passkey.login) : null;
+    if (!user) {
+      errorBox.textContent = 'Passkey existuje, ale uživatel už v aplikaci není.';
+      return;
+    }
+    updateRememberedLogin(user.login);
+    completeLogin(user, user.login, 'passkey');
+    writeAudit('auth.passkey_login', 'user', user.id, `${user.name} se přihlásil/a přes passkey`);
+  } catch (error) {
+    console.warn('Passkey login failed:', error);
+    errorBox.textContent = error?.name === 'NotAllowedError'
+      ? 'Biometrické přihlášení bylo zrušeno.'
+      : 'Biometrické přihlášení se nezdařilo. Použijte heslo.';
+  }
+}
+
+function removeCurrentUserPasskey() {
+  if (!currentUser) return;
+  const before = readPasskeys();
+  const after = before.filter(item => normalizeLogin(item.login) !== normalizeLogin(currentUser.login));
+  savePasskeys(after);
+  writeAudit('auth.passkey_removed', 'user', currentUser.id, `${currentUser.name} vypnul/a passkey na zařízení`);
+  renderProfile();
+  showToast('Biometrie/passkey je na tomto zařízení vypnutá');
+}
+
 async function doLogin() {
   const rawLogin = document.getElementById('login-user').value;
   const u = normalizeLogin(rawLogin);
@@ -2265,6 +2440,7 @@ async function doLogin() {
 
 document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+document.getElementById('login-user').addEventListener('input', updatePasskeyLoginHint);
 document.getElementById('remember-user').addEventListener('change', () => {
   if (!document.getElementById('remember-user').checked) updateRememberedLogin('');
 });
@@ -8201,6 +8377,8 @@ function formatTime(iso) {
 // ── PROFILE ───────────────────────────────────────────
 function renderProfile() {
   const u = currentUser;
+  const passkey = passkeyForCurrentUser();
+  const passkeyAvailable = passkeySupported();
   document.getElementById('page-profile').innerHTML = `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">👤 Profil</div>
     <div class="card" style="text-align:center;padding:28px">
@@ -8208,6 +8386,28 @@ function renderProfile() {
       <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">${escapeHtml(u.name)}</div>
       <span class="role-badge role-${u.role}" style="font-size:12px">${ROLE_LABELS[u.role]}</span>
       <div style="margin-top:14px;font-size:12px;color:var(--text2)">Login: <b>${escapeHtml(u.login)}</b></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔐 Biometrie / Passkey</div>
+      <div class="profile-passkey">
+        <div>
+          <strong>${passkey ? 'Zapnuto na tomto zařízení' : 'Není zapnuto'}</strong>
+          <span>
+            ${passkey
+              ? `Vytvořeno ${escapeHtml(formatDateTime(passkey.createdAt))}. Přihlášení použije Face ID, Touch ID, Windows Hello nebo PIN zařízení.`
+              : passkeyAvailable
+                ? 'Po zapnutí se budete moct přihlásit bez hesla na tomto telefonu nebo počítači.'
+                : 'Tento prohlížeč nebo adresa nepodporuje WebAuthn. Použijte HTTPS, localhost a podporované zařízení.'}
+          </span>
+        </div>
+        ${passkey
+          ? `<button class="btn btn-ghost" onclick="removeCurrentUserPasskey()">Vypnout</button>`
+          : `<button class="btn btn-teal" ${passkeyAvailable ? '' : 'disabled'} onclick="registerCurrentUserPasskey()">Zapnout biometrii</button>`}
+      </div>
+      <div class="profile-passkey-note">
+        Otisk prstu ani obličej se do aplikace neukládá. EZOP4 si lokálně pamatuje jen ID passkey pro tento prohlížeč.
+      </div>
     </div>
 
     <div class="card">

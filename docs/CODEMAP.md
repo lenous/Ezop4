@@ -9,6 +9,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Order station sequence UI: `src/legacy/runtime.js`, search `manageStationsModal`
 - Memory cleanup rules: `src/legacy/runtime.js`, search `cleanupAppMemory`
 - Session lock rules: `src/legacy/runtime.js`, search `sessionLockTimeoutMs`
+- Passkey/biometric login: `src/legacy/runtime.js`, search `PASSKEYS_KEY`, `loginWithPasskey`, and `registerCurrentUserPasskey`; login shell in `src/ui/shell.ts`; styles in `src/styles/layout.css` and `src/styles/components.css`
 - Feature visibility flags: `src/legacy/runtime.js`, search `featureEnabled`; defaults in `src/domain/defaultData.ts`
 - Role permission overrides: `src/legacy/runtime.js`, search `renderAdminRolePermissions`; defaults in `src/domain/defaultData.ts`
 - Security checklist: `src/legacy/runtime.js`, search `renderSecurityChecklist`; shown in Admin → Systém → Ezop4
