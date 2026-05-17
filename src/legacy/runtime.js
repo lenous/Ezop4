@@ -3007,7 +3007,6 @@ function renderWorkQueue() {
 function queueCardHtml(item, position = 0, total = 0) {
   const { order, station, index, stInfo, queueState } = item;
   const meta = stationStatusMeta(station.status);
-  const link = currentOrderLink(order, station.stId);
   const blockReason = orderBlockReason(order);
   const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter) && Number(queueStationFilter) === Number(station.stId);
   return `<div class="card app-queue-card" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
@@ -3039,8 +3038,7 @@ function queueCardHtml(item, position = 0, total = 0) {
           ` : ''}
           ${stationWorkActionButtons(order, station)}
           <button class="btn btn-primary btn-sm" onclick="openStation('${order.id}', '${station.stId}')">Otevřít stanoviště</button>
-          <button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Detail zakázky</button>
-          <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(link)}')">Kopírovat QR odkaz</button>
+          ${orderMoreButton(order.id, station.stId)}
         </div>
       </div>
     </div>
@@ -3092,6 +3090,45 @@ async function copyTextToClipboard(text) {
 // ── ORDERS LIST ───────────────────────────────────────
 let orderSearch = '';
 let orderFilter = null; // 'in_progress' | 'urgent' | 'overdue' | 'blocked' | 'wait_*' | null
+
+function orderMoreButton(orderId, stationId = '') {
+  return `<button class="btn btn-ghost btn-sm more-actions-btn"
+    onclick="event.stopPropagation();openOrderActionsModal('${orderId}', '${stationId}')">⋯ Další</button>`;
+}
+
+function openOrderActionsModal(orderId, stationId = '') {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  const station = stationId ? order.stations?.find(s => Number(s.stId) === Number(stationId)) : null;
+  const stInfo = station ? STATIONS.find(st => Number(st.id) === Number(station.stId)) : null;
+  const items = [
+    `<button class="action-menu-item primary" onclick="closeModal();openOrder('${order.id}')">
+      <span>📋</span><b>Detail zakázky</b><small>${escapeHtml(order.number)} · ${escapeHtml(order.name)}</small>
+    </button>`,
+    station ? `<button class="action-menu-item primary" onclick="closeModal();openStation('${order.id}', '${station.stId}')">
+      <span>${stInfo?.icon || '🔧'}</span><b>Otevřít stanoviště</b><small>${escapeHtml(stInfo?.name || 'Stanoviště')}</small>
+    </button>` : '',
+    `<button class="action-menu-item" onclick="copyTextToClipboard(currentOrderLink(ORDERS.find(o=>o.id==='${order.id}'), '${stationId}'));closeModal()">
+      <span>🔗</span><b>${station ? 'QR odkaz na stanoviště' : 'Odkaz na zakázku'}</b><small>Zkopírovat odkaz pro mobil nebo QR</small>
+    </button>`,
+    can('manage_order_stations') ? `<button class="action-menu-item" onclick="closeModal();manageStationsModal('${order.id}')">
+      <span>⚙️</span><b>Spravovat stanoviště</b><small>Zapnout, vypnout a seřadit postup výroby</small>
+    </button>` : '',
+    can('block_order') ? (isOrderBlocked(order)
+      ? `<button class="action-menu-item" onclick="closeModal();unblockOrderModal('${order.id}')">
+          <span>✅</span><b>Odblokovat zakázku</b><small>Zakázka bude znovu dostupná pro výrobu</small>
+        </button>`
+      : `<button class="action-menu-item danger" onclick="closeModal();blockOrderModal('${order.id}')">
+          <span>⛔</span><b>Blokovat zakázku</b><small>Zastavit práci kvůli materiálu, dokumentaci nebo problému</small>
+        </button>`) : '',
+    can('delete_order') ? `<button class="action-menu-item danger" onclick="closeModal();deleteOrderModal('${order.id}')">
+      <span>🗑️</span><b>Smazat zakázku</b><small>Citlivá akce dostupná jen oprávněným rolím</small>
+    </button>` : '',
+  ].filter(Boolean).join('');
+  openModal('Další možnosti', `<div class="action-menu">${items}</div>`, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+}
 
 function filterOrders(q) {
   let list = visibleOrders();
@@ -3191,7 +3228,7 @@ function ordersListHtml(list) {
             <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
             ${orderBlockedBadgeHtml(o)}
             ${orderReadinessBadgeHtml(o)}
-            ${can('delete_order') ? `<button class="btn btn-danger btn-sm" style="margin-left:auto;padding:5px 9px;font-size:11px" onclick="event.stopPropagation();deleteOrderModal('${o.id}')">🗑️</button>` : ''}
+            <span style="margin-left:auto">${orderMoreButton(o.id)}</span>
           </div>
           <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${o.name}</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)">
@@ -3265,11 +3302,7 @@ function openOrder(orderId, options = {}) {
           <span class="badge badge-${selectedOrder.priority}">${priorityLabel(selectedOrder.priority)}</span>
           ${featureEnabled('featureOrderBlocking') ? orderBlockedBadgeHtml(selectedOrder) : ''}
           ${featureEnabled('featureReadiness') ? orderReadinessBadgeHtml(selectedOrder) : ''}
-          <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(currentOrderLink(selectedOrder))}')">🔗 Odkaz</button>
-          ${can('block_order') ? (isOrderBlocked(selectedOrder)
-            ? `<button class="btn btn-teal btn-sm" onclick="unblockOrderModal('${selectedOrder.id}')">Odblokovat</button>`
-            : `<button class="btn btn-danger btn-sm" onclick="blockOrderModal('${selectedOrder.id}')">Blokovat</button>`) : ''}
-          ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${selectedOrder.id}')">🗑️ Smazat</button>` : ''}
+          ${orderMoreButton(selectedOrder.id)}
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
@@ -3301,7 +3334,7 @@ function openOrder(orderId, options = {}) {
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
       <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Stanoviště výroby</div>
-      ${can('manage_order_stations') ? `<button class="btn btn-ghost btn-sm" onclick="manageStationsModal('${selectedOrder.id}')">⚙️ Spravovat</button>` : ''}
+      ${can('manage_order_stations') ? orderMoreButton(selectedOrder.id) : ''}
     </div>
     ${selectedOrder.stations.map((s, index) => ({ s, index })).filter(({ s }) => userCanAccessStation(s.stId)).map(({ s, index }) => {
       const stInfo = STATIONS.find(x => x.id === s.stId);
@@ -6248,6 +6281,8 @@ function renderAdminEzop4() {
       </div>
     </div>
 
+    ${renderSecurityChecklist(authMode, strictSupabaseAuth, sessionLockHours)}
+
     <div class="card">
       <div class="card-title">🔐 Režim přihlášení</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
@@ -6290,6 +6325,35 @@ function renderAdminEzop4() {
         2. Vytvořit uživatele v Supabase Auth a doplnit tabulku profiles.<br>
         3. Přepnout login na Supabase Auth.<br>
         4. Přesunout zakázky a počty z app_state do tabulek.
+      </div>
+    </div>
+  `;
+}
+
+function renderSecurityChecklist(authMode, strictSupabaseAuth, sessionLockHours) {
+  const disabledOverrides = Object.values(APP_SETTINGS.rolePermissionOverrides || {})
+    .reduce((sum, roleMap) => sum + Object.values(roleMap || {}).filter(v => v === false).length, 0);
+  const lastLogin = (LOGIN_LOGS || [])[0];
+  const operatorSafe =
+    !BASE_ROLE_PERMISSIONS.create_order.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.delete_order.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.manage_users.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.app_settings.includes('operator');
+  const adminOnly =
+    BASE_ROLE_PERMISSIONS.manage_users.length === 1 &&
+    BASE_ROLE_PERMISSIONS.manage_users.includes('admin') &&
+    BASE_ROLE_PERMISSIONS.app_settings.length === 1 &&
+    BASE_ROLE_PERMISSIONS.app_settings.includes('admin');
+  return `
+    <div class="card" style="border-left:4px solid ${operatorSafe && adminOnly ? 'var(--green)' : 'var(--red)'}">
+      <div class="card-title">🔎 Bezpečnostní kontrola rolí</div>
+      ${ezop4ChecklistRow('Operátor bez správy a mazání', 'Operátor nemá vytváření zakázek, mazání, správu uživatelů ani nastavení aplikace.', operatorSafe)}
+      ${ezop4ChecklistRow('Admin-only nastavení', 'Správa uživatelů a nastavení aplikace jsou v základních právech pouze pro admina.', adminOnly)}
+      ${ezop4ChecklistRow('Role lze omezovat z aplikace', disabledOverrides ? `Admin už vypnul ${disabledOverrides} oprávnění přes Role a práva.` : 'Zatím nejsou vypnutá žádná dodatečná oprávnění rolí.', true)}
+      ${ezop4ChecklistRow('Produkční přihlášení', authMode === 'supabase' ? (strictSupabaseAuth ? 'Supabase Auth běží bez demo fallbacku.' : 'Supabase Auth je zapnutý, ale fallback na demo je stále povolený.') : 'Stále běží demo login. Pro ostrý provoz přepnout na Supabase Auth.', strictSupabaseAuth)}
+      ${ezop4ChecklistRow('Auto lock relace', sessionLockHours > 0 ? `Relace se uzamkne po ${sessionLockHours} h neaktivity.` : 'Doporučení: zapnout automatické zamčení v Nastavení.', sessionLockHours > 0)}
+      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:10px">
+        Poslední lokální login: ${lastLogin ? `${escapeHtml(lastLogin.login || lastLogin.userLogin || 'uživatel')} · ${formatDateTime(lastLogin.at || lastLogin.time || lastLogin.createdAt)}` : 'zatím bez záznamu'}.
       </div>
     </div>
   `;
@@ -7027,7 +7091,7 @@ function renderAdminOrders() {
       </div>
       <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
       <button class="btn btn-ghost btn-sm" onclick="editOrderModal('${o.id}')">✏️</button>
-      ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${o.id}')">🗑️</button>` : ''}
+      ${orderMoreButton(o.id)}
     </div>`).join('')}`;
 }
 

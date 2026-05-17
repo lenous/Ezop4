@@ -96,6 +96,39 @@
   #app .btn-danger,
   .modal-overlay .btn-danger,
   .numpad-overlay .btn-danger { background: linear-gradient(135deg, #ff5a5a, var(--red)); color: #fff; }
+  #app .more-actions-btn { min-width: 76px; justify-content: center; }
+
+  .action-menu {
+    display: grid;
+    gap: 8px;
+  }
+  .action-menu-item {
+    width: 100%;
+    border: 1px solid rgba(168,180,189,.16);
+    border-radius: 10px;
+    background: rgba(255,255,255,.035);
+    color: var(--text);
+    padding: 11px 12px;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 8px 10px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .action-menu-item span {
+    grid-row: span 2;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: rgba(125,214,210,.10);
+  }
+  .action-menu-item b { font-size: 13px; line-height: 1.2; }
+  .action-menu-item small { color: var(--text2); font-size: 11px; line-height: 1.35; }
+  .action-menu-item.primary { border-color: rgba(54,176,174,.35); background: rgba(54,176,174,.10); }
+  .action-menu-item.danger { border-color: rgba(239,68,68,.36); background: rgba(239,68,68,.09); }
+  .action-menu-item.danger b { color: #ff8b8b; }
   #app .btn-sm,
   .modal-overlay .btn-sm,
   .numpad-overlay .btn-sm { font-size: 11px; padding: 7px 12px; }

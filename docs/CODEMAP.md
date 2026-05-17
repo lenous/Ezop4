@@ -11,11 +11,13 @@ Use this map before opening large files. It keeps future changes focused and che
 - Session lock rules: `src/legacy/runtime.js`, search `sessionLockTimeoutMs`
 - Feature visibility flags: `src/legacy/runtime.js`, search `featureEnabled`; defaults in `src/domain/defaultData.ts`
 - Role permission overrides: `src/legacy/runtime.js`, search `renderAdminRolePermissions`; defaults in `src/domain/defaultData.ts`
+- Security checklist: `src/legacy/runtime.js`, search `renderSecurityChecklist`; shown in Admin → Systém → Ezop4
 - Role menu visibility: `src/legacy/runtime.js`, search `renderRoleNavVisibility` and `navVisibleForCurrentUser`
 - Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
 - Notification center: `src/legacy/runtime.js`, search `buildNotifications` and `openNotificationsModal`; styles in `src/styles/components.css`
 - Work queue cards and click-through: `src/legacy/runtime.js`, search `renderWorkQueue`, `queueCardHtml`, and `queueCardOpen`
+- Secondary order actions menu: `src/legacy/runtime.js`, search `openOrderActionsModal` and `orderMoreButton`; styles in `src/styles/components.css` under `action-menu`
 - Direct messenger: `src/legacy/runtime.js`, search `openMessengerModal` and `sendDirectMessage`; topbar button in `src/ui/shell.ts`; role gate is `use_messenger`
 - Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
 - Station detail layout: `src/legacy/runtime.js`, search `renderStationDetail`; styles in `src/styles/components.css` and `src/styles/mobile.css`
