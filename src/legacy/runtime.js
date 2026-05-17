@@ -1927,6 +1927,11 @@ function notificationReadStorageKey() {
   return `${NOTIFICATION_READ_KEY}:${userKey}`;
 }
 
+function notificationSnoozeStorageKey() {
+  const userKey = normalizeLogin(currentUser?.login || currentUser?.id || 'anonymous') || 'anonymous';
+  return `${NOTIFICATION_READ_KEY}:snooze:${userKey}`;
+}
+
 function readNotificationIds() {
   try {
     return new Set(JSON.parse(localStorage.getItem(notificationReadStorageKey()) || '[]'));
@@ -1937,6 +1942,36 @@ function readNotificationIds() {
 
 function saveNotificationIds(ids) {
   localStorage.setItem(notificationReadStorageKey(), JSON.stringify([...ids].slice(-500)));
+}
+
+function readNotificationSnoozes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(notificationSnoozeStorageKey()) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveNotificationSnoozes(snoozes) {
+  const now = Date.now();
+  const cleaned = Object.fromEntries(Object.entries(snoozes || {})
+    .filter(([, until]) => Number(until) > now));
+  localStorage.setItem(notificationSnoozeStorageKey(), JSON.stringify(cleaned));
+}
+
+function snoozedUntil(id) {
+  const until = Number(readNotificationSnoozes()[id] || 0);
+  return until > Date.now() ? until : 0;
+}
+
+function snoozeNotification(id, minutes = 60, filter = 'new') {
+  const snoozes = readNotificationSnoozes();
+  snoozes[id] = Date.now() + Math.max(5, Number(minutes) || 60) * 60000;
+  saveNotificationSnoozes(snoozes);
+  refreshNotificationBadge();
+  openNotificationsModal(filter);
+  showToast('Upozornění odloženo');
 }
 
 function notificationTime(value) {
@@ -2066,12 +2101,12 @@ function buildNotifications() {
   });
 
   return items
-    .map(item => ({ ...item, read: read.has(item.id) }))
+    .map(item => ({ ...item, read: read.has(item.id), snoozedUntil: snoozedUntil(item.id) }))
     .sort((a, b) => new Date(b.at) - new Date(a.at));
 }
 
 function unreadNotifications() {
-  return buildNotifications().filter(item => !item.read);
+  return buildNotifications().filter(item => !item.read && !item.snoozedUntil);
 }
 
 function notificationFilterLabel(filter) {
@@ -2105,9 +2140,14 @@ function markNotificationRead(id) {
   refreshNotificationBadge();
 }
 
+function markNotificationReadAndRefresh(id, filter = 'new') {
+  markNotificationRead(id);
+  openNotificationsModal(filter);
+}
+
 function markAllNotificationsRead() {
   const read = readNotificationIds();
-  buildNotifications().forEach(item => read.add(item.id));
+  buildNotifications().filter(item => !item.snoozedUntil).forEach(item => read.add(item.id));
   saveNotificationIds(read);
   refreshNotificationBadge();
   openNotificationsModal('all');
@@ -2115,20 +2155,27 @@ function markAllNotificationsRead() {
 
 function openNotificationsModal(filter = 'new') {
   const all = buildNotifications();
-  const unread = all.filter(item => !item.read);
+  const activeAll = all.filter(item => !item.snoozedUntil);
+  const unread = activeAll.filter(item => !item.read);
   const filters = ['new', 'production', 'issues', 'messages', 'all'];
   const safeFilter = filters.includes(filter) ? filter : 'new';
   const list = safeFilter === 'all'
     ? all
     : safeFilter === 'new'
       ? unread
-      : all.filter(item => item.category === safeFilter);
+      : activeAll.filter(item => item.category === safeFilter);
   const countForFilter = key => {
     if (key === 'all') return all.length;
     if (key === 'new') return unread.length;
-    return all.filter(item => item.category === key).length;
+    return activeAll.filter(item => item.category === key).length;
   };
   openModal('🔔 Upozornění', `
+    <div class="notification-inbox-summary">
+      <div><b>${unread.length}</b><span>nové</span></div>
+      <div><b>${countForFilter('production')}</b><span>výroba</span></div>
+      <div><b>${countForFilter('issues')}</b><span>problémy</span></div>
+      <div><b>${countForFilter('messages')}</b><span>zprávy</span></div>
+    </div>
     <div class="notification-tabs">
       ${filters.map(key => `
         <button class="${safeFilter === key ? 'active' : ''}" onclick="openNotificationsModal('${key}')">
@@ -2138,23 +2185,28 @@ function openNotificationsModal(filter = 'new') {
     </div>
     ${list.length === 0
       ? `<div style="text-align:center;color:var(--text2);padding:28px 12px">Žádná upozornění v kategorii ${escapeHtml(notificationFilterLabel(safeFilter).toLowerCase())}.</div>`
-      : `<div class="notification-list">${list.slice(0, 30).map(notificationItemHtml).join('')}</div>`}
+      : `<div class="notification-list">${list.slice(0, 30).map(item => notificationItemHtml(item, safeFilter)).join('')}</div>`}
   `, [
     { label: 'Označit přečtené', cls: 'btn-ghost', action: 'markAllNotificationsRead()' },
     { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
   ]);
 }
 
-function notificationItemHtml(item) {
-  return `<button class="notification-item ${item.read ? 'read' : ''} ${item.tone || 'info'}" onclick="closeModal();${item.action}">
+function notificationItemHtml(item, filter = 'new') {
+  const snoozed = item.snoozedUntil ? ` · odloženo do ${new Date(item.snoozedUntil).toLocaleTimeString('cs-CZ', { hour:'2-digit', minute:'2-digit' })}` : '';
+  return `<div class="notification-item ${item.read ? 'read' : ''} ${item.snoozedUntil ? 'snoozed' : ''} ${item.tone || 'info'}">
     <span class="notification-icon">${item.icon}</span>
-    <span class="notification-copy">
+    <button class="notification-copy" onclick="closeModal();${item.action}">
       <strong>${escapeHtml(item.title)}</strong>
-      <em>${escapeHtml(item.type)} · ${notificationAge(item.at)}</em>
+      <em>${escapeHtml(item.type)} · ${notificationAge(item.at)}${snoozed}</em>
       <small>${escapeHtml(item.body)}</small>
+    </button>
+    <span class="notification-actions">
+      <button onclick="closeModal();${item.action}">${item.read ? 'Otevřít' : 'Řešit'}</button>
+      ${!item.read ? `<button onclick="markNotificationReadAndRefresh('${item.id}', '${filter}')">Přečtené</button>` : ''}
+      ${!item.read && !item.snoozedUntil ? `<button onclick="snoozeNotification('${item.id}', 60, '${filter}')">Odložit</button>` : ''}
     </span>
-    <span class="notification-action">${item.read ? 'přečteno' : 'otevřít'}</span>
-  </button>`;
+  </div>`;
 }
 
 async function doLogin() {
