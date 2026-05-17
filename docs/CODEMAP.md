@@ -16,11 +16,13 @@ Use this map before opening large files. It keeps future changes focused and che
 - Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
 - Notification center: `src/legacy/runtime.js`, search `buildNotifications` and `openNotificationsModal`; styles in `src/styles/components.css`
+- Dashboard stopped-work overview: `src/legacy/runtime.js`, search `dashboardStoppedWorkHtml` and `orderStopItems`; styles use `app-stop-*`
 - Work queue cards and click-through: `src/legacy/runtime.js`, search `renderWorkQueue`, `queueCardHtml`, and `queueCardOpen`
 - Secondary order actions menu: `src/legacy/runtime.js`, search `openOrderActionsModal` and `orderMoreButton`; styles in `src/styles/components.css` under `action-menu`
 - Direct messenger: `src/legacy/runtime.js`, search `openMessengerModal` and `sendDirectMessage`; topbar button in `src/ui/shell.ts`; role gate is `use_messenger`
 - Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
 - Station detail layout: `src/legacy/runtime.js`, search `renderStationDetail`; styles in `src/styles/components.css` and `src/styles/mobile.css`
+- Order timeline: `src/legacy/runtime.js`, search `orderTimelineItems` and `orderTimelineCardHtml`; styles use `order-timeline-*`
 - Admin grouped navigation and desktop console layout: `src/legacy/runtime.js`, search `adminGroups`, `renderAdmin`, `activeAdminNav`, and `renderAdminSubTabs`; styles use `admin-shell`, `admin-sidebar`, `admin-tabs-nested`, and `admin-content-head` in `src/styles/components.css` plus mobile overrides in `src/styles/mobile.css`
 - Admin order rows: `src/legacy/runtime.js`, search `renderAdminOrders` and `adminOrderRowOpen`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`

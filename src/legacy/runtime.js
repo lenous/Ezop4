@@ -2746,6 +2746,141 @@ function visibleIssues() {
   return ISSUES.filter(userCanSeeIssue);
 }
 
+function orderStopItems(orders = visibleOrders()) {
+  const issueByOrder = visibleIssues().filter(issue => !issue.resolved)
+    .reduce((map, issue) => {
+      if (!map.has(issue.orderId)) map.set(issue.orderId, []);
+      map.get(issue.orderId).push(issue);
+      return map;
+    }, new Map());
+
+  return orders.flatMap(order => {
+    const items = [];
+    const activeIndex = activeStationIndex(order);
+    const station = order.stations?.[activeIndex];
+    const stInfo = STATIONS.find(st => Number(st.id) === Number(station?.stId));
+    const readiness = readinessSummary(order);
+
+    if (isOrderBlocked(order)) {
+      items.push({
+        tone: 'danger',
+        icon: '⛔',
+        label: 'Blokace',
+        reason: orderBlockReason(order) || 'Zakázka je blokovaná.',
+        order,
+        station,
+        stInfo,
+        rank: 0,
+      });
+    }
+
+    (issueByOrder.get(order.id) || []).slice(0, 1).forEach(issue => {
+      const issueStation = STATIONS.find(st => Number(st.id) === Number(issue.stationId));
+      items.push({
+        tone: 'danger',
+        icon: '⚠️',
+        label: 'Problém',
+        reason: issue.description || 'Otevřený problém ve výrobě.',
+        order,
+        station: order.stations?.find(st => Number(st.stId) === Number(issue.stationId)) || station,
+        stInfo: issueStation || stInfo,
+        rank: 1,
+      });
+    });
+
+    if (isOrderOverdue(order)) {
+      items.push({
+        tone: 'warning',
+        icon: '⏰',
+        label: 'Po termínu',
+        reason: `Termín ${formatDate(order.due)} · ${orderDaysLate(order)} dní po termínu.`,
+        order,
+        station,
+        stInfo,
+        rank: 2,
+      });
+    }
+
+    if (readiness.status !== 'ok') {
+      const missing = Object.keys(READINESS_ITEMS)
+        .filter(key => readinessEffectiveStatus(order, key) !== 'ok')
+        .map(key => READINESS_ITEMS[key].label)
+        .slice(0, 3)
+        .join(', ');
+      items.push({
+        tone: readiness.status === 'blocked' ? 'danger' : 'warning',
+        icon: readiness.status === 'blocked' ? '🔴' : '🟡',
+        label: 'Příprava',
+        reason: missing ? `Dořešit: ${missing}` : 'Zakázka není plně připravená.',
+        order,
+        station,
+        stInfo,
+        rank: 3,
+      });
+    }
+
+    if (station && !orderIsClosed(order) && !isOrderBlocked(order)) {
+      const available = stationInputQty(order, station, activeIndex);
+      const processed = stationProcessedQty(station);
+      const needsClaim = available > processed && !station.workerUserId && !station.workerLogin && ['waiting', 'in_progress', 'partial'].includes(station.status);
+      if (needsClaim) {
+        items.push({
+          tone: 'info',
+          icon: '👤',
+          label: 'Nepřevzato',
+          reason: `${stInfo?.name || 'Stanoviště'} čeká na převzetí práce.`,
+          order,
+          station,
+          stInfo,
+          rank: 4,
+        });
+      }
+    }
+
+    return items;
+  }).sort((a, b) =>
+    a.rank - b.rank ||
+    priorityRank(a.order.priority) - priorityRank(b.order.priority) ||
+    dueTime(a.order) - dueTime(b.order)
+  );
+}
+
+function dashboardStoppedWorkHtml(orders) {
+  const items = orderStopItems(orders).slice(0, 6);
+  if (!items.length) {
+    return `<div class="card app-stop-panel app-stop-panel-calm">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">🟢 Co stojí</div>
+          <div class="app-muted">Teď není vidět žádná blokace, problém ani prošlý termín.</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  return `<div class="card app-stop-panel">
+    <div class="app-panel-head">
+      <div>
+        <div class="card-title">🚦 Co stojí</div>
+        <div class="app-muted">${items.length} nejdůležitějších věcí, které brzdí výrobu.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showOrdersFiltered('blocked')">Blokace</button>
+    </div>
+    <div class="app-stop-list">
+      ${items.map(item => `
+        <button class="app-stop-row ${item.tone}" type="button" onclick="${item.station ? `openStation('${item.order.id}','${item.station.stId}')` : `openOrder('${item.order.id}')`}">
+          <span class="app-stop-icon">${item.icon}</span>
+          <span class="app-stop-copy">
+            <b>${escapeHtml(item.order.number)} · ${escapeHtml(item.label)}</b>
+            <small>${escapeHtml(item.reason)}</small>
+            <em>${item.stInfo ? `${item.stInfo.icon} ${escapeHtml(item.stInfo.name)}` : escapeHtml(item.order.name)}</em>
+          </span>
+          <span class="app-stop-action">Otevřít</span>
+        </button>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
 // ── DASHBOARD ─────────────────────────────────────────
 function renderDashboard() {
   const orders = visibleOrders();
@@ -2779,6 +2914,7 @@ function renderDashboard() {
     ${dashboardOperatorWorkHtml()}
 
     ${dashboardCockpitHtml(orders, { total, inProg, issues, done, urgent })}
+    ${dashboardStoppedWorkHtml(orders)}
     ${dashboardPlanningRiskHtml(orders)}
   `;
 }
@@ -3250,6 +3386,157 @@ function ordersListHtml(list) {
   }).join('');
 }
 
+function orderTimelineItems(order) {
+  if (!order) return [];
+  const stationName = stId => {
+    const st = STATIONS.find(item => Number(item.id) === Number(stId));
+    return st ? `${st.icon} ${st.name}` : 'Stanoviště';
+  };
+  const items = [];
+
+  items.push({
+    at: order.orderDate || order.createdAt || order.due || '',
+    icon: '📋',
+    title: 'Zakázka vytvořena',
+    body: `${order.number} · ${order.name}`,
+    actor: order.customer || '',
+    tone: 'info',
+  });
+
+  (order.stations || []).forEach((station, index) => {
+    const meta = stationStatusMeta(station.status);
+    const processed = stationProcessedQty(station);
+    const received = stationInputQty(order, station, index);
+    const lastAt = station.workCompletedAt || station.workPausedAt || station.workStartedAt || '';
+    if (station.workStartedAt || station.workerName || station.workerLogin) {
+      items.push({
+        at: station.workStartedAt || '',
+        icon: '👤',
+        title: `${stationName(station.stId)} převzato`,
+        body: `${stationWorkerLabel(station)} · ${processed}/${received} ks zpracováno`,
+        actor: station.workerRole ? ROLE_LABELS[station.workerRole] || station.workerRole : '',
+        tone: 'info',
+      });
+    }
+    if (processed || ['completed', 'partial', 'issue'].includes(station.status)) {
+      items.push({
+        at: lastAt,
+        icon: meta.icon,
+        title: `${stationName(station.stId)} · ${meta.label}`,
+        body: `OK ${positiveQty(station.qtyOk)} · Oprava ${positiveQty(station.qtyRework)} · Zmetek ${positiveQty(station.qtyScrap)}`,
+        actor: station.workCompletedByName || station.workerName || '',
+        tone: station.status === 'issue' ? 'danger' : station.status === 'completed' ? 'success' : 'info',
+      });
+    }
+  });
+
+  Object.entries(normalizeOrderReadiness(order)).forEach(([key, readiness]) => {
+    if (!readiness.updatedAt) return;
+    const item = READINESS_ITEMS[key];
+    const status = readinessEffectiveStatus(order, key);
+    items.push({
+      at: readiness.updatedAt,
+      icon: item?.icon || '🧩',
+      title: `Připravenost · ${item?.label || key}`,
+      body: readiness.note || READINESS_STATUS[status]?.label || status,
+      actor: readiness.updatedByName || '',
+      tone: status === 'ok' ? 'success' : status === 'blocked' ? 'danger' : 'warning',
+    });
+  });
+
+  PROD_NOTES
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(note => note.orderId === order.id && noteVisibleToCurrentUser(note))
+    .forEach(note => items.push({
+      at: note.createdAt,
+      icon: '📝',
+      title: NOTE_CATEGORIES[note.category] || note.type || 'Poznámka',
+      body: note.text,
+      actor: note.author || '',
+      tone: 'info',
+    }));
+
+  ISSUES
+    .filter(issue => issue.orderId === order.id && userCanSeeIssue(issue))
+    .forEach(issue => items.push({
+      at: issue.resolvedAt || issue.reportedAt,
+      icon: issue.resolved ? '✅' : '⚠️',
+      title: `${issue.resolved ? 'Vyřešený problém' : 'Nahlášený problém'} · ${stationName(issue.stationId)}`,
+      body: issue.description || '',
+      actor: issue.resolvedBy || issue.reportedBy || '',
+      tone: issue.resolved ? 'success' : 'danger',
+    }));
+
+  auditRows()
+    .filter(row => row.entityId === order.id || String(row.entityId || '').startsWith(order.id + ':') || String(row.summary || '').includes(order.number))
+    .forEach(row => items.push({
+      at: row.at,
+      icon: '🧾',
+      title: auditActionLabel(row.action),
+      body: row.summary || row.action,
+      actor: row.userName || 'Systém',
+      tone: row.action?.includes('blocked') || row.action?.includes('deleted') ? 'danger' : 'info',
+    }));
+
+  const seen = new Set();
+  return items
+    .filter(item => item.title || item.body)
+    .filter(item => {
+      const key = `${item.at}|${item.title}|${item.body}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => {
+      const atA = new Date(a.at || 0).getTime() || 0;
+      const atB = new Date(b.at || 0).getTime() || 0;
+      return atB - atA;
+    });
+}
+
+function auditActionLabel(action) {
+  const labels = {
+    'station.qty_saved': 'Počty kusů',
+    'station.status_changed': 'Změna stavu',
+    'station.work_claimed': 'Převzetí práce',
+    'station.work_paused': 'Pozastavení práce',
+    'order.blocked': 'Blokace zakázky',
+    'order.unblocked': 'Odblokování zakázky',
+    'order.updated': 'Úprava zakázky',
+    'issue.reported': 'Problém',
+    'issue.resolved': 'Vyřešení problému',
+    'note.created': 'Poznámka',
+    'note.deleted': 'Smazání poznámky',
+  };
+  return labels[action] || action || 'Událost';
+}
+
+function orderTimelineCardHtml(order) {
+  const items = orderTimelineItems(order).slice(0, 14);
+  return `<div class="card order-timeline-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div>
+        <div class="card-title" style="margin:0">🕒 Timeline zakázky</div>
+        <div class="app-muted">${items.length} posledních událostí z výroby, poznámek, problémů a auditu.</div>
+      </div>
+      ${can('app_settings') ? `<button class="btn btn-ghost btn-sm" onclick="switchAdminTab('audit');navigateTo('admin')">Audit</button>` : ''}
+    </div>
+    <div class="order-timeline-list">
+      ${items.length ? items.map(item => `
+        <div class="order-timeline-item ${item.tone || 'info'}">
+          <span class="order-timeline-dot">${item.icon || '•'}</span>
+          <div class="order-timeline-copy">
+            <b>${escapeHtml(item.title)}</b>
+            <span>${escapeHtml(item.body || '')}</span>
+            <small>${item.at ? formatDateTime(item.at) : 'bez času'}${item.actor ? ' · ' + escapeHtml(item.actor) : ''}</small>
+          </div>
+        </div>
+      `).join('') : `<div class="app-empty">Zatím není z čeho složit historii zakázky.</div>`}
+    </div>
+  </div>`;
+}
+
 // ── ORDER DETAIL ──────────────────────────────────────
 function openOrder(orderId, options = {}) {
   selectedOrder = ORDERS.find(o => o.id === orderId);
@@ -3326,6 +3613,7 @@ function openOrder(orderId, options = {}) {
 
     ${orderControlHtml}
     ${orderInfoCardHtml(selectedOrder)}
+    ${orderTimelineCardHtml(selectedOrder)}
     ${advancedPanelHtml('Další informace k zakázce', `
       ${featureEnabled('featureProductMemory') ? productPhotoCardHtml(selectedOrder) : ''}
       ${orderDocsCardHtml(selectedOrder)}

@@ -254,6 +254,11 @@
     #app .app-current-grid { grid-template-columns: 1fr; gap: 8px; }
     #app .app-issue-row { grid-template-columns: auto minmax(0, 1fr); padding: 8px 0; }
     #app .app-issue-row em { grid-column: 2; max-width: 100%; }
+    #app .app-stop-row { grid-template-columns: 30px minmax(0, 1fr); }
+    #app .app-stop-action { display: none; }
+    #app .order-timeline-item { grid-template-columns: 30px minmax(0, 1fr); padding: 9px; }
+    #app .order-timeline-dot,
+    #app .app-stop-icon { width: 30px; height: 30px; }
     #app .card { padding: 12px; border-radius: 8px; margin-bottom: 10px; }
     #app .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     #app .stat-card { padding: 12px 10px; min-width: 0; }
