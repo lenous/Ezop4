@@ -3011,7 +3011,10 @@ function queueCardHtml(item, position = 0, total = 0) {
   const blockReason = orderBlockReason(order);
   const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter) && Number(queueStationFilter) === Number(station.stId);
   return `<div class="card app-queue-card" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
-    style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''};${manualPlanning?'cursor:grab':''}">
+    role="button" tabindex="0" aria-label="Otevřít stanoviště ${escapeHtml(stInfo?.name || 'stanoviště')} zakázky ${escapeHtml(order.number)}"
+    onclick="queueCardOpen(event,'${order.id}','${station.stId}')"
+    onkeydown="queueCardKeyOpen(event,'${order.id}','${station.stId}')"
+    style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''}">
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div style="font-size:26px;line-height:1">${stInfo?.icon || '🔧'}</div>
       <div style="flex:1;min-width:0">
@@ -3042,6 +3045,17 @@ function queueCardHtml(item, position = 0, total = 0) {
       </div>
     </div>
   </div>`;
+}
+
+function queueCardOpen(event, orderId, stId) {
+  if (event?.target?.closest?.('button,a,input,select,textarea,[data-no-card-open]')) return;
+  openStation(orderId, stId);
+}
+
+function queueCardKeyOpen(event, orderId, stId) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  openStation(orderId, stId);
 }
 
 function quickOpenOrderModal() {

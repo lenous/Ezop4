@@ -685,6 +685,16 @@
 
   #app .app-queue-card {
     background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.01)), rgba(14,23,27,.94);
+    cursor: pointer;
+  }
+
+  #app .app-queue-card[draggable="true"] {
+    cursor: grab;
+  }
+
+  #app .app-queue-card:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
   }
 
   #app .app-cockpit {
