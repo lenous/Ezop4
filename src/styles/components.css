@@ -355,6 +355,11 @@
     display: grid; grid-template-columns: 1fr;
     gap: 7px; margin: 0;
   }
+  #app .admin-group-section {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
   #app .admin-group-tab {
     border: 1px solid var(--border); border-radius: var(--radius);
     background: var(--card2); color: var(--text2); padding: 10px 8px;
@@ -367,8 +372,31 @@
     background: rgba(54,176,174,.16);
     color: var(--teal2);
   }
+  #app .admin-tabs-nested {
+    margin: -1px 0 4px 16px;
+    padding-left: 10px;
+    border-left: 1px solid rgba(168,180,189,.18);
+  }
+  #app .admin-tabs-nested .admin-tab {
+    padding: 8px 12px;
+    background: rgba(255,255,255,.025);
+  }
   .admin-section { display: none; }
   .admin-section.active { display: block; }
+
+  #app .admin-order-row {
+    cursor: pointer;
+    transition: transform .15s, border-color .2s, background .2s, box-shadow .2s;
+  }
+  #app .admin-order-row:hover {
+    transform: translateY(-1px);
+    border-color: rgba(125,214,210,.32) !important;
+    box-shadow: 0 16px 34px rgba(0,0,0,.22);
+  }
+  #app .admin-order-row:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+  }
 
   .role-permission-legend {
     display: flex; flex-wrap: wrap; gap: 10px; color: var(--text2); font-size: 11px;

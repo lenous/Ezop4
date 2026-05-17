@@ -306,9 +306,11 @@
     #app .admin-content-head h2 { font-size: 18px; }
     #app .admin-content-head p { display: none; }
     #app .admin-group-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    #app .admin-group-section.active { grid-column: 1 / -1; }
     #app .admin-group-tab { justify-content: center; text-align: center; min-height: 44px; }
     #app .admin-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #app .admin-tab { text-align: center; }
+    #app .admin-tabs-nested { margin: 0 0 2px; padding-left: 0; border-left: 0; }
     #app .display-mode-grid { grid-template-columns: 1fr; }
     #app .display-mode-card { min-height: 0; }
     #app .role-permission-name { align-items: flex-start; flex-direction: column; gap: 2px; }

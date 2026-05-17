@@ -5579,16 +5579,18 @@ function normalizeAdminSelection() {
 function renderAdminGroupTabs() {
   return `<div class="admin-group-tabs">
     ${adminGroups().map(group => `
-      <button class="admin-group-tab ${adminGroup === group.id ? 'active' : ''}" onclick="switchAdminGroup('${group.id}')">
-        <span>${group.icon}</span><b>${group.label}</b>
-      </button>
+      <div class="admin-group-section ${adminGroup === group.id ? 'active' : ''}">
+        <button class="admin-group-tab ${adminGroup === group.id ? 'active' : ''}" onclick="switchAdminGroup('${group.id}')">
+          <span>${group.icon}</span><b>${group.label}</b>
+        </button>
+        ${adminGroup === group.id ? renderAdminSubTabs(group) : ''}
+      </div>
     `).join('')}
   </div>`;
 }
 
-function renderAdminSubTabs() {
-  const group = adminGroups().find(item => item.id === adminGroup);
-  return `<div class="admin-tabs">
+function renderAdminSubTabs(group = adminGroups().find(item => item.id === adminGroup)) {
+  return `<div class="admin-tabs admin-tabs-nested">
     ${(group?.tabs || []).map(tab => `
       <div class="admin-tab ${adminTab === tab.id ? 'active' : ''}" onclick="switchAdminTab('${tab.id}')">${tab.icon} ${tab.label}</div>
     `).join('')}
@@ -5946,7 +5948,6 @@ function renderAdmin() {
           </div>
         </div>
         ${renderAdminGroupTabs()}
-        ${renderAdminSubTabs()}
       </aside>
 
       <main class="admin-content">
@@ -7012,7 +7013,11 @@ function renderAdminOrders() {
     <button class="btn btn-primary btn-sm" onclick="newOrderModal()">+ Nová zakázka</button>
   </div>
   ${[...ORDERS].sort((a,b)=>a.number.localeCompare(b.number)).map(o => `
-    <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card2);
+    <div class="admin-order-row" role="button" tabindex="0"
+      aria-label="Otevřít detail zakázky ${escapeHtml(o.number)}"
+      onclick="adminOrderRowOpen(event,'${o.id}')"
+      onkeydown="adminOrderRowKeyOpen(event,'${o.id}')"
+      style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card2);
       border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px">
       <div style="font-family:'SF Mono',Menlo,monospace;font-size:14px;font-weight:800;color:var(--gold);min-width:62px">${o.number}</div>
       <div style="flex:1">
@@ -7024,6 +7029,17 @@ function renderAdminOrders() {
       <button class="btn btn-ghost btn-sm" onclick="editOrderModal('${o.id}')">✏️</button>
       ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${o.id}')">🗑️</button>` : ''}
     </div>`).join('')}`;
+}
+
+function adminOrderRowOpen(event, orderId) {
+  if (event?.target?.closest?.('button,a,input,select,textarea,[data-no-card-open]')) return;
+  openOrder(orderId);
+}
+
+function adminOrderRowKeyOpen(event, orderId) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  openOrder(orderId);
 }
 
 // ── MŮJ PROSTOR ──────────────────────────────────────
