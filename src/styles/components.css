@@ -589,6 +589,65 @@
     border-color: rgba(34,197,94,.28);
     background: rgba(34,197,94,.10);
   }
+  .issue-detail { display: grid; gap: 14px; }
+  .issue-detail-head {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255,255,255,.035);
+  }
+  .issue-detail-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239,68,68,.12);
+    font-size: 22px;
+  }
+  .issue-detail-head strong { display: block; color: var(--text); font-size: 16px; line-height: 1.15; }
+  .issue-detail-head span:not(.badge) { display: block; color: var(--text2); font-size: 12px; margin-top: 3px; }
+  .issue-detail-message {
+    border-left: 4px solid var(--red);
+    border-radius: 12px;
+    background: rgba(239,68,68,.08);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 750;
+    line-height: 1.35;
+    padding: 14px;
+  }
+  .issue-detail.resolved .issue-detail-message { border-left-color: var(--green); background: rgba(34,197,94,.08); }
+  .issue-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .issue-detail-grid div {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255,255,255,.025);
+    padding: 10px;
+  }
+  .issue-detail-grid em {
+    display: block;
+    color: var(--text3);
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .45px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  .issue-detail-grid b {
+    display: block;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
   .messenger-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 10px; min-height: 420px; }
   .messenger-peers { display: grid; align-content: start; gap: 6px; max-height: 520px; overflow: auto; }
   .messenger-peer {

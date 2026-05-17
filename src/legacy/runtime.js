@@ -2020,7 +2020,7 @@ function buildNotifications() {
       title: `${issue.stationName || 'Stanoviště'} · ${issue.orderNumber || ''}`,
       body: issue.description || 'Nahlášený problém čeká na řešení.',
       at: notificationTime(issue.reportedAt),
-      action: `markNotificationRead('issue:${issue.id}');openIssueTarget('${issue.id}')`,
+      action: `markNotificationRead('issue:${issue.id}');openIssueDetail('${issue.id}')`,
     });
   });
 
@@ -2679,7 +2679,7 @@ function issueCardHtml(i, canResolve) {
   const agoTxt = ago < 1 ? 'právě teď' : ago < 60 ? `před ${ago} min` : `před ${Math.round(ago/60)} h`;
   const recipient = issueRecipientLabel(i);
 
-  return `<div class="card" style="border-left:4px solid ${sevColor};${i.resolved?'opacity:.55':''};cursor:pointer" onclick="openIssueTarget('${i.id}')">
+  return `<div class="card" style="border-left:4px solid ${sevColor};${i.resolved?'opacity:.55':''};cursor:pointer" onclick="openIssueDetail('${i.id}')">
     <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
       <div style="font-size:24px">${i.stationIcon}</div>
       <div style="flex:1">
@@ -2704,6 +2704,74 @@ function issueCardHtml(i, canResolve) {
       }
     </div>
   </div>`;
+}
+
+function issueReporterUser(issue) {
+  if (!issue) return null;
+  if (issue.reportedByUserId) {
+    const byId = USERS.find(u => u.id === issue.reportedByUserId);
+    if (byId) return byId;
+  }
+  const login = normalizeLogin(issue.reportedByLogin);
+  if (login) {
+    const byLogin = USERS.find(u => normalizeLogin(u.login) === login);
+    if (byLogin) return byLogin;
+  }
+  return USERS.find(u => u.name === issue.reportedBy) || null;
+}
+
+function issueStationName(stId) {
+  return STATIONS.find(st => Number(st.id) === Number(stId))?.name || '';
+}
+
+function openIssueDetail(issueId) {
+  const issue = ISSUES.find(i => i.id === issueId);
+  if (!issue) {
+    showToast('Problém už v aplikaci není.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === issue.orderId);
+  const station = order?.stations.find(s => Number(s.stId) === Number(issue.stationId));
+  const reporter = issueReporterUser(issue);
+  const recipient = issueRecipientLabel(issue);
+  const reportedAt = formatDateTime(issue.reportedAt);
+  const resolvedAt = issue.resolvedAt ? formatDateTime(issue.resolvedAt) : '';
+  const canMessageReporter = reporter && reporter.id !== currentUser?.id && can('use_messenger') && userCanUseMessenger(reporter);
+  const routeLabel = order && station ? `${order.number} · ${issueStationName(station.stId)}` : issue.orderNumber || 'Zakázka';
+  const safeIssueId = escapeHtml(issue.id);
+  const actions = [
+    ...(order && station ? [{ label: 'Otevřít stanoviště', cls: 'btn-ghost', action: `closeModal();openIssueTarget('${safeIssueId}')` }] : []),
+    ...(canMessageReporter ? [{ label: 'Napsat zprávu', cls: 'btn-ghost', action: `openMessengerModal('${escapeHtml(reporter.id)}')` }] : []),
+    ...(!issue.resolved && canResolveIssues() ? [{ label: '✓ Vyřešit problém', cls: 'btn-teal', action: `resolveIssueFromDetail('${safeIssueId}')` }] : []),
+    { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ];
+  openModal('⚠️ Detail problému', `
+    <div class="issue-detail ${issue.resolved ? 'resolved' : ''}">
+      <div class="issue-detail-head">
+        <div class="issue-detail-icon">${escapeHtml(issue.stationIcon || '⚠️')}</div>
+        <div>
+          <strong>${escapeHtml(issue.stationName || issueStationName(issue.stationId) || 'Stanoviště')}</strong>
+          <span>${escapeHtml(issue.orderName || order?.name || '')} · ${escapeHtml(issue.orderNumber || order?.number || '')}</span>
+        </div>
+        <span class="badge ${issue.resolved ? 'badge-done' : 'badge-issue'}">${issue.resolved ? 'Vyřešeno' : sevLabel(issue.severity)}</span>
+      </div>
+
+      <div class="issue-detail-message">
+        ${escapeHtml(issue.description || 'Bez popisu problému.')}
+      </div>
+
+      <div class="issue-detail-grid">
+        <div><em>Zakázka</em><b>${escapeHtml(routeLabel)}</b></div>
+        <div><em>Nahlásil</em><b>${escapeHtml(issue.reportedBy || reporter?.name || 'Neznámý uživatel')}</b></div>
+        <div><em>Odesláno komu</em><b>${escapeHtml(recipient)}</b></div>
+        <div><em>Čas hlášení</em><b>${escapeHtml(reportedAt)}</b></div>
+        ${issue.resolved ? `
+          <div><em>Vyřešil</em><b>${escapeHtml(issue.resolvedBy || 'nezapsáno')}</b></div>
+          <div><em>Čas vyřešení</em><b>${escapeHtml(resolvedAt)}</b></div>
+        ` : ''}
+      </div>
+    </div>
+  `, actions);
 }
 
 function openIssueTarget(issueId) {
@@ -5681,6 +5749,11 @@ function resolveIssue(id) {
 function resolveIssueFromNotification(id, filter = 'new') {
   resolveIssue(id);
   openNotificationsModal(filter);
+}
+
+function resolveIssueFromDetail(id) {
+  resolveIssue(id);
+  openIssueDetail(id);
 }
 
 function forwardQtyModal() {
