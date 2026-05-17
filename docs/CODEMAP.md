@@ -18,7 +18,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Direct messenger: `src/legacy/runtime.js`, search `openMessengerModal` and `sendDirectMessage`; topbar button in `src/ui/shell.ts`; role gate is `use_messenger`
 - Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
 - Station detail layout: `src/legacy/runtime.js`, search `renderStationDetail`; styles in `src/styles/components.css` and `src/styles/mobile.css`
-- Admin grouped navigation: `src/legacy/runtime.js`, search `adminGroups`
+- Admin grouped navigation and desktop console layout: `src/legacy/runtime.js`, search `adminGroups`, `renderAdmin`, and `activeAdminNav`; styles use `admin-shell`, `admin-sidebar`, and `admin-content-head` in `src/styles/components.css` plus mobile overrides in `src/styles/mobile.css`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`
 - Shell HTML only: `src/ui/shell.ts`
 - Visual styling: `src/styles/`

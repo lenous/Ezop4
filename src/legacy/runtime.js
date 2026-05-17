@@ -5581,6 +5581,12 @@ function renderAdminSubTabs() {
   </div>`;
 }
 
+function activeAdminNav() {
+  const group = adminGroups().find(item => item.id === adminGroup) || adminGroups()[0];
+  const tab = group?.tabs?.find(item => item.id === adminTab) || group?.tabs?.[0] || { icon:'⚙️', label:'Správa aplikace' };
+  return { group, tab };
+}
+
 // ── OZNÁMENÍ ──────────────────────────────────────────
 const ANNOUNCE_TYPES = {
   info:    { label: 'Informace', color: 'var(--blue,#60a5fa)', icon: 'ℹ️'  },
@@ -5914,50 +5920,72 @@ function renderAdmin() {
   if (adminTab === 'team_attendance' && !featureEnabled('featureAttendance')) adminTab = 'settings';
   if (adminTab === 'settings' && adminGroup !== 'system') adminGroup = adminTabGroupId(adminTab);
   normalizeAdminSelection();
+  const activeAdmin = activeAdminNav();
   document.getElementById('page-admin').innerHTML = `
-    <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">⚙️ Správa aplikace</div>
-    ${renderAdminGroupTabs()}
-    ${renderAdminSubTabs()}
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar-title">
+          <span>⚙️</span>
+          <div>
+            <b>Správa aplikace</b>
+            <small>${escapeHtml(activeAdmin.group?.label || 'Administrace')}</small>
+          </div>
+        </div>
+        ${renderAdminGroupTabs()}
+        ${renderAdminSubTabs()}
+      </aside>
 
-    <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
-      ${renderAdminUsers()}
+      <main class="admin-content">
+        <div class="admin-content-head">
+          <div>
+            <div class="admin-eyebrow">${escapeHtml(activeAdmin.group?.icon || '⚙️')} ${escapeHtml(activeAdmin.group?.label || 'Administrace')}</div>
+            <h2>${escapeHtml(activeAdmin.tab.icon)} ${escapeHtml(activeAdmin.tab.label)}</h2>
+            <p>Administrace je na PC rozdělená do levé navigace a pracovní plochy, aby se nastavení lépe četlo a nebralo místo obsahu.</p>
+          </div>
+          <span class="badge badge-admin">ADMIN</span>
+        </div>
+
+        <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
+          ${renderAdminUsers()}
+        </div>
+        <div class="admin-section ${adminTab==='role_permissions'?'active':''}" id="adm-role-permissions">
+          ${renderAdminRolePermissions()}
+        </div>
+        <div class="admin-section ${adminTab==='login_logs'?'active':''}" id="adm-login-logs">
+          ${renderAdminLoginLogs()}
+        </div>
+        <div class="admin-section ${adminTab==='audit'?'active':''}" id="adm-audit">
+          ${renderAdminAudit()}
+        </div>
+        <div class="admin-section ${adminTab==='settings'?'active':''}" id="adm-settings">
+          ${renderAdminSettings()}
+        </div>
+        <div class="admin-section ${adminTab==='stations'?'active':''}" id="adm-stations">
+          ${renderAdminStations()}
+        </div>
+        <div class="admin-section ${adminTab==='orders_mgmt'?'active':''}" id="adm-orders">
+          ${renderAdminOrders()}
+        </div>
+        <div class="admin-section ${adminTab==='kpi_report'?'active':''}" id="adm-kpi">
+          ${renderKpiHtml()}
+        </div>
+        <div class="admin-section ${adminTab==='cloud'?'active':''}" id="adm-cloud">
+          ${renderAdminCloud()}
+        </div>
+        ${featureEnabled('featureLupaNet') ? `<div class="admin-section ${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
+          ${renderAdminLupaNet()}
+        </div>` : ''}
+        <div class="admin-section ${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
+          ${renderAdminEzop4()}
+        </div>
+        <div class="admin-section ${adminTab==='announcements'?'active':''}" id="adm-announcements">
+          ${renderAdminAnnouncements()}
+        </div>
+        ${featureEnabled('featureAttendance') ? `<div class="admin-section ${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
+          ${renderAdminTeamAttendance()}
+        </div>` : ''}
+      </main>
     </div>
-    <div class="admin-section ${adminTab==='role_permissions'?'active':''}" id="adm-role-permissions">
-      ${renderAdminRolePermissions()}
-    </div>
-    <div class="admin-section ${adminTab==='login_logs'?'active':''}" id="adm-login-logs">
-      ${renderAdminLoginLogs()}
-    </div>
-    <div class="admin-section ${adminTab==='audit'?'active':''}" id="adm-audit">
-      ${renderAdminAudit()}
-    </div>
-    <div class="admin-section ${adminTab==='settings'?'active':''}" id="adm-settings">
-      ${renderAdminSettings()}
-    </div>
-    <div class="admin-section ${adminTab==='stations'?'active':''}" id="adm-stations">
-      ${renderAdminStations()}
-    </div>
-    <div class="admin-section ${adminTab==='orders_mgmt'?'active':''}" id="adm-orders">
-      ${renderAdminOrders()}
-    </div>
-    <div class="admin-section ${adminTab==='kpi_report'?'active':''}" id="adm-kpi">
-      ${renderKpiHtml()}
-    </div>
-    <div class="admin-section ${adminTab==='cloud'?'active':''}" id="adm-cloud">
-      ${renderAdminCloud()}
-    </div>
-    ${featureEnabled('featureLupaNet') ? `<div class="admin-section ${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
-      ${renderAdminLupaNet()}
-    </div>` : ''}
-    <div class="admin-section ${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
-      ${renderAdminEzop4()}
-    </div>
-    <div class="admin-section ${adminTab==='announcements'?'active':''}" id="adm-announcements">
-      ${renderAdminAnnouncements()}
-    </div>
-    ${featureEnabled('featureAttendance') ? `<div class="admin-section ${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
-      ${renderAdminTeamAttendance()}
-    </div>` : ''}
   `;
 }
 
