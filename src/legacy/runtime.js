@@ -325,6 +325,10 @@ function isManagerRole(role = currentUser?.role) {
   return ['admin','dispatcher','management','tpv'].includes(role);
 }
 
+function canResolveIssues(role = currentUser?.role) {
+  return isManagerRole(role);
+}
+
 function userStationIds(user = currentUser) {
   if (!user) return [];
   return normalizedStationIds(user.stationIds, user.login, user.role);
@@ -2008,6 +2012,7 @@ function buildNotifications() {
   visibleIssues().filter(issue => !issue.resolved).forEach(issue => {
     items.push({
       id: `issue:${issue.id}`,
+      issueId: issue.id,
       type: 'Problém',
       category: 'issues',
       icon: issue.severity === 'high' ? '🚨' : '⚠️',
@@ -2194,6 +2199,9 @@ function openNotificationsModal(filter = 'new') {
 
 function notificationItemHtml(item, filter = 'new') {
   const snoozed = item.snoozedUntil ? ` · odloženo do ${new Date(item.snoozedUntil).toLocaleTimeString('cs-CZ', { hour:'2-digit', minute:'2-digit' })}` : '';
+  const resolveButton = item.issueId && canResolveIssues()
+    ? `<button class="notification-resolve" onclick="resolveIssueFromNotification('${item.issueId}', '${filter}')">Vyřešit</button>`
+    : '';
   return `<div class="notification-item ${item.read ? 'read' : ''} ${item.snoozedUntil ? 'snoozed' : ''} ${item.tone || 'info'}">
     <span class="notification-icon">${item.icon}</span>
     <button class="notification-copy" onclick="closeModal();${item.action}">
@@ -2202,7 +2210,8 @@ function notificationItemHtml(item, filter = 'new') {
       <small>${escapeHtml(item.body)}</small>
     </button>
     <span class="notification-actions">
-      <button onclick="closeModal();${item.action}">${item.read ? 'Otevřít' : 'Řešit'}</button>
+      <button onclick="closeModal();${item.action}">Otevřít</button>
+      ${resolveButton}
       ${!item.read ? `<button onclick="markNotificationReadAndRefresh('${item.id}', '${filter}')">Přečtené</button>` : ''}
       ${!item.read && !item.snoozedUntil ? `<button onclick="snoozeNotification('${item.id}', 60, '${filter}')">Odložit</button>` : ''}
     </span>
@@ -2628,7 +2637,7 @@ function renderIssues() {
   const issues = visibleIssues();
   const open = issues.filter(i => !i.resolved);
   const closed = issues.filter(i => i.resolved);
-  const isManager = ['admin','dispatcher','management'].includes(currentUser.role);
+  const isManager = canResolveIssues(currentUser.role);
 
   document.getElementById('page-issues').innerHTML = `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">
@@ -5662,8 +5671,16 @@ function resolveIssue(id) {
     cloneForAudit(i),
   );
   showToast('✅ Problém vyřešen');
+  markNotificationRead(`issue:${id}`);
+  refreshNotificationBadge();
+  buildNav();
   if (currentPage === 'dashboard') renderDashboard();
   if (currentPage === 'issues')    renderIssues();
+}
+
+function resolveIssueFromNotification(id, filter = 'new') {
+  resolveIssue(id);
+  openNotificationsModal(filter);
 }
 
 function forwardQtyModal() {

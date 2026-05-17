@@ -584,6 +584,11 @@
     border-color: rgba(226,184,32,.25);
     background: rgba(226,184,32,.08);
   }
+  .notification-actions button.notification-resolve {
+    color: var(--green);
+    border-color: rgba(34,197,94,.28);
+    background: rgba(34,197,94,.10);
+  }
   .messenger-layout { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 10px; min-height: 420px; }
   .messenger-peers { display: grid; align-content: start; gap: 6px; max-height: 520px; overflow: auto; }
   .messenger-peer {

@@ -15,7 +15,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Role menu visibility: `src/legacy/runtime.js`, search `renderRoleNavVisibility` and `navVisibleForCurrentUser`
 - Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
-- Notification center: `src/legacy/runtime.js`, search `buildNotifications`, `openNotificationsModal`, and `snoozeNotification`; styles in `src/styles/components.css`
+- Notification center: `src/legacy/runtime.js`, search `buildNotifications`, `openNotificationsModal`, `snoozeNotification`, and `resolveIssueFromNotification`; styles in `src/styles/components.css`
 - Dashboard stopped-work overview: `src/legacy/runtime.js`, search `dashboardStoppedWorkHtml` and `orderStopItems`; styles use `app-stop-*`
 - Work queue cards and click-through: `src/legacy/runtime.js`, search `renderWorkQueue`, `queueCardHtml`, and `queueCardOpen`
 - Secondary order actions menu: `src/legacy/runtime.js`, search `openOrderActionsModal` and `orderMoreButton`; styles in `src/styles/components.css` under `action-menu`
