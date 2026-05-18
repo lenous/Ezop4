@@ -1631,3 +1631,114 @@ html.ux-banner-active .topbar { top: 36px; }
 @media print {
   .ux-alert-bell, .ux-alert-panel { display: none !important; }
 }
+
+/* ════════════════════════════════
+   BOTTLENECK CARD
+════════════════════════════════ */
+.ux-bn-card {
+  margin: 14px 0;
+  padding: 16px;
+  border-left: 4px solid #4f8df9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ux-bn-card.tone-warning { border-left-color: #f59e0b; }
+.ux-bn-card.tone-danger { border-left-color: #ef4444; }
+
+.ux-bn-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.ux-bn-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+}
+.ux-bn-top-icon {
+  font-size: 36px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ux-bn-top-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ux-bn-top-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ux-bn-top-reasons {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+.ux-bn-top-counters {
+  display: flex;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.ux-bn-top-counters > div {
+  text-align: center;
+  min-width: 50px;
+}
+.ux-bn-top-counters b {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+  line-height: 1;
+}
+.ux-bn-top-counters span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text2);
+  display: block;
+  margin-top: 4px;
+}
+.ux-bn-top-counters .danger b { color: #ef4444; }
+
+.ux-bn-others {
+  border-top: 1px solid rgba(127,127,127,.15);
+  padding-top: 10px;
+}
+.ux-bn-others-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text2);
+  margin-bottom: 8px;
+}
+.ux-bn-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.ux-bn-row + .ux-bn-row {
+  border-top: 1px solid rgba(127,127,127,.08);
+}
+.ux-bn-row-name {
+  color: var(--text);
+}
+.ux-bn-row-stats {
+  display: flex;
+  gap: 8px;
+}
+.ux-bn-row-stats em {
+  font-style: normal;
+  font-size: 11px;
+  background: rgba(255,255,255,.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--text2);
+}
+.ux-bn-row-stats em.danger {
+  background: rgba(239,68,68,.15);
+  color: #ef4444;
+}
