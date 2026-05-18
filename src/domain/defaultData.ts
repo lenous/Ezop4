@@ -26,6 +26,23 @@ export const appSettings = {
   darkMode: true,
   language: 'cs',
   shiftHours: 8,
+  compactAdvancedUi: true,
+  operatorSimpleMode: true,
+  featureProductMemory: true,
+  featureAiSummary: true,
+  featureReadiness: true,
+  featureOrderBlocking: true,
+  featureScrapManagement: true,
+  featureAttendance: true,
+  featureLupaNet: true,
+  featureMessenger: true,
+  messengerAllowDeleteOwn: false,
+  messengerMaxLength: 500,
+  rolePermissionOverrides: {},
+  hiddenNavByRole: {
+    operator: ['kpi', 'workspace'],
+  },
+  appDisplayMode: 'standard',
 };
 
 export const stations = [

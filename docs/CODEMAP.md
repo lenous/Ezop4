@@ -8,6 +8,25 @@ Use this map before opening large files. It keeps future changes focused and che
 - Demo users, orders, stations and seed notes: `src/domain/defaultData.ts`
 - Order station sequence UI: `src/legacy/runtime.js`, search `manageStationsModal`
 - Memory cleanup rules: `src/legacy/runtime.js`, search `cleanupAppMemory`
+- Session lock rules: `src/legacy/runtime.js`, search `sessionLockTimeoutMs`
+- Passkey/biometric login: `src/legacy/runtime.js`, search `PASSKEYS_KEY`, `loginWithPasskey`, and `registerCurrentUserPasskey`; login shell in `src/ui/shell.ts`; styles in `src/styles/layout.css` and `src/styles/components.css`
+- Feature visibility flags: `src/legacy/runtime.js`, search `featureEnabled`; defaults in `src/domain/defaultData.ts`
+- Role permission overrides: `src/legacy/runtime.js`, search `renderAdminRolePermissions`; defaults in `src/domain/defaultData.ts`
+- Security checklist: `src/legacy/runtime.js`, search `renderSecurityChecklist`; shown in Admin → Systém → Ezop4
+- Role menu visibility: `src/legacy/runtime.js`, search `renderRoleNavVisibility` and `navVisibleForCurrentUser`
+- Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
+- Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
+- Notification center: `src/legacy/runtime.js`, search `buildNotifications`, `openNotificationsModal`, `snoozeNotification`, and `resolveIssueFromNotification`; styles in `src/styles/components.css`
+- Issue detail workflow: `src/legacy/runtime.js`, search `renderIssues`, `issueCardHtml`, `openIssueDetail`, and `resolveIssueFromDetail`; styles use `issue-detail-*`
+- Dashboard stopped-work overview: `src/legacy/runtime.js`, search `dashboardStoppedWorkHtml` and `orderStopItems`; styles use `app-stop-*`
+- Work queue cards and click-through: `src/legacy/runtime.js`, search `renderWorkQueue`, `queueCardHtml`, and `queueCardOpen`
+- Secondary order actions menu: `src/legacy/runtime.js`, search `openOrderActionsModal` and `orderMoreButton`; styles in `src/styles/components.css` under `action-menu`
+- Direct messenger: `src/legacy/runtime.js`, search `openMessengerModal` and `sendDirectMessage`; topbar button in `src/ui/shell.ts`; role gate is `use_messenger`
+- Operator simple UI: `src/legacy/runtime.js`, search `operatorSimpleMode`
+- Station detail layout: `src/legacy/runtime.js`, search `renderStationDetail`; styles in `src/styles/components.css` and `src/styles/mobile.css`
+- Order timeline: `src/legacy/runtime.js`, search `orderTimelineItems` and `orderTimelineCardHtml`; styles use `order-timeline-*`
+- Admin grouped navigation and desktop console layout: `src/legacy/runtime.js`, search `adminGroups`, `renderAdmin`, `activeAdminNav`, and `renderAdminSubTabs`; styles use `admin-shell`, `admin-sidebar`, `admin-tabs-nested`, and `admin-content-head` in `src/styles/components.css` plus mobile overrides in `src/styles/mobile.css`
+- Admin order rows: `src/legacy/runtime.js`, search `renderAdminOrders` and `adminOrderRowOpen`
 - Legacy UI wiring for station/order screens: `src/legacy/runtime.js`
 - Shell HTML only: `src/ui/shell.ts`
 - Visual styling: `src/styles/`

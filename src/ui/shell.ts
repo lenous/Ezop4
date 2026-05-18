@@ -7,44 +7,38 @@ export const shellHtml = `<!-- ════════════════�
       <span>EZOP<span>4</span></span>
     </button>
     <nav class="landing-nav" aria-label="Produkt">
-      <a href="#why-ezop">Proč EZOP4</a>
-      <a href="#features">Funkce</a>
+      <a href="#why-ezop">Přehled</a>
       <a href="#landing-roles">Role</a>
       <a href="#landing-integrations">Integrace</a>
       <a href="#security">Bezpečnost</a>
-      <a href="#pricing">Ceník</a>
-      <a href="#contact">Kontakt</a>
     </nav>
     <div class="landing-header-actions">
       <button class="landing-login-link" type="button" onclick="showLoginScreen()">Přihlásit se</button>
-      <button class="landing-header-demo" type="button" onclick="openDemoLogin()">Otevřít demo</button>
+      <button class="landing-header-demo" type="button" onclick="openDemoLogin()">Spustit demo</button>
     </div>
   </header>
 
   <main class="landing-main">
     <section class="landing-hero" id="why-ezop">
       <div class="landing-hero-copy">
-        <div class="landing-title-mark">EZOP<span>4</span></div>
-        <h1>Výrobní řízení pro elektroniku</h1>
+        <div class="landing-kicker">Mobilní EZOP pro výrobu elektroniky</div>
+        <h1>Jedna obrazovka pro směnu, zakázky a stanoviště.</h1>
         <p>
-          Mobilní PWA pro EMS a elektronickou výrobu. Fronty pracovišť, zakázky,
-          počty kusů, problémy, blokace a audit v reálném čase. V dílně i v kanceláři.
+          Přihlášení podle role, fronty práce, počty kusů, problémy, poznámky,
+          messenger a audit. V dílně na telefonu, v kanceláři na PC.
         </p>
         <div class="landing-actions">
           <button class="landing-primary" type="button" onclick="openDemoLogin()">
-            <span class="landing-btn-icon" aria-hidden="true">▣</span>
-            Otevřít demo
+            Spustit demo
           </button>
           <button class="landing-secondary" type="button" onclick="showLoginScreen()">
-            <span class="landing-btn-icon" aria-hidden="true">▢</span>
             Přihlásit se
           </button>
         </div>
-        <div class="landing-proof" aria-label="Hlavní přínosy">
-          <span><b>◷</b> Reálný čas<em>Okamžitá data</em></span>
-          <span><b>▦</b> PWA<em>Funguje offline</em></span>
-          <span><b>⬡</b> Audit<em>Kompletní stopa</em></span>
-          <span><b>☁</b> Cloud<em>Supabase</em></span>
+        <div class="landing-proof" aria-label="Stav systému">
+          <span><b>4</b> aktivní zakázky<em>v demo datech</em></span>
+          <span><b>9</b> stanovišť<em>v trase výroby</em></span>
+          <span><b>5</b> rolí<em>s oprávněními</em></span>
         </div>
       </div>
 
@@ -53,65 +47,64 @@ export const shellHtml = `<!-- ════════════════�
           <span class="landing-product-logo">EZOP<span>4</span></span>
           <nav aria-label="Náhled aplikace">
             <span class="active">Přehled</span>
-            <span>Fronty</span>
             <span>Zakázky</span>
             <span>Stanoviště</span>
             <span>Problémy</span>
           </nav>
-          <span class="landing-product-user">Mistr⌄</span>
+          <span class="landing-product-user">☁ Cloud</span>
         </div>
         <div class="landing-product-body">
-          <div class="landing-panel landing-fronts">
-            <h3>Fronty pracovišť</h3>
-            <div class="landing-front-row"><span>Sklad</span><b>2 / 5</b><em>1 blokováno</em></div>
-            <div class="landing-front-row"><span>Automat 1</span><b>3 / 4</b></div>
-            <div class="landing-front-row ok"><span>AOI</span><b>4 / 4</b><em>Plná kapacita</em></div>
-            <div class="landing-front-row"><span>RTG</span><b>1 / 3</b></div>
-            <div class="landing-front-row"><span>THT montáž</span><b>2 / 3</b><em>1 blokováno</em></div>
-            <div class="landing-front-row"><span>Kontrola</span><b>2 / 3</b></div>
-            <div class="landing-front-row"><span>Balení</span><b>1 / 2</b></div>
-            <button class="landing-mini-btn" type="button">Zobrazit detail front</button>
-          </div>
-          <div class="landing-panel landing-overview">
-            <h3>Dnešní přehled</h3>
-            <div class="landing-kpi-grid">
-              <div><span>Zakázky</span><b>18</b><em>Aktivní</em></div>
-              <div><span>OK</span><b class="green">1 246</b></div>
-              <div><span>Oprava</span><b class="amber">132</b></div>
-              <div><span>Zmetek</span><b class="red">27</b></div>
-              <div><span>Včasnost</span><b>92 %</b><em class="green">▲ 6 %</em></div>
-              <div><span>Výkon</span><b>83 %</b><em class="green">▲ 4 %</em></div>
-              <div><span>Problémy</span><b class="red">3</b><em>Aktivní</em></div>
-              <div><span>Blokované</span><b class="red">2</b><em>Zakázky</em></div>
+          <div class="landing-panel landing-shift">
+            <div class="landing-panel-head">
+              <span>Směna dnes</span>
+              <b>online</b>
             </div>
-            <div class="landing-current-work">
-              <h3>Aktuální práce</h3>
-              <div class="landing-work-card">
-                <div>
-                  <b>Z-2025-0187</b>
-                  <span>Deska řídicí jednotky V2</span>
-                  <small>Stanoviště AOI · Operátor Jan Novák · Plán 1 000 ks</small>
-                </div>
-                <div class="landing-ring"><span>75 %</span></div>
-                <ul>
-                  <li><span>OK</span><b class="green">720</b></li>
-                  <li><span>Oprava</span><b class="amber">20</b></li>
-                  <li><span>Zmetek</span><b class="red">10</b></li>
-                </ul>
+            <div class="landing-shift-grid">
+              <div><b>4</b><span>Zakázky</span></div>
+              <div><b class="green">378</b><span>OK kusů</span></div>
+              <div><b class="amber">12</b><span>Oprava</span></div>
+              <div><b class="red">1</b><span>Problém</span></div>
+            </div>
+            <div class="landing-active-task">
+              <div>
+                <small>Právě běží</small>
+                <strong>261100 · Řídicí deska VB-300</strong>
+                <span>Sklad → Automat → AOI → RTG</span>
               </div>
+              <em>Hotovo 22%</em>
             </div>
-            <div class="landing-issues">
-              <h3>Poslední problémy <span>Zobrazit vše</span></h3>
-              <p>AOI - falešné chyby na konektoru J3 <time>10:21</time></p>
-              <p>RTG - čeká se na výměnu zdroje <time>09:47</time></p>
-              <p>THT - chybí materiál R47 10k <time>09:15</time></p>
+          </div>
+
+          <div class="landing-panel landing-station-preview">
+            <div class="landing-panel-head">
+              <span>Stanoviště</span>
+              <b>operátor</b>
             </div>
+            <div class="landing-station-title">
+              <span>📦</span>
+              <div><strong>Sklad</strong><small>261100 · Řídicí deska VB-300</small></div>
+            </div>
+            <div class="landing-counts">
+              <div><b class="green">150</b><span>OK</span></div>
+              <div><b class="amber">0</b><span>Oprava</span></div>
+              <div><b class="red">0</b><span>Zmetek</span></div>
+            </div>
+            <button class="landing-next-step" type="button">Další stanoviště · 🤖 Automat →</button>
+          </div>
+
+          <div class="landing-panel landing-alert-preview">
+            <div class="landing-panel-head">
+              <span>Upozornění</span>
+              <b>2 nové</b>
+            </div>
+            <p><strong>💬 Marie Horáčková</strong><span>Dotaz k zakázce 261100</span></p>
+            <p><strong>⚠ Problém</strong><span>Montáž THT · není materiál</span></p>
           </div>
         </div>
         <div class="landing-product-status">
           <span>● Online</span>
-          <span>Poslední aktualizace: 10:23:45</span>
-          <span>Verze 4.0.0</span>
+          <span>PWA · mobil i PC</span>
+          <span>Supabase ready</span>
         </div>
       </div>
     </section>
@@ -245,6 +238,10 @@ export const shellHtml = `<!-- ════════════════�
     </label>
 
     <button class="login-btn" onclick="doLogin()">Přihlásit se</button>
+    <button id="passkey-login-btn" class="login-passkey-btn" type="button" onclick="loginWithPasskey()">
+      🔐 Přihlásit biometrií / passkey
+    </button>
+    <div id="passkey-login-hint" class="login-passkey-hint"></div>
     <div id="login-error" class="login-error"></div>
   </div>
 </div>
@@ -259,6 +256,8 @@ export const shellHtml = `<!-- ════════════════�
     <span id="tbar-name" class="topbar-user"></span>
     <span id="tbar-role" class="role-badge"></span>
     <span id="tbar-attendance" class="role-badge" style="font-size:10px;cursor:pointer;display:none" onclick="navigateTo('workspace')"></span>
+    <button id="tbar-notifications" class="notification-btn" style="display:none" title="Upozornění" onclick="openNotificationsModal()">🔔<span id="notification-count"></span></button>
+    <button id="tbar-messenger" class="notification-btn messenger-btn" style="display:none" title="Messenger" onclick="openMessengerModal()">💬<span id="messenger-count"></span></button>
     <button id="tbar-search" class="logout-btn" style="background:transparent;display:none" title="Hledat (Ctrl+K)" onclick="openGlobalSearch()">🔎</button>
     <button id="tbar-install" class="logout-btn" style="background:rgba(226,184,32,.15);color:var(--gold);display:none" title="Nainstalovat aplikaci" onclick="triggerPwaInstall()">📥 Instalovat</button>
     <button class="logout-btn" onclick="doLogout()">Odhlásit</button>

@@ -79,6 +79,22 @@ function setEzop4AuthMode(mode) {
   window.EZOP4_AUTH?.writeAuthMode?.(mode === 'supabase' ? 'supabase' : 'demo');
 }
 
+const EZOP4_DEMO_FALLBACK_KEY = 'ezop4-demo-fallback-enabled';
+
+function demoFallbackAllowed() {
+  try { return localStorage.getItem(EZOP4_DEMO_FALLBACK_KEY) === '1'; }
+  catch { return false; }
+}
+
+function setDemoFallbackAllowed(enabled) {
+  try {
+    if (enabled) localStorage.setItem(EZOP4_DEMO_FALLBACK_KEY, '1');
+    else localStorage.removeItem(EZOP4_DEMO_FALLBACK_KEY);
+  } catch {
+    // Nouzovy fallback je jen lokalni volba v tomto prohlizeci.
+  }
+}
+
 // ── PERSISTENCE: localStorage + Supabase ──────────────
 const LS_KEY = 'vyrobais_state_v1';
 const CLOUD_ROW_ID = 'main';
@@ -92,7 +108,7 @@ function localState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
     USERS: userProfilesForStorage(),
-    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS,
+    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, DIRECT_MESSAGES,
     securityVersion: SECURITY_VERSION,
   };
 }
@@ -100,7 +116,7 @@ function localState() {
 function cloudState() {
   return {
     ORDERS, ISSUES, PROD_NOTES,
-    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, SHIFT_HANDOVERS,
+    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, SHIFT_HANDOVERS, DIRECT_MESSAGES,
     securityVersion: SECURITY_VERSION,
     securityNote: 'Cloud state intentionally excludes user profiles, credentials and login logs.',
   };
@@ -121,6 +137,7 @@ function applyState(s, options = {}) {
   if (s.USER_WORKSPACE && typeof s.USER_WORKSPACE === 'object') USER_WORKSPACE = s.USER_WORKSPACE;
   if (Array.isArray(s.ANNOUNCEMENTS)) ANNOUNCEMENTS = s.ANNOUNCEMENTS;
   if (Array.isArray(s.SHIFT_HANDOVERS)) SHIFT_HANDOVERS = s.SHIFT_HANDOVERS;
+  if (Array.isArray(s.DIRECT_MESSAGES)) DIRECT_MESSAGES = s.DIRECT_MESSAGES;
   if (s.APP_SETTINGS) APP_SETTINGS = { ...APP_SETTINGS, ...s.APP_SETTINGS };
   if (s.NEXT_ORDER_CODE) NEXT_ORDER_CODE = s.NEXT_ORDER_CODE;
   normalizeAppData();
@@ -143,6 +160,7 @@ function resetState() {
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(USER_CREDENTIALS_KEY);
   localStorage.removeItem(LOGIN_GUARD_KEY);
+  localStorage.removeItem(PASSKEYS_KEY);
   location.reload();
 }
 
@@ -202,6 +220,9 @@ let USER_PASSWORDS = loadUserPasswords();
 let USER_WORKSPACE = {};
 let ANNOUNCEMENTS = [];
 let SHIFT_HANDOVERS = [];
+let DIRECT_MESSAGES = [];
+let lastUserActivityAt = Date.now();
+let inactivityMonitorStarted = false;
 
 function normalizeLogin(login) {
   return String(login || '').trim().toLowerCase();
@@ -305,6 +326,10 @@ function isManagerRole(role = currentUser?.role) {
   return ['admin','dispatcher','management','tpv'].includes(role);
 }
 
+function canResolveIssues(role = currentUser?.role) {
+  return isManagerRole(role);
+}
+
 function userStationIds(user = currentUser) {
   if (!user) return [];
   return normalizedStationIds(user.stationIds, user.login, user.role);
@@ -328,6 +353,69 @@ function stationAccessLabel(user = currentUser) {
   if (isManagerRole(user.role)) return 'všechna stanoviště';
   const names = accessibleStations(user).map(st => `${st.icon} ${st.name}`);
   return names.length ? names.join(', ') : 'bez přiřazeného stanoviště';
+}
+
+function featureEnabled(key) {
+  return APP_SETTINGS?.[key] !== false;
+}
+
+function compactAdvancedUi() {
+  return APP_SETTINGS?.compactAdvancedUi !== false;
+}
+
+function operatorSimpleMode() {
+  return currentUser?.role === 'operator' && APP_SETTINGS?.operatorSimpleMode !== false;
+}
+
+function advancedPanelHtml(title, body, options = {}) {
+  const content = String(body || '').trim();
+  if (!content) return '';
+  if (!compactAdvancedUi() || options.forceOpen) return content;
+  const subtitle = options.subtitle ? `<span class="advanced-panel-subtitle">${escapeHtml(options.subtitle)}</span>` : '';
+  return `<details class="advanced-panel">
+    <summary>
+      <span>${title}</span>
+      ${subtitle}
+    </summary>
+    <div class="advanced-panel-body">${content}</div>
+  </details>`;
+}
+
+function sessionLockTimeoutMs() {
+  const hours = Number(APP_SETTINGS?.lockTimeout);
+  if (!Number.isFinite(hours) || hours <= 0) return 0;
+  return hours * 60 * 60 * 1000;
+}
+
+function markUserActivity() {
+  if (currentUser) lastUserActivityAt = Date.now();
+}
+
+function startInactivityMonitor() {
+  if (inactivityMonitorStarted) return;
+  inactivityMonitorStarted = true;
+  ['pointerdown','keydown','touchstart','scroll'].forEach(eventName => {
+    document.addEventListener(eventName, markUserActivity, { passive: true });
+  });
+  setInterval(checkSessionLockTimeout, 60000);
+}
+
+function checkSessionLockTimeout() {
+  if (!currentUser) return;
+  const timeoutMs = sessionLockTimeoutMs();
+  if (!timeoutMs) return;
+  if (Date.now() - lastUserActivityAt < timeoutMs) return;
+  const lockedUser = currentUser;
+  writeAudit(
+    'auth.session_locked',
+    'user',
+    lockedUser.id,
+    `Relace uzamčena po ${APP_SETTINGS.lockTimeout} h neaktivity`,
+    { lastActivityAt: new Date(lastUserActivityAt).toISOString() },
+    { lockedAt: new Date().toISOString() },
+  );
+  showToast('🔐 Relace byla uzamčena po neaktivitě', { skipSave: true });
+  doLogout({ skipCheckoutPrompt: true });
 }
 
 function orderVisibleToCurrentUser(order) {
@@ -1256,6 +1344,7 @@ let NEXT_ORDER_CODE = DEFAULTS.nextOrderCode || 261104;
 let ORDERS = cloneDefault('orders') || [];
 
 const LOGIN_LOG_KEY = 'vyrobais-login-log-v1';
+const NOTIFICATION_READ_KEY = 'ezop4-notification-read-v1';
 let LOGIN_LOGS = loadLoginLogs();
 let PRODUCT_MEMORY = {};
 
@@ -1345,6 +1434,9 @@ let currentPage = 'dashboard';
 let detailView = null;
 let selectedOrder = null;
 let selectedStation = null;
+let pageBackStack = [];
+let navigationSkipHistory = false;
+let mobileSwipe = null;
 
 // Numpad state
 let numpadValue = '';
@@ -1438,6 +1530,7 @@ function stationAuditId(order, station) {
 // ── LOGIN / LOGOUT ─────────────────────────────────────
 const REMEMBER_USER_KEY = 'vyrobais-remember-user';
 const LOGIN_GUARD_KEY = 'vyrobais-login-guard-v1';
+const PASSKEYS_KEY = 'ezop4-passkeys-v1';
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MS = 60 * 1000;
 
@@ -1494,12 +1587,74 @@ function savedLoginUser() {
   catch { return ''; }
 }
 
+function passkeySupported() {
+  return Boolean(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
+}
+
+function bytesToBase64Url(bytes) {
+  const binary = Array.from(new Uint8Array(bytes)).map(b => String.fromCharCode(b)).join('');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBytes(value) {
+  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+}
+
+function randomChallenge() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function readPasskeys() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PASSKEYS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(item => item?.id && item?.login) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePasskeys(items) {
+  try { localStorage.setItem(PASSKEYS_KEY, JSON.stringify(items.slice(-20))); }
+  catch { /* Passkey map is device-local convenience only. */ }
+}
+
+function passkeysForLogin(login = '') {
+  const normalized = normalizeLogin(login);
+  return readPasskeys().filter(item => !normalized || normalizeLogin(item.login) === normalized);
+}
+
+function passkeyForCurrentUser() {
+  return passkeysForLogin(currentUser?.login).find(item => item.userId === currentUser?.id) || null;
+}
+
+function updatePasskeyLoginHint() {
+  const hint = document.getElementById('passkey-login-hint');
+  const btn = document.getElementById('passkey-login-btn');
+  if (!hint || !btn) return;
+  if (!passkeySupported()) {
+    btn.disabled = true;
+    hint.textContent = 'Biometrie/passkey vyžaduje HTTPS nebo localhost a podporovaný telefon či prohlížeč.';
+    return;
+  }
+  const login = normalizeLogin(document.getElementById('login-user')?.value);
+  const count = passkeysForLogin(login).length;
+  btn.disabled = count === 0;
+  hint.textContent = count
+    ? (login ? `Pro účet ${login} je na tomto zařízení aktivní passkey.` : 'Na tomto zařízení je aktivní passkey.')
+    : 'Nejdřív se přihlaste heslem a v Profilu zapněte biometrii pro toto zařízení.';
+}
+
 function applyRememberedLogin() {
   const saved = savedLoginUser();
   const userInput = document.getElementById('login-user');
   const remember = document.getElementById('remember-user');
   userInput.value = saved;
   remember.checked = !!saved;
+  updatePasskeyLoginHint();
   if (saved) document.getElementById('login-pass').focus();
   else userInput.focus();
 }
@@ -1539,12 +1694,15 @@ function openDemoLogin() {
   const passInput = document.getElementById('login-pass');
   userInput.value = 'admin';
   passInput.value = '';
+  updatePasskeyLoginHint();
   passInput.focus();
 }
 
 function completeLogin(user, loginForRemember, authSource) {
   currentUser = user;
   currentAuthSource = authSource || 'demo';
+  lastUserActivityAt = Date.now();
+  startInactivityMonitor();
   const lockedRole = currentAuthSource === 'demo' ? BUILTIN_USER_ROLES[normalizeLogin(user.login)] : null;
   if (lockedRole) currentUser.role = lockedRole;
   clearLoginFailures(normalizeLogin(loginForRemember || user.login));
@@ -1590,6 +1748,649 @@ function refreshTopbarUser() {
     rb.textContent = ROLE_LABELS[currentUser.role] || currentUser.role || '';
     rb.className = 'role-badge role-' + currentUser.role;
   }
+  refreshNotificationBadge();
+  refreshMessengerBadge();
+}
+
+function directMessagePeers() {
+  return (USERS || [])
+    .filter(u => u.id !== currentUser?.id)
+    .filter(u => userCanUseMessenger(u));
+}
+
+function userCanUseMessenger(user) {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(user?.login)] || user?.role;
+  if (!role) return false;
+  if (role === 'admin') return true;
+  return featureEnabled('featureMessenger')
+    && (BASE_ROLE_PERMISSIONS.use_messenger?.includes(role) ?? false)
+    && rolePermissionAllowed(role, 'use_messenger');
+}
+
+function messageTouchesUser(message, userId = currentUser?.id) {
+  return Boolean(userId && (message.fromUserId === userId || message.toUserId === userId));
+}
+
+function directMessagesForCurrentUser() {
+  return (DIRECT_MESSAGES || [])
+    .filter(message => messageTouchesUser(message))
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function unreadDirectMessages() {
+  const uid = currentUser?.id;
+  if (!uid) return [];
+  return (DIRECT_MESSAGES || []).filter(message =>
+    message.toUserId === uid && !(Array.isArray(message.readBy) && message.readBy.includes(uid))
+  );
+}
+
+function directMessagePeerId(message) {
+  if (!currentUser) return '';
+  return message.fromUserId === currentUser.id ? message.toUserId : message.fromUserId;
+}
+
+function latestDirectMessageByPeer() {
+  const map = new Map();
+  directMessagesForCurrentUser().forEach(message => {
+    map.set(directMessagePeerId(message), message);
+  });
+  return map;
+}
+
+function refreshMessengerBadge() {
+  const btn = document.getElementById('tbar-messenger');
+  const count = document.getElementById('messenger-count');
+  if (!btn || !count) return;
+  if (!currentUser || !can('use_messenger')) {
+    btn.style.display = 'none';
+    btn.classList.remove('has-unread');
+    count.textContent = '';
+    return;
+  }
+  const unread = unreadDirectMessages().length;
+  btn.style.display = '';
+  btn.classList.toggle('has-unread', unread > 0);
+  count.textContent = unread > 0 ? String(Math.min(unread, 99)) : '';
+}
+
+function markDirectThreadRead(peerId) {
+  const uid = currentUser?.id;
+  if (!uid || !peerId) return;
+  let changed = false;
+  DIRECT_MESSAGES.forEach(message => {
+    if (message.fromUserId === peerId && message.toUserId === uid) {
+      if (!Array.isArray(message.readBy)) message.readBy = [];
+      if (!message.readBy.includes(uid)) {
+        message.readBy.push(uid);
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    saveState();
+    refreshMessengerBadge();
+    refreshNotificationBadge();
+  }
+}
+
+function openMessengerModal(peerId = '') {
+  if (!can('use_messenger')) {
+    showToast('Messenger není pro tuto roli povolený');
+    return;
+  }
+  const peers = directMessagePeers();
+  if (!peers.length) {
+    openModal('💬 Messenger', '<div style="color:var(--text2);padding:20px;text-align:center">V aplikaci zatím nejsou další uživatelé.</div>', [
+      { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+    ]);
+    return;
+  }
+  const latest = latestDirectMessageByPeer();
+  const sortedPeers = [...peers].sort((a, b) => {
+    const atA = latest.get(a.id)?.createdAt || '';
+    const atB = latest.get(b.id)?.createdAt || '';
+    return atB.localeCompare(atA) || a.name.localeCompare(b.name, 'cs');
+  });
+  const selectedPeerId = peerId || sortedPeers[0]?.id || '';
+  const selectedPeer = sortedPeers.find(u => u.id === selectedPeerId) || sortedPeers[0];
+  markDirectThreadRead(selectedPeer.id);
+  const messages = directMessagesForCurrentUser()
+    .filter(message => directMessagePeerId(message) === selectedPeer.id)
+    .slice(-80);
+  openModal('💬 Messenger', `
+    <div class="messenger-layout">
+      <div class="messenger-peers">
+        ${sortedPeers.map(peer => {
+          const last = latest.get(peer.id);
+          const unread = unreadDirectMessages().filter(message => message.fromUserId === peer.id).length;
+          return `<button class="messenger-peer ${peer.id === selectedPeer.id ? 'active' : ''}" onclick="openMessengerModal('${escapeHtml(peer.id)}')">
+            <span class="messenger-avatar" style="background:${escapeHtml(peer.color || '#64748b')}22;color:${escapeHtml(peer.color || '#64748b')}">${escapeHtml(peer.avatar || '👤')}</span>
+            <span><strong>${escapeHtml(peer.name)}</strong><em>${escapeHtml(last?.text || ROLE_LABELS[peer.role] || peer.role)}</em></span>
+            ${unread ? `<b>${unread}</b>` : ''}
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="messenger-thread">
+        <div class="messenger-thread-head">
+          <span class="messenger-avatar" style="background:${escapeHtml(selectedPeer.color || '#64748b')}22;color:${escapeHtml(selectedPeer.color || '#64748b')}">${escapeHtml(selectedPeer.avatar || '👤')}</span>
+          <div><strong>${escapeHtml(selectedPeer.name)}</strong><em>${escapeHtml(ROLE_LABELS[selectedPeer.role] || selectedPeer.role)}</em></div>
+        </div>
+        <div class="messenger-messages">
+          ${messages.length === 0
+            ? `<div class="messenger-empty">Zatím žádná přímá zpráva.</div>`
+            : messages.map(message => messengerMessageHtml(message)).join('')}
+        </div>
+        <div class="messenger-compose">
+          <input type="hidden" id="dm-to" value="${escapeHtml(selectedPeer.id)}">
+          <textarea class="input" id="dm-text" rows="3" maxlength="${messengerMaxLength()}" placeholder="Napiš zprávu pro ${escapeHtml(selectedPeer.name)}..."></textarea>
+          <button class="btn btn-primary" onclick="sendDirectMessage()">Odeslat</button>
+        </div>
+      </div>
+    </div>
+  `, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+  setTimeout(() => document.getElementById('dm-text')?.focus(), 50);
+}
+
+function messengerMessageHtml(message) {
+  const mine = message.fromUserId === currentUser?.id;
+  const canDelete = APP_SETTINGS.messengerAllowDeleteOwn && (mine || currentUser?.role === 'admin');
+  return `<div class="messenger-message ${mine ? 'mine' : 'theirs'}">
+    <div>${escapeHtml(message.text || '')}</div>
+    <small>
+      ${mine ? 'Já' : escapeHtml(message.fromName || 'Uživatel')} · ${formatDateTime(message.createdAt)}
+      ${canDelete ? ` · <button class="link-btn" onclick="deleteDirectMessage('${escapeHtml(message.id)}')">smazat</button>` : ''}
+    </small>
+  </div>`;
+}
+
+function messengerMaxLength() {
+  return Math.max(50, Number(APP_SETTINGS.messengerMaxLength) || 500);
+}
+
+function sendDirectMessage() {
+  if (!can('use_messenger')) {
+    showToast('Messenger není pro tuto roli povolený');
+    return;
+  }
+  const toUserId = document.getElementById('dm-to')?.value;
+  const text = document.getElementById('dm-text')?.value?.trim();
+  const to = USERS.find(u => u.id === toUserId);
+  if (!to || !currentUser) return;
+  if (!userCanUseMessenger(to)) {
+    showToast('Příjemce nemá Messenger povolený');
+    return;
+  }
+  if (!text) {
+    showToast('Zpráva je prázdná');
+    return;
+  }
+  const maxLen = messengerMaxLength();
+  if (text.length > maxLen) {
+    showToast(`Zpráva je moc dlouhá (${text.length}/${maxLen})`);
+    return;
+  }
+  const message = {
+    id: 'dm' + Date.now() + Math.random().toString(36).slice(2, 6),
+    fromUserId: currentUser.id,
+    fromLogin: currentUser.login,
+    fromName: currentUser.name,
+    toUserId: to.id,
+    toLogin: to.login,
+    toName: to.name,
+    text,
+    createdAt: new Date().toISOString(),
+    readBy: [currentUser.id],
+  };
+  DIRECT_MESSAGES.push(message);
+  writeAudit(
+    'direct_message.sent',
+    'direct_message',
+    message.id,
+    `${currentUser.name} → ${to.name}`,
+    null,
+    {
+      id: message.id,
+      fromUserId: currentUser.id,
+      toUserId: to.id,
+      createdAt: message.createdAt,
+      textLength: text.length,
+    }
+  );
+  saveState();
+  refreshMessengerBadge();
+  refreshNotificationBadge();
+  openMessengerModal(to.id);
+  showToast('Zpráva odeslána');
+}
+
+function deleteDirectMessage(id) {
+  const message = DIRECT_MESSAGES.find(item => item.id === id);
+  if (!message || !currentUser) return;
+  const allowed = message.fromUserId === currentUser.id || currentUser.role === 'admin';
+  if (!APP_SETTINGS.messengerAllowDeleteOwn || !allowed) {
+    showToast('Mazání zpráv není povolené');
+    return;
+  }
+  const peerId = directMessagePeerId(message);
+  DIRECT_MESSAGES = DIRECT_MESSAGES.filter(item => item.id !== id);
+  writeAudit(
+    'direct_message.deleted',
+    'direct_message',
+    id,
+    `Smazána přímá zpráva (${message.fromName} → ${message.toName})`,
+    { id, fromUserId: message.fromUserId, toUserId: message.toUserId, textLength: (message.text || '').length },
+    null
+  );
+  saveState();
+  refreshMessengerBadge();
+  refreshNotificationBadge();
+  openMessengerModal(peerId);
+  showToast('Zpráva smazána');
+}
+
+function notificationReadStorageKey() {
+  const userKey = normalizeLogin(currentUser?.login || currentUser?.id || 'anonymous') || 'anonymous';
+  return `${NOTIFICATION_READ_KEY}:${userKey}`;
+}
+
+function notificationSnoozeStorageKey() {
+  const userKey = normalizeLogin(currentUser?.login || currentUser?.id || 'anonymous') || 'anonymous';
+  return `${NOTIFICATION_READ_KEY}:snooze:${userKey}`;
+}
+
+function readNotificationIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(notificationReadStorageKey()) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveNotificationIds(ids) {
+  localStorage.setItem(notificationReadStorageKey(), JSON.stringify([...ids].slice(-500)));
+}
+
+function readNotificationSnoozes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(notificationSnoozeStorageKey()) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveNotificationSnoozes(snoozes) {
+  const now = Date.now();
+  const cleaned = Object.fromEntries(Object.entries(snoozes || {})
+    .filter(([, until]) => Number(until) > now));
+  localStorage.setItem(notificationSnoozeStorageKey(), JSON.stringify(cleaned));
+}
+
+function snoozedUntil(id) {
+  const until = Number(readNotificationSnoozes()[id] || 0);
+  return until > Date.now() ? until : 0;
+}
+
+function snoozeNotification(id, minutes = 60, filter = 'new') {
+  const snoozes = readNotificationSnoozes();
+  snoozes[id] = Date.now() + Math.max(5, Number(minutes) || 60) * 60000;
+  saveNotificationSnoozes(snoozes);
+  refreshNotificationBadge();
+  openNotificationsModal(filter);
+  showToast('Upozornění odloženo');
+}
+
+function notificationTime(value) {
+  try { return new Date(value || Date.now()).toISOString(); }
+  catch { return new Date().toISOString(); }
+}
+
+function notificationAge(value) {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000));
+  if (minutes < 1) return 'teď';
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 1440) return `${Math.round(minutes / 60)} h`;
+  return `${Math.round(minutes / 1440)} d`;
+}
+
+function noteTargetsCurrentUser(note) {
+  if (!noteVisibleToCurrentUser(note) || noteAuthoredByCurrentUser(note)) return false;
+  if (currentUser?.role !== 'operator') return true;
+  const allowed = accessibleStations().map(st => Number(st.id)).filter(Boolean);
+  if (note.targetScope === 'all') return true;
+  const stationIds = Array.isArray(note.stationIds) ? note.stationIds.map(Number) : [Number(note.stationId)];
+  return stationIds.some(id => allowed.includes(id));
+}
+
+function blockedNotificationId(order) {
+  return `blocked:${order.id}:${order.blocked?.at || order.blocked?.createdAt || 'active'}`;
+}
+
+function buildNotifications() {
+  if (!currentUser) return [];
+  const read = readNotificationIds();
+  const items = [];
+
+  visibleIssues().filter(issue => !issue.resolved).forEach(issue => {
+    items.push({
+      id: `issue:${issue.id}`,
+      issueId: issue.id,
+      type: 'Problém',
+      category: 'issues',
+      icon: issue.severity === 'high' ? '🚨' : '⚠️',
+      tone: issue.severity === 'high' ? 'danger' : 'warning',
+      title: `${issue.stationName || 'Stanoviště'} · ${issue.orderNumber || ''}`,
+      body: issue.description || 'Nahlášený problém čeká na řešení.',
+      at: notificationTime(issue.reportedAt),
+      action: `markNotificationRead('issue:${issue.id}');openIssueDetail('${issue.id}')`,
+    });
+  });
+
+  unreadDirectMessages().forEach(message => {
+    items.push({
+      id: `direct:${message.id}`,
+      type: 'Přímá zpráva',
+      category: 'messages',
+      icon: '💬',
+      tone: 'info',
+      title: message.fromName || 'Zpráva',
+      body: message.text || '',
+      at: notificationTime(message.createdAt),
+      action: `markNotificationRead('direct:${message.id}');openMessengerModal('${message.fromUserId}')`,
+    });
+  });
+
+  PROD_NOTES
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(noteTargetsCurrentUser)
+    .forEach(note => {
+      const order = ORDERS.find(o => o.id === note.orderId);
+      const station = STATIONS.find(st => Number(st.id) === Number(note.stationId));
+      const ready = String(note.autoKey || '').startsWith('auto-ready:');
+      items.push({
+        id: `note:${note.id}`,
+        type: ready ? 'Připraveno' : 'Poznámka',
+        category: 'production',
+        icon: ready ? '✅' : '📝',
+        tone: ready ? 'success' : 'info',
+        title: `${order?.number || 'Zakázka'} · ${station?.name || 'vzkaz'}`,
+        body: note.text || 'Nový vzkaz k výrobě.',
+        at: notificationTime(note.createdAt),
+        action: order && station
+          ? `markNotificationRead('note:${note.id}');openStation('${order.id}','${station.id}')`
+          : `markNotificationRead('note:${note.id}');navigateTo('orders')`,
+      });
+    });
+
+  visibleAnnouncements().forEach(a => {
+    items.push({
+      id: `announcement:${a.id}`,
+      type: 'Oznámení',
+      category: 'production',
+      icon: ANNOUNCE_TYPES[a.type]?.icon || '📢',
+      tone: a.type === 'urgent' ? 'danger' : a.type === 'warning' ? 'warning' : 'info',
+      title: a.title || ANNOUNCE_TYPES[a.type]?.label || 'Oznámení',
+      body: a.text || '',
+      at: notificationTime(a.createdAt),
+      action: `markNotificationRead('announcement:${a.id}')`,
+    });
+  });
+
+  unseenHandovers(20).forEach(h => {
+    items.push({
+      id: `handover:${h.id}`,
+      type: 'Předání směny',
+      category: 'production',
+      icon: '🔄',
+      tone: 'info',
+      title: h.title || 'Předání směny',
+      body: h.text || '',
+      at: notificationTime(h.createdAt),
+      action: `markNotificationRead('handover:${h.id}');markHandoverSeen('${h.id}')`,
+    });
+  });
+
+  ORDERS.filter(isOrderBlocked).forEach(order => {
+    if (currentUser.role === 'operator' && !orderVisibleToCurrentUser(order)) return;
+    const id = blockedNotificationId(order);
+    items.push({
+      id,
+      type: 'Blokace',
+      category: 'production',
+      icon: '⛔',
+      tone: 'danger',
+      title: `${order.number} · ${order.name}`,
+      body: orderBlockReason(order) || 'Zakázka je blokovaná.',
+      at: notificationTime(order.blocked?.at || order.blocked?.createdAt || order.due),
+      action: `markNotificationRead('${id}');openOrder('${order.id}')`,
+    });
+  });
+
+  return items
+    .map(item => ({ ...item, read: read.has(item.id), snoozedUntil: snoozedUntil(item.id) }))
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+function unreadNotifications() {
+  return buildNotifications().filter(item => !item.read && !item.snoozedUntil);
+}
+
+function notificationFilterLabel(filter) {
+  return {
+    new: 'Nové',
+    production: 'Výroba',
+    issues: 'Problémy',
+    messages: 'Zprávy',
+    all: 'Vše',
+  }[filter] || filter;
+}
+
+function refreshNotificationBadge() {
+  const btn = document.getElementById('tbar-notifications');
+  const count = document.getElementById('notification-count');
+  if (!btn || !count) return;
+  if (!currentUser) {
+    btn.style.display = 'none';
+    return;
+  }
+  const unread = unreadNotifications().length;
+  btn.style.display = '';
+  btn.classList.toggle('has-unread', unread > 0);
+  count.textContent = unread > 0 ? String(Math.min(unread, 99)) : '';
+}
+
+function markNotificationRead(id) {
+  const read = readNotificationIds();
+  read.add(id);
+  saveNotificationIds(read);
+  refreshNotificationBadge();
+}
+
+function markNotificationReadAndRefresh(id, filter = 'new') {
+  markNotificationRead(id);
+  openNotificationsModal(filter);
+}
+
+function markAllNotificationsRead() {
+  const read = readNotificationIds();
+  buildNotifications().filter(item => !item.snoozedUntil).forEach(item => read.add(item.id));
+  saveNotificationIds(read);
+  refreshNotificationBadge();
+  openNotificationsModal('all');
+}
+
+function openNotificationsModal(filter = 'new') {
+  const all = buildNotifications();
+  const activeAll = all.filter(item => !item.snoozedUntil);
+  const unread = activeAll.filter(item => !item.read);
+  const filters = ['new', 'production', 'issues', 'messages', 'all'];
+  const safeFilter = filters.includes(filter) ? filter : 'new';
+  const list = safeFilter === 'all'
+    ? all
+    : safeFilter === 'new'
+      ? unread
+      : activeAll.filter(item => item.category === safeFilter);
+  const countForFilter = key => {
+    if (key === 'all') return all.length;
+    if (key === 'new') return unread.length;
+    return activeAll.filter(item => item.category === key).length;
+  };
+  openModal('🔔 Upozornění', `
+    <div class="notification-inbox-summary">
+      <div><b>${unread.length}</b><span>nové</span></div>
+      <div><b>${countForFilter('production')}</b><span>výroba</span></div>
+      <div><b>${countForFilter('issues')}</b><span>problémy</span></div>
+      <div><b>${countForFilter('messages')}</b><span>zprávy</span></div>
+    </div>
+    <div class="notification-tabs">
+      ${filters.map(key => `
+        <button class="${safeFilter === key ? 'active' : ''}" onclick="openNotificationsModal('${key}')">
+          ${notificationFilterLabel(key)} (${countForFilter(key)})
+        </button>
+      `).join('')}
+    </div>
+    ${list.length === 0
+      ? `<div style="text-align:center;color:var(--text2);padding:28px 12px">Žádná upozornění v kategorii ${escapeHtml(notificationFilterLabel(safeFilter).toLowerCase())}.</div>`
+      : `<div class="notification-list">${list.slice(0, 30).map(item => notificationItemHtml(item, safeFilter)).join('')}</div>`}
+  `, [
+    { label: 'Označit přečtené', cls: 'btn-ghost', action: 'markAllNotificationsRead()' },
+    { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ]);
+}
+
+function notificationItemHtml(item, filter = 'new') {
+  const snoozed = item.snoozedUntil ? ` · odloženo do ${new Date(item.snoozedUntil).toLocaleTimeString('cs-CZ', { hour:'2-digit', minute:'2-digit' })}` : '';
+  const resolveButton = item.issueId && canResolveIssues()
+    ? `<button class="notification-resolve" onclick="resolveIssueFromNotification('${item.issueId}', '${filter}')">Vyřešit</button>`
+    : '';
+  return `<div class="notification-item ${item.read ? 'read' : ''} ${item.snoozedUntil ? 'snoozed' : ''} ${item.tone || 'info'}">
+    <span class="notification-icon">${item.icon}</span>
+    <button class="notification-copy" onclick="closeModal();${item.action}">
+      <strong>${escapeHtml(item.title)}</strong>
+      <em>${escapeHtml(item.type)} · ${notificationAge(item.at)}${snoozed}</em>
+      <small>${escapeHtml(item.body)}</small>
+    </button>
+    <span class="notification-actions">
+      <button onclick="closeModal();${item.action}">Otevřít</button>
+      ${resolveButton}
+      ${!item.read ? `<button onclick="markNotificationReadAndRefresh('${item.id}', '${filter}')">Přečtené</button>` : ''}
+      ${!item.read && !item.snoozedUntil ? `<button onclick="snoozeNotification('${item.id}', 60, '${filter}')">Odložit</button>` : ''}
+    </span>
+  </div>`;
+}
+
+async function registerCurrentUserPasskey() {
+  if (!currentUser) return;
+  if (!passkeySupported()) {
+    showToast('Biometrie/passkey není v tomto prohlížeči dostupná');
+    return;
+  }
+  try {
+    const existing = passkeysForLogin(currentUser.login);
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge: randomChallenge(),
+        rp: { name: 'EZOP4' },
+        user: {
+          id: new TextEncoder().encode(currentUser.id || currentUser.login).slice(0, 64),
+          name: currentUser.login,
+          displayName: currentUser.name,
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 },
+        ],
+        timeout: 60000,
+        attestation: 'none',
+        authenticatorSelection: {
+          residentKey: 'preferred',
+          userVerification: 'required',
+        },
+        excludeCredentials: existing.map(item => ({
+          type: 'public-key',
+          id: base64UrlToBytes(item.id),
+        })),
+      },
+    });
+    if (!credential?.rawId) throw new Error('Passkey nebyl vytvořen.');
+    const id = bytesToBase64Url(credential.rawId);
+    const items = readPasskeys().filter(item => item.id !== id && normalizeLogin(item.login) !== normalizeLogin(currentUser.login));
+    items.push({
+      id,
+      userId: currentUser.id,
+      login: normalizeLogin(currentUser.login),
+      name: currentUser.name,
+      role: currentUser.role,
+      createdAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+    });
+    savePasskeys(items);
+    writeAudit('auth.passkey_registered', 'user', currentUser.id, `${currentUser.name} zapnul/a passkey na zařízení`);
+    renderProfile();
+    showToast('🔐 Biometrie/passkey je zapnutá pro toto zařízení');
+  } catch (error) {
+    console.warn('Passkey registration failed:', error);
+    showToast(error?.name === 'NotAllowedError' ? 'Registrace biometrie byla zrušena' : 'Passkey se nepodařilo zapnout');
+  }
+}
+
+async function loginWithPasskey() {
+  const errorBox = document.getElementById('login-error');
+  if (!passkeySupported()) {
+    errorBox.textContent = 'Biometrie/passkey není v tomto prohlížeči dostupná. Použijte HTTPS, localhost a podporované zařízení.';
+    return;
+  }
+  const login = normalizeLogin(document.getElementById('login-user')?.value);
+  const candidates = passkeysForLogin(login);
+  if (!candidates.length) {
+    errorBox.textContent = login
+      ? `Pro účet ${login} není na tomto zařízení zapnutá biometrie/passkey. Přihlaste se heslem a zapněte ji v Profilu.`
+      : 'Na tomto zařízení zatím není uložený žádný passkey pro EZOP4.';
+    updatePasskeyLoginHint();
+    return;
+  }
+  try {
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: randomChallenge(),
+        timeout: 60000,
+        userVerification: 'required',
+        allowCredentials: candidates.map(item => ({
+          type: 'public-key',
+          id: base64UrlToBytes(item.id),
+        })),
+      },
+    });
+    const matchedId = bytesToBase64Url(assertion.rawId);
+    const passkey = candidates.find(item => item.id === matchedId);
+    const user = passkey ? resolveLoginUser(passkey.login) : null;
+    if (!user) {
+      errorBox.textContent = 'Passkey existuje, ale uživatel už v aplikaci není.';
+      return;
+    }
+    updateRememberedLogin(user.login);
+    completeLogin(user, user.login, 'passkey');
+    writeAudit('auth.passkey_login', 'user', user.id, `${user.name} se přihlásil/a přes passkey`);
+  } catch (error) {
+    console.warn('Passkey login failed:', error);
+    errorBox.textContent = error?.name === 'NotAllowedError'
+      ? 'Biometrické přihlášení bylo zrušeno.'
+      : 'Biometrické přihlášení se nezdařilo. Použijte heslo.';
+  }
+}
+
+function removeCurrentUserPasskey() {
+  if (!currentUser) return;
+  const before = readPasskeys();
+  const after = before.filter(item => normalizeLogin(item.login) !== normalizeLogin(currentUser.login));
+  savePasskeys(after);
+  writeAudit('auth.passkey_removed', 'user', currentUser.id, `${currentUser.name} vypnul/a passkey na zařízení`);
+  renderProfile();
+  showToast('Biometrie/passkey je na tomto zařízení vypnutá');
 }
 
 async function doLogin() {
@@ -1615,7 +2416,15 @@ async function doLogin() {
       return;
     } catch (error) {
       supabaseError = error?.message || 'Supabase Auth se nezdařil.';
-      console.warn('Supabase Auth fallback:', error);
+      console.warn('Supabase Auth failed:', error);
+      if (!demoFallbackAllowed()) {
+        registerLoginFailure(u);
+        recordLoginEvent(u || '(prazdne)', null, false);
+        document.getElementById('login-error').textContent =
+          `Supabase Auth: ${supabaseError}. Demo fallback je z bezpečnostních důvodů vypnutý.`;
+        return;
+      }
+      console.warn('[auth] Nouzovy demo fallback je rucne povoleny.');
     }
   }
 
@@ -1631,6 +2440,7 @@ async function doLogin() {
 
 document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+document.getElementById('login-user').addEventListener('input', updatePasskeyLoginHint);
 document.getElementById('remember-user').addEventListener('change', () => {
   if (!document.getElementById('remember-user').checked) updateRememberedLogin('');
 });
@@ -1673,27 +2483,105 @@ async function doLogout(options = {}) {
   document.getElementById('login-pass').value = '';
   const ind = document.getElementById('tbar-attendance');
   if (ind) ind.style.display = 'none';
+  const notif = document.getElementById('tbar-notifications');
+  if (notif) notif.style.display = 'none';
+  const messenger = document.getElementById('tbar-messenger');
+  if (messenger) messenger.style.display = 'none';
 }
 
 // ── ROLE PERMISSIONS ──────────────────────────────────
+const ROLE_PERMISSION_LABELS = {
+  view_orders: 'Vidí zakázky',
+  edit_qty: 'Zadává počty',
+  change_status: 'Mění stav stanoviště',
+  create_order: 'Vytváří zakázky',
+  delete_order: 'Maže zakázky',
+  manage_order_stations: 'Řídí stanoviště',
+  edit_order_info: 'Upravuje údaje zakázky',
+  edit_product_memory: 'Programy a fotky',
+  manage_scrap: 'Správa zmetků',
+  block_order: 'Blokuje zakázky',
+  use_messenger: 'Messenger',
+  view_kpi: 'Vidí KPI',
+  manage_users: 'Správa uživatelů',
+  app_settings: 'Nastavení aplikace',
+};
+
+const BASE_ROLE_PERMISSIONS = {
+  view_orders:    ['operator','tpv','dispatcher','management','admin'],
+  edit_qty:       ['operator','tpv','dispatcher','management','admin'],
+  change_status:  ['operator','tpv','dispatcher','management','admin'],
+  create_order:   ['dispatcher','management','admin'],
+  delete_order:   ['tpv','dispatcher','management','admin'],
+  manage_order_stations:['dispatcher','management','admin'],
+  edit_order_info:['dispatcher','management','admin'],
+  edit_product_memory:['tpv','dispatcher','management','admin'],
+  manage_scrap:   ['tpv','dispatcher','management','admin'],
+  block_order:    ['tpv','dispatcher','management','admin'],
+  use_messenger:  ['operator','tpv','dispatcher','management','admin'],
+  view_kpi:       ['dispatcher','management','admin'],
+  manage_users:   ['admin'],
+  app_settings:   ['admin'],
+};
+
+const ROLE_PERMISSION_ACTIONS = [
+  'view_orders',
+  'edit_qty',
+  'change_status',
+  'create_order',
+  'delete_order',
+  'manage_order_stations',
+  'edit_order_info',
+  'edit_product_memory',
+  'manage_scrap',
+  'block_order',
+  'use_messenger',
+  'view_kpi',
+];
+
+const ROLE_NAV_ITEMS = [
+  { id:'dashboard', label:'Přehled', icon:'🏠', lockedFor:['admin'] },
+  { id:'queue', label:'Fronty', icon:'🧭' },
+  { id:'orders', label:'Zakázky', icon:'📋' },
+  { id:'issues', label:'Problémy', icon:'⚠️' },
+  { id:'kpi', label:'KPI', icon:'📊' },
+  { id:'workspace', label:'Můj prostor', icon:'📒' },
+  { id:'admin', label:'Správa', icon:'⚙️', lockedFor:['admin'] },
+  { id:'profile', label:'Profil', icon:'👤', lockedFor:['admin','dispatcher','tpv','management','operator'] },
+];
+
+function rolePermissionOverride(role, action) {
+  return APP_SETTINGS?.rolePermissionOverrides?.[role]?.[action];
+}
+
+function rolePermissionAllowed(role, action) {
+  if (role === 'admin') return true;
+  return rolePermissionOverride(role, action) !== false;
+}
+
 function can(action) {
   const r = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
-  const perms = {
-    view_orders:    ['operator','tpv','dispatcher','management','admin'],
-    edit_qty:       ['operator','tpv','dispatcher','management','admin'],
-    change_status:  ['operator','tpv','dispatcher','management','admin'],
-    create_order:   ['dispatcher','management','admin'],
-    delete_order:   ['tpv','dispatcher','management','admin'],
-    manage_order_stations:['dispatcher','management','admin'],
-    edit_order_info:['dispatcher','management','admin'],
-    edit_product_memory:['tpv','dispatcher','management','admin'],
-    manage_scrap:   ['tpv','dispatcher','management','admin'],
-    block_order:    ['tpv','dispatcher','management','admin'],
-    view_kpi:       ['dispatcher','management','admin'],
-    manage_users:   ['admin'],
-    app_settings:   ['admin'],
+  const gatedFeatures = {
+    edit_product_memory: 'featureProductMemory',
+    manage_scrap: 'featureScrapManagement',
+    block_order: 'featureOrderBlocking',
+    use_messenger: 'featureMessenger',
   };
-  return perms[action]?.includes(r) ?? false;
+  const gate = gatedFeatures[action];
+  if (gate && !featureEnabled(gate) && r !== 'admin') return false;
+  return (BASE_ROLE_PERMISSIONS[action]?.includes(r) ?? false) && rolePermissionAllowed(r, action);
+}
+
+function navHiddenForRole(role, navId) {
+  return Array.isArray(APP_SETTINGS?.hiddenNavByRole?.[role]) && APP_SETTINGS.hiddenNavByRole[role].includes(navId);
+}
+
+function navVisibleForCurrentUser(navId) {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  if (!role) return false;
+  const meta = ROLE_NAV_ITEMS.find(item => item.id === navId);
+  if (meta?.lockedFor?.includes(role)) return true;
+  return !navHiddenForRole(role, navId);
 }
 
 // ── INIT ──────────────────────────────────────────────
@@ -1750,14 +2638,40 @@ function getNavItems() {
     { id:'orders',    label:'Zakázky',  icon:'📋' },
     { id:'issues',    label:'Problémy' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
   ];
+  if (can('view_kpi') || (currentUser?.role === 'operator' && APP_SETTINGS.showKpiOperator)) {
+    items.push({ id:'kpi', label:'KPI', icon:'📊' });
+  }
   if (can('app_settings')) items.push({ id:'admin', label:'Správa',   icon:'⚙️' });
-  items.push({ id:'workspace', label:'Můj prostor', icon:'📒' });
+  if (featureEnabled('featureAttendance') || currentUser?.role === 'admin') {
+    items.push({ id:'workspace', label:'Můj prostor', icon:'📒' });
+  }
   items.push({ id:'profile',   label:'Profil',      icon:'👤' });
-  return items;
+  return items.filter(item => navVisibleForCurrentUser(item.id));
+}
+
+function bottomNavPriority() {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  if (role === 'admin') return ['dashboard', 'orders', 'issues', 'admin', 'profile'];
+  if (['dispatcher', 'management', 'tpv'].includes(role)) return ['dashboard', 'orders', 'queue', 'issues', 'profile'];
+  return ['dashboard', 'queue', 'orders', 'issues', 'profile'];
+}
+
+function getBottomNavModel(items) {
+  const priority = bottomNavPriority();
+  const sorted = [...items].sort((a, b) => {
+    const ai = priority.includes(a.id) ? priority.indexOf(a.id) : 99;
+    const bi = priority.includes(b.id) ? priority.indexOf(b.id) : 99;
+    return ai - bi;
+  });
+  if (sorted.length <= 5) return { visible: sorted, more: [] };
+  const visible = sorted.slice(0, 4);
+  const more = sorted.filter(item => !visible.some(v => v.id === item.id));
+  return { visible, more };
 }
 
 function buildNav() {
   const items = getNavItems();
+  const bottom = getBottomNavModel(items);
   const nt = document.getElementById('navtabs');
   const bn = document.getElementById('bottom-nav');
   nt.innerHTML = items.map(i =>
@@ -1766,14 +2680,75 @@ function buildNav() {
     </div>`
   ).join('');
   bn.innerHTML = `<div class="bottom-nav-inner">` +
-    items.map(i =>
+    bottom.visible.map(i =>
       `<div class="bn-item" id="bn-${i.id}" onclick="navigateTo('${i.id}')">
         <span class="bn-icon">${i.icon}</span><span>${i.label}</span>
       </div>`
-    ).join('') + `</div>`;
+    ).join('') +
+    (bottom.more.length ? `
+      <div class="bn-item bn-more" id="bn-more" onclick="openMobileMoreNav()">
+        <span class="bn-icon">⋯</span><span>Více</span>
+      </div>` : '') +
+    `</div>`;
+  refreshNotificationBadge();
+  refreshMessengerBadge();
 }
 
-function navigateTo(page) {
+function openMobileMoreNav() {
+  const { more } = getBottomNavModel(getNavItems());
+  if (!more.length) return;
+  openModal('Více možností', `
+    <div class="mobile-more-grid">
+      ${more.map(item => `
+        <button class="mobile-more-item" onclick="closeModal();navigateTo('${item.id}')">
+          <span>${item.icon}</span>
+          <strong>${escapeHtml(item.label)}</strong>
+        </button>
+      `).join('')}
+    </div>
+  `, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+}
+
+function scrollAppToTop() {
+  const reset = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.scrollingElement?.scrollTo?.({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const active = document.querySelector('#app .page.active');
+    if (active) active.scrollTop = 0;
+  };
+  requestAnimationFrame(() => {
+    reset();
+    setTimeout(reset, 40);
+  });
+}
+
+function mobileBackStep() {
+  if (document.getElementById('numpad-overlay')?.classList.contains('visible')) return false;
+  if (document.getElementById('modal-overlay')?.classList.contains('visible')) {
+    closeModal();
+    return true;
+  }
+  if (detailView?.type === 'station' && detailView.orderId) {
+    openOrder(detailView.orderId, { skipHistory: true });
+    return true;
+  }
+  if (detailView?.type === 'order') {
+    navigateTo('orders', { skipHistory: true });
+    return true;
+  }
+  const previous = pageBackStack.pop();
+  if (previous && previous !== currentPage) {
+    navigateTo(previous, { skipHistory: true });
+    return true;
+  }
+  return false;
+}
+
+function navigateTo(page, options = {}) {
   // Při přechodu pryč ze stránky zakázek (mimo přes showOrdersFiltered) zruš filtr
   if (currentPage === 'orders' && page !== 'orders') orderFilter = null;
   detailView = null;
@@ -1782,6 +2757,10 @@ function navigateTo(page) {
   document.querySelectorAll('.navtab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
 
+  if (!options.skipHistory && !navigationSkipHistory && currentPage && currentPage !== page) {
+    pageBackStack.push(currentPage);
+    pageBackStack = pageBackStack.slice(-12);
+  }
   currentPage = page;
   let pg = document.getElementById('page-' + page);
   if (!pg && page === 'queue') {
@@ -1814,6 +2793,7 @@ function navigateTo(page) {
   document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + page)?.classList.add('active');
   document.getElementById('bn-' + page)?.classList.add('active');
+  scrollAppToTop();
 }
 
 function refreshCurrentView() {
@@ -1833,7 +2813,7 @@ function renderIssues() {
   const issues = visibleIssues();
   const open = issues.filter(i => !i.resolved);
   const closed = issues.filter(i => i.resolved);
-  const isManager = ['admin','dispatcher','management'].includes(currentUser.role);
+  const isManager = canResolveIssues(currentUser.role);
 
   document.getElementById('page-issues').innerHTML = `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">
@@ -1875,7 +2855,7 @@ function issueCardHtml(i, canResolve) {
   const agoTxt = ago < 1 ? 'právě teď' : ago < 60 ? `před ${ago} min` : `před ${Math.round(ago/60)} h`;
   const recipient = issueRecipientLabel(i);
 
-  return `<div class="card" style="border-left:4px solid ${sevColor};${i.resolved?'opacity:.55':''};cursor:pointer" onclick="openIssueTarget('${i.id}')">
+  return `<div class="card" style="border-left:4px solid ${sevColor};${i.resolved?'opacity:.55':''};cursor:pointer" onclick="openIssueDetail('${i.id}')">
     <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
       <div style="font-size:24px">${i.stationIcon}</div>
       <div style="flex:1">
@@ -1900,6 +2880,74 @@ function issueCardHtml(i, canResolve) {
       }
     </div>
   </div>`;
+}
+
+function issueReporterUser(issue) {
+  if (!issue) return null;
+  if (issue.reportedByUserId) {
+    const byId = USERS.find(u => u.id === issue.reportedByUserId);
+    if (byId) return byId;
+  }
+  const login = normalizeLogin(issue.reportedByLogin);
+  if (login) {
+    const byLogin = USERS.find(u => normalizeLogin(u.login) === login);
+    if (byLogin) return byLogin;
+  }
+  return USERS.find(u => u.name === issue.reportedBy) || null;
+}
+
+function issueStationName(stId) {
+  return STATIONS.find(st => Number(st.id) === Number(stId))?.name || '';
+}
+
+function openIssueDetail(issueId) {
+  const issue = ISSUES.find(i => i.id === issueId);
+  if (!issue) {
+    showToast('Problém už v aplikaci není.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === issue.orderId);
+  const station = order?.stations.find(s => Number(s.stId) === Number(issue.stationId));
+  const reporter = issueReporterUser(issue);
+  const recipient = issueRecipientLabel(issue);
+  const reportedAt = formatDateTime(issue.reportedAt);
+  const resolvedAt = issue.resolvedAt ? formatDateTime(issue.resolvedAt) : '';
+  const canMessageReporter = reporter && reporter.id !== currentUser?.id && can('use_messenger') && userCanUseMessenger(reporter);
+  const routeLabel = order && station ? `${order.number} · ${issueStationName(station.stId)}` : issue.orderNumber || 'Zakázka';
+  const safeIssueId = escapeHtml(issue.id);
+  const actions = [
+    ...(order && station ? [{ label: 'Otevřít stanoviště', cls: 'btn-ghost', action: `closeModal();openIssueTarget('${safeIssueId}')` }] : []),
+    ...(canMessageReporter ? [{ label: 'Napsat zprávu', cls: 'btn-ghost', action: `openMessengerModal('${escapeHtml(reporter.id)}')` }] : []),
+    ...(!issue.resolved && canResolveIssues() ? [{ label: '✓ Vyřešit problém', cls: 'btn-teal', action: `resolveIssueFromDetail('${safeIssueId}')` }] : []),
+    { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ];
+  openModal('⚠️ Detail problému', `
+    <div class="issue-detail ${issue.resolved ? 'resolved' : ''}">
+      <div class="issue-detail-head">
+        <div class="issue-detail-icon">${escapeHtml(issue.stationIcon || '⚠️')}</div>
+        <div>
+          <strong>${escapeHtml(issue.stationName || issueStationName(issue.stationId) || 'Stanoviště')}</strong>
+          <span>${escapeHtml(issue.orderName || order?.name || '')} · ${escapeHtml(issue.orderNumber || order?.number || '')}</span>
+        </div>
+        <span class="badge ${issue.resolved ? 'badge-done' : 'badge-issue'}">${issue.resolved ? 'Vyřešeno' : sevLabel(issue.severity)}</span>
+      </div>
+
+      <div class="issue-detail-message">
+        ${escapeHtml(issue.description || 'Bez popisu problému.')}
+      </div>
+
+      <div class="issue-detail-grid">
+        <div><em>Zakázka</em><b>${escapeHtml(routeLabel)}</b></div>
+        <div><em>Nahlásil</em><b>${escapeHtml(issue.reportedBy || reporter?.name || 'Neznámý uživatel')}</b></div>
+        <div><em>Odesláno komu</em><b>${escapeHtml(recipient)}</b></div>
+        <div><em>Čas hlášení</em><b>${escapeHtml(reportedAt)}</b></div>
+        ${issue.resolved ? `
+          <div><em>Vyřešil</em><b>${escapeHtml(issue.resolvedBy || 'nezapsáno')}</b></div>
+          <div><em>Čas vyřešení</em><b>${escapeHtml(resolvedAt)}</b></div>
+        ` : ''}
+      </div>
+    </div>
+  `, actions);
 }
 
 function openIssueTarget(issueId) {
@@ -2003,6 +3051,141 @@ function visibleIssues() {
   return ISSUES.filter(userCanSeeIssue);
 }
 
+function orderStopItems(orders = visibleOrders()) {
+  const issueByOrder = visibleIssues().filter(issue => !issue.resolved)
+    .reduce((map, issue) => {
+      if (!map.has(issue.orderId)) map.set(issue.orderId, []);
+      map.get(issue.orderId).push(issue);
+      return map;
+    }, new Map());
+
+  return orders.flatMap(order => {
+    const items = [];
+    const activeIndex = activeStationIndex(order);
+    const station = order.stations?.[activeIndex];
+    const stInfo = STATIONS.find(st => Number(st.id) === Number(station?.stId));
+    const readiness = readinessSummary(order);
+
+    if (isOrderBlocked(order)) {
+      items.push({
+        tone: 'danger',
+        icon: '⛔',
+        label: 'Blokace',
+        reason: orderBlockReason(order) || 'Zakázka je blokovaná.',
+        order,
+        station,
+        stInfo,
+        rank: 0,
+      });
+    }
+
+    (issueByOrder.get(order.id) || []).slice(0, 1).forEach(issue => {
+      const issueStation = STATIONS.find(st => Number(st.id) === Number(issue.stationId));
+      items.push({
+        tone: 'danger',
+        icon: '⚠️',
+        label: 'Problém',
+        reason: issue.description || 'Otevřený problém ve výrobě.',
+        order,
+        station: order.stations?.find(st => Number(st.stId) === Number(issue.stationId)) || station,
+        stInfo: issueStation || stInfo,
+        rank: 1,
+      });
+    });
+
+    if (isOrderOverdue(order)) {
+      items.push({
+        tone: 'warning',
+        icon: '⏰',
+        label: 'Po termínu',
+        reason: `Termín ${formatDate(order.due)} · ${orderDaysLate(order)} dní po termínu.`,
+        order,
+        station,
+        stInfo,
+        rank: 2,
+      });
+    }
+
+    if (readiness.status !== 'ok') {
+      const missing = Object.keys(READINESS_ITEMS)
+        .filter(key => readinessEffectiveStatus(order, key) !== 'ok')
+        .map(key => READINESS_ITEMS[key].label)
+        .slice(0, 3)
+        .join(', ');
+      items.push({
+        tone: readiness.status === 'blocked' ? 'danger' : 'warning',
+        icon: readiness.status === 'blocked' ? '🔴' : '🟡',
+        label: 'Příprava',
+        reason: missing ? `Dořešit: ${missing}` : 'Zakázka není plně připravená.',
+        order,
+        station,
+        stInfo,
+        rank: 3,
+      });
+    }
+
+    if (station && !orderIsClosed(order) && !isOrderBlocked(order)) {
+      const available = stationInputQty(order, station, activeIndex);
+      const processed = stationProcessedQty(station);
+      const needsClaim = available > processed && !station.workerUserId && !station.workerLogin && ['waiting', 'in_progress', 'partial'].includes(station.status);
+      if (needsClaim) {
+        items.push({
+          tone: 'info',
+          icon: '👤',
+          label: 'Nepřevzato',
+          reason: `${stInfo?.name || 'Stanoviště'} čeká na převzetí práce.`,
+          order,
+          station,
+          stInfo,
+          rank: 4,
+        });
+      }
+    }
+
+    return items;
+  }).sort((a, b) =>
+    a.rank - b.rank ||
+    priorityRank(a.order.priority) - priorityRank(b.order.priority) ||
+    dueTime(a.order) - dueTime(b.order)
+  );
+}
+
+function dashboardStoppedWorkHtml(orders) {
+  const items = orderStopItems(orders).slice(0, 6);
+  if (!items.length) {
+    return `<div class="card app-stop-panel app-stop-panel-calm">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">🟢 Co stojí</div>
+          <div class="app-muted">Teď není vidět žádná blokace, problém ani prošlý termín.</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  return `<div class="card app-stop-panel">
+    <div class="app-panel-head">
+      <div>
+        <div class="card-title">🚦 Co stojí</div>
+        <div class="app-muted">${items.length} nejdůležitějších věcí, které brzdí výrobu.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showOrdersFiltered('blocked')">Blokace</button>
+    </div>
+    <div class="app-stop-list">
+      ${items.map(item => `
+        <button class="app-stop-row ${item.tone}" type="button" onclick="${item.station ? `openStation('${item.order.id}','${item.station.stId}')` : `openOrder('${item.order.id}')`}">
+          <span class="app-stop-icon">${item.icon}</span>
+          <span class="app-stop-copy">
+            <b>${escapeHtml(item.order.number)} · ${escapeHtml(item.label)}</b>
+            <small>${escapeHtml(item.reason)}</small>
+            <em>${item.stInfo ? `${item.stInfo.icon} ${escapeHtml(item.stInfo.name)}` : escapeHtml(item.order.name)}</em>
+          </span>
+          <span class="app-stop-action">Otevřít</span>
+        </button>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
 // ── DASHBOARD ─────────────────────────────────────────
 function renderDashboard() {
   const orders = visibleOrders();
@@ -2036,6 +3219,7 @@ function renderDashboard() {
     ${dashboardOperatorWorkHtml()}
 
     ${dashboardCockpitHtml(orders, { total, inProg, issues, done, urgent })}
+    ${dashboardStoppedWorkHtml(orders)}
     ${dashboardPlanningRiskHtml(orders)}
   `;
 }
@@ -2264,11 +3448,13 @@ function renderWorkQueue() {
 function queueCardHtml(item, position = 0, total = 0) {
   const { order, station, index, stInfo, queueState } = item;
   const meta = stationStatusMeta(station.status);
-  const link = currentOrderLink(order, station.stId);
   const blockReason = orderBlockReason(order);
   const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter) && Number(queueStationFilter) === Number(station.stId);
   return `<div class="card app-queue-card" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
-    style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''};${manualPlanning?'cursor:grab':''}">
+    role="button" tabindex="0" aria-label="Otevřít stanoviště ${escapeHtml(stInfo?.name || 'stanoviště')} zakázky ${escapeHtml(order.number)}"
+    onclick="queueCardOpen(event,'${order.id}','${station.stId}')"
+    onkeydown="queueCardKeyOpen(event,'${order.id}','${station.stId}')"
+    style="margin-bottom:8px;border-left:4px solid ${queueState.color};${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''}">
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div style="font-size:26px;line-height:1">${stInfo?.icon || '🔧'}</div>
       <div style="flex:1;min-width:0">
@@ -2293,12 +3479,22 @@ function queueCardHtml(item, position = 0, total = 0) {
           ` : ''}
           ${stationWorkActionButtons(order, station)}
           <button class="btn btn-primary btn-sm" onclick="openStation('${order.id}', '${station.stId}')">Otevřít stanoviště</button>
-          <button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Detail zakázky</button>
-          <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(link)}')">Kopírovat QR odkaz</button>
+          ${orderMoreButton(order.id, station.stId)}
         </div>
       </div>
     </div>
   </div>`;
+}
+
+function queueCardOpen(event, orderId, stId) {
+  if (event?.target?.closest?.('button,a,input,select,textarea,[data-no-card-open]')) return;
+  openStation(orderId, stId);
+}
+
+function queueCardKeyOpen(event, orderId, stId) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  openStation(orderId, stId);
 }
 
 function quickOpenOrderModal() {
@@ -2335,6 +3531,45 @@ async function copyTextToClipboard(text) {
 // ── ORDERS LIST ───────────────────────────────────────
 let orderSearch = '';
 let orderFilter = null; // 'in_progress' | 'urgent' | 'overdue' | 'blocked' | 'wait_*' | null
+
+function orderMoreButton(orderId, stationId = '') {
+  return `<button class="btn btn-ghost btn-sm more-actions-btn"
+    onclick="event.stopPropagation();openOrderActionsModal('${orderId}', '${stationId}')">⋯ Další</button>`;
+}
+
+function openOrderActionsModal(orderId, stationId = '') {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  const station = stationId ? order.stations?.find(s => Number(s.stId) === Number(stationId)) : null;
+  const stInfo = station ? STATIONS.find(st => Number(st.id) === Number(station.stId)) : null;
+  const items = [
+    `<button class="action-menu-item primary" onclick="closeModal();openOrder('${order.id}')">
+      <span>📋</span><b>Detail zakázky</b><small>${escapeHtml(order.number)} · ${escapeHtml(order.name)}</small>
+    </button>`,
+    station ? `<button class="action-menu-item primary" onclick="closeModal();openStation('${order.id}', '${station.stId}')">
+      <span>${stInfo?.icon || '🔧'}</span><b>Otevřít stanoviště</b><small>${escapeHtml(stInfo?.name || 'Stanoviště')}</small>
+    </button>` : '',
+    `<button class="action-menu-item" onclick="copyTextToClipboard(currentOrderLink(ORDERS.find(o=>o.id==='${order.id}'), '${stationId}'));closeModal()">
+      <span>🔗</span><b>${station ? 'QR odkaz na stanoviště' : 'Odkaz na zakázku'}</b><small>Zkopírovat odkaz pro mobil nebo QR</small>
+    </button>`,
+    can('manage_order_stations') ? `<button class="action-menu-item" onclick="closeModal();manageStationsModal('${order.id}')">
+      <span>⚙️</span><b>Spravovat stanoviště</b><small>Zapnout, vypnout a seřadit postup výroby</small>
+    </button>` : '',
+    can('block_order') ? (isOrderBlocked(order)
+      ? `<button class="action-menu-item" onclick="closeModal();unblockOrderModal('${order.id}')">
+          <span>✅</span><b>Odblokovat zakázku</b><small>Zakázka bude znovu dostupná pro výrobu</small>
+        </button>`
+      : `<button class="action-menu-item danger" onclick="closeModal();blockOrderModal('${order.id}')">
+          <span>⛔</span><b>Blokovat zakázku</b><small>Zastavit práci kvůli materiálu, dokumentaci nebo problému</small>
+        </button>`) : '',
+    can('delete_order') ? `<button class="action-menu-item danger" onclick="closeModal();deleteOrderModal('${order.id}')">
+      <span>🗑️</span><b>Smazat zakázku</b><small>Citlivá akce dostupná jen oprávněným rolím</small>
+    </button>` : '',
+  ].filter(Boolean).join('');
+  openModal('Další možnosti', `<div class="action-menu">${items}</div>`, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+}
 
 function filterOrders(q) {
   let list = visibleOrders();
@@ -2434,7 +3669,7 @@ function ordersListHtml(list) {
             <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
             ${orderBlockedBadgeHtml(o)}
             ${orderReadinessBadgeHtml(o)}
-            ${can('delete_order') ? `<button class="btn btn-danger btn-sm" style="margin-left:auto;padding:5px 9px;font-size:11px" onclick="event.stopPropagation();deleteOrderModal('${o.id}')">🗑️</button>` : ''}
+            <span style="margin-left:auto">${orderMoreButton(o.id)}</span>
           </div>
           <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${o.name}</div>
           <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)">
@@ -2454,6 +3689,157 @@ function ordersListHtml(list) {
       </div>
     </div>`;
   }).join('');
+}
+
+function orderTimelineItems(order) {
+  if (!order) return [];
+  const stationName = stId => {
+    const st = STATIONS.find(item => Number(item.id) === Number(stId));
+    return st ? `${st.icon} ${st.name}` : 'Stanoviště';
+  };
+  const items = [];
+
+  items.push({
+    at: order.orderDate || order.createdAt || order.due || '',
+    icon: '📋',
+    title: 'Zakázka vytvořena',
+    body: `${order.number} · ${order.name}`,
+    actor: order.customer || '',
+    tone: 'info',
+  });
+
+  (order.stations || []).forEach((station, index) => {
+    const meta = stationStatusMeta(station.status);
+    const processed = stationProcessedQty(station);
+    const received = stationInputQty(order, station, index);
+    const lastAt = station.workCompletedAt || station.workPausedAt || station.workStartedAt || '';
+    if (station.workStartedAt || station.workerName || station.workerLogin) {
+      items.push({
+        at: station.workStartedAt || '',
+        icon: '👤',
+        title: `${stationName(station.stId)} převzato`,
+        body: `${stationWorkerLabel(station)} · ${processed}/${received} ks zpracováno`,
+        actor: station.workerRole ? ROLE_LABELS[station.workerRole] || station.workerRole : '',
+        tone: 'info',
+      });
+    }
+    if (processed || ['completed', 'partial', 'issue'].includes(station.status)) {
+      items.push({
+        at: lastAt,
+        icon: meta.icon,
+        title: `${stationName(station.stId)} · ${meta.label}`,
+        body: `OK ${positiveQty(station.qtyOk)} · Oprava ${positiveQty(station.qtyRework)} · Zmetek ${positiveQty(station.qtyScrap)}`,
+        actor: station.workCompletedByName || station.workerName || '',
+        tone: station.status === 'issue' ? 'danger' : station.status === 'completed' ? 'success' : 'info',
+      });
+    }
+  });
+
+  Object.entries(normalizeOrderReadiness(order)).forEach(([key, readiness]) => {
+    if (!readiness.updatedAt) return;
+    const item = READINESS_ITEMS[key];
+    const status = readinessEffectiveStatus(order, key);
+    items.push({
+      at: readiness.updatedAt,
+      icon: item?.icon || '🧩',
+      title: `Připravenost · ${item?.label || key}`,
+      body: readiness.note || READINESS_STATUS[status]?.label || status,
+      actor: readiness.updatedByName || '',
+      tone: status === 'ok' ? 'success' : status === 'blocked' ? 'danger' : 'warning',
+    });
+  });
+
+  PROD_NOTES
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(note => note.orderId === order.id && noteVisibleToCurrentUser(note))
+    .forEach(note => items.push({
+      at: note.createdAt,
+      icon: '📝',
+      title: NOTE_CATEGORIES[note.category] || note.type || 'Poznámka',
+      body: note.text,
+      actor: note.author || '',
+      tone: 'info',
+    }));
+
+  ISSUES
+    .filter(issue => issue.orderId === order.id && userCanSeeIssue(issue))
+    .forEach(issue => items.push({
+      at: issue.resolvedAt || issue.reportedAt,
+      icon: issue.resolved ? '✅' : '⚠️',
+      title: `${issue.resolved ? 'Vyřešený problém' : 'Nahlášený problém'} · ${stationName(issue.stationId)}`,
+      body: issue.description || '',
+      actor: issue.resolvedBy || issue.reportedBy || '',
+      tone: issue.resolved ? 'success' : 'danger',
+    }));
+
+  auditRows()
+    .filter(row => row.entityId === order.id || String(row.entityId || '').startsWith(order.id + ':') || String(row.summary || '').includes(order.number))
+    .forEach(row => items.push({
+      at: row.at,
+      icon: '🧾',
+      title: auditActionLabel(row.action),
+      body: row.summary || row.action,
+      actor: row.userName || 'Systém',
+      tone: row.action?.includes('blocked') || row.action?.includes('deleted') ? 'danger' : 'info',
+    }));
+
+  const seen = new Set();
+  return items
+    .filter(item => item.title || item.body)
+    .filter(item => {
+      const key = `${item.at}|${item.title}|${item.body}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => {
+      const atA = new Date(a.at || 0).getTime() || 0;
+      const atB = new Date(b.at || 0).getTime() || 0;
+      return atB - atA;
+    });
+}
+
+function auditActionLabel(action) {
+  const labels = {
+    'station.qty_saved': 'Počty kusů',
+    'station.status_changed': 'Změna stavu',
+    'station.work_claimed': 'Převzetí práce',
+    'station.work_paused': 'Pozastavení práce',
+    'order.blocked': 'Blokace zakázky',
+    'order.unblocked': 'Odblokování zakázky',
+    'order.updated': 'Úprava zakázky',
+    'issue.reported': 'Problém',
+    'issue.resolved': 'Vyřešení problému',
+    'note.created': 'Poznámka',
+    'note.deleted': 'Smazání poznámky',
+  };
+  return labels[action] || action || 'Událost';
+}
+
+function orderTimelineCardHtml(order) {
+  const items = orderTimelineItems(order).slice(0, 14);
+  return `<div class="card order-timeline-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div>
+        <div class="card-title" style="margin:0">🕒 Timeline zakázky</div>
+        <div class="app-muted">${items.length} posledních událostí z výroby, poznámek, problémů a auditu.</div>
+      </div>
+      ${can('app_settings') ? `<button class="btn btn-ghost btn-sm" onclick="switchAdminTab('audit');navigateTo('admin')">Audit</button>` : ''}
+    </div>
+    <div class="order-timeline-list">
+      ${items.length ? items.map(item => `
+        <div class="order-timeline-item ${item.tone || 'info'}">
+          <span class="order-timeline-dot">${item.icon || '•'}</span>
+          <div class="order-timeline-copy">
+            <b>${escapeHtml(item.title)}</b>
+            <span>${escapeHtml(item.body || '')}</span>
+            <small>${item.at ? formatDateTime(item.at) : 'bez času'}${item.actor ? ' · ' + escapeHtml(item.actor) : ''}</small>
+          </div>
+        </div>
+      `).join('') : `<div class="app-empty">Zatím není z čeho složit historii zakázky.</div>`}
+    </div>
+  </div>`;
 }
 
 // ── ORDER DETAIL ──────────────────────────────────────
@@ -2483,6 +3869,13 @@ function openOrder(orderId, options = {}) {
   const totalOk = orderGoodQty(selectedOrder);
   const doneSt  = selectedOrder.stations.filter(s=>s.status==='completed').length;
   const pct     = Math.round(doneSt / selectedOrder.stations.length * 100);
+  const orderControlCards = `
+    ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
+    ${featureEnabled('featureReadiness') ? orderReadinessCardHtml(selectedOrder) : ''}
+  `;
+  const orderControlHtml = operatorSimpleMode()
+    ? advancedPanelHtml('Řízení a připravenost', orderControlCards, { subtitle: 'pokročilé' })
+    : orderControlCards;
 
   pg.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;cursor:pointer" onclick="navigateTo('orders')">
@@ -2499,13 +3892,9 @@ function openOrder(orderId, options = {}) {
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
           <span class="badge badge-${selectedOrder.priority}">${priorityLabel(selectedOrder.priority)}</span>
-          ${orderBlockedBadgeHtml(selectedOrder)}
-          ${orderReadinessBadgeHtml(selectedOrder)}
-          <button class="btn btn-ghost btn-sm" onclick="copyTextToClipboard('${escapeHtml(currentOrderLink(selectedOrder))}')">🔗 Odkaz</button>
-          ${can('block_order') ? (isOrderBlocked(selectedOrder)
-            ? `<button class="btn btn-teal btn-sm" onclick="unblockOrderModal('${selectedOrder.id}')">Odblokovat</button>`
-            : `<button class="btn btn-danger btn-sm" onclick="blockOrderModal('${selectedOrder.id}')">Blokovat</button>`) : ''}
-          ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${selectedOrder.id}')">🗑️ Smazat</button>` : ''}
+          ${featureEnabled('featureOrderBlocking') ? orderBlockedBadgeHtml(selectedOrder) : ''}
+          ${featureEnabled('featureReadiness') ? orderReadinessBadgeHtml(selectedOrder) : ''}
+          ${orderMoreButton(selectedOrder.id)}
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
@@ -2527,16 +3916,18 @@ function openOrder(orderId, options = {}) {
       </div>
     </div>
 
-    ${orderBlockCardHtml(selectedOrder)}
-    ${orderReadinessCardHtml(selectedOrder)}
+    ${orderControlHtml}
     ${orderInfoCardHtml(selectedOrder)}
-    ${productPhotoCardHtml(selectedOrder)}
-    ${orderDocsCardHtml(selectedOrder)}
-    ${orderAiCardHtml(selectedOrder)}
+    ${orderTimelineCardHtml(selectedOrder)}
+    ${advancedPanelHtml('Další informace k zakázce', `
+      ${featureEnabled('featureProductMemory') ? productPhotoCardHtml(selectedOrder) : ''}
+      ${orderDocsCardHtml(selectedOrder)}
+      ${featureEnabled('featureAiSummary') ? orderAiCardHtml(selectedOrder) : ''}
+    `, { subtitle: 'foto, dokumenty, AI' })}
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
       <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Stanoviště výroby</div>
-      ${can('manage_order_stations') ? `<button class="btn btn-ghost btn-sm" onclick="manageStationsModal('${selectedOrder.id}')">⚙️ Spravovat</button>` : ''}
+      ${can('manage_order_stations') ? orderMoreButton(selectedOrder.id) : ''}
     </div>
     ${selectedOrder.stations.map((s, index) => ({ s, index })).filter(({ s }) => userCanAccessStation(s.stId)).map(({ s, index }) => {
       const stInfo = STATIONS.find(x => x.id === s.stId);
@@ -2561,6 +3952,7 @@ function openOrder(orderId, options = {}) {
       </div>`;
     }).join('')}
   `;
+  scrollAppToTop();
 }
 
 function orderInfoCardHtml(o) {
@@ -3285,6 +4677,7 @@ function openStation(orderId, stId, options = {}) {
   pg.classList.add('active');
 
   renderStationDetail(stInfo);
+  scrollAppToTop();
 }
 
 function stationWorkPanelHtml(order, station) {
@@ -3433,59 +4826,46 @@ function operatorStationTaskPanelHtml(order, station, stInfo) {
   </div>`;
 }
 
+function stationWorkSummaryHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const available = stationInputQty(order, station, index);
+  const processed = stationProcessedQty(station);
+  const remaining = Math.max(0, available - processed);
+  const nextStation = (order.stations || [])[index + 1];
+  const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  return `<div class="station-work-summary" style="--summary-color:${state.color}">
+    <div class="station-summary-main">
+      <span class="station-summary-icon">${state.icon}</span>
+      <div>
+        <strong>${escapeHtml(state.label)}</strong>
+        <span>${escapeHtml(state.action)}</span>
+      </div>
+    </div>
+    <div class="station-summary-stats">
+      <div><b>${available}</b><span>${index > 0 ? 'Přišlo' : 'Objednáno'}</span></div>
+      <div><b>${processed}</b><span>Zpracováno</span></div>
+      <div><b>${remaining}</b><span>Zbývá</span></div>
+    </div>
+    <div class="station-summary-route">
+      ${nextInfo
+        ? `<button class="station-next-btn" onclick="openStation('${escapeHtml(order.id)}','${nextStation.stId}')">
+            <span>Další stanoviště</span>
+            <strong>${nextInfo.icon} ${escapeHtml(nextInfo.name)}</strong>
+            <b>Otevřít →</b>
+          </button>`
+        : `<span class="station-route-final">🏁 Poslední stanoviště</span>`}
+    </div>
+  </div>`;
+}
+
 function renderStationDetail(stInfo) {
   const s = selectedStation;
-  const statusMeta = stationStatusMeta(s.status);
-
-  const pg = document.getElementById('page-station');
-  pg.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;cursor:pointer"
-         onclick="openOrder('${selectedOrder.id}')">
-      <span style="color:var(--text2);font-size:20px">←</span>
-      <span style="font-size:12px;color:var(--text2)">Zpět na zakázku</span>
-    </div>
-
-    <div class="station-header">
-      <div class="station-badge">${stInfo?.icon ?? '🔧'}</div>
-      <div>
-        <div style="font-size:16px;font-weight:800;color:var(--text)">${stInfo?.name ?? 'Stanoviště'}</div>
-        <div style="font-size:12px;color:var(--text2)">${selectedOrder.name}</div>
-      </div>
-      <span class="badge ${statusMeta.badge}" style="margin-left:auto">${statusMeta.label}</span>
-    </div>
-
-    ${operatorStationTaskPanelHtml(selectedOrder, selectedStation, stInfo)}
-    ${orderBlockCardHtml(selectedOrder)}
-    ${stationWorkPanelHtml(selectedOrder, selectedStation)}
-
-    <!-- QTY -->
-    <div class="card">
-      <div class="card-title">📦 Počty kusů</div>
-      <div class="qty-grid" id="qty-grid">
-        ${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
-        ${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
-        ${qtyFieldHtml('scrap',  'Zmetek',  s.qtyScrap,  'scrap-color')}
-      </div>
-      <div id="qty-summary"></div>
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
-      </div>
-      ${scrapControlHtml()}
-    </div>
-
-    <!-- STATUS ACTIONS -->
-    <div class="card">
-      <div class="card-title">🔄 Změnit stav</div>
-      <div class="action-grid">
-        ${stationStatusButton('waiting', '🧰 Příprava')}
-        ${stationStatusButton('in_progress', '▶ Rozpracováno')}
-        ${stationStatusButton('partial', '◐ Částečně hotovo')}
-        ${stationStatusButton('completed', '✅ Hotovo')}
-      </div>
-      <button class="action-btn issue" style="margin-top:8px;width:100%;justify-content:center" onclick="reportIssueModal()">⚠️ Nahlásit problém</button>
-    </div>
-
-    <!-- PRODUCTION NOTES -->
+  const stationSupportCards = `
+    ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
+  `;
+  const stationSupportHtml = advancedPanelHtml('Upozornění zakázky', stationSupportCards, { subtitle: 'blokace' });
+  const stationNotesCard = `
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div class="card-title" style="margin:0">📝 Poznámky k výrobě (${stationNotes(selectedOrder.id, selectedStation.stId).length})</div>
@@ -3493,9 +4873,71 @@ function renderStationDetail(stInfo) {
       </div>
       ${renderStationNotes()}
     </div>
+  `;
+  const stationNotesHtml = stationNotesCard;
+  const stationProgramPhotoHtml = featureEnabled('featureProductMemory')
+    ? advancedPanelHtml('Program a foto výrobku', `
+      ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
+      ${productPhotoCardHtml(selectedOrder, true)}
+    `, { subtitle: 'opakovaná výroba' })
+    : '';
+  const stationAccessHtml = advancedPanelHtml('Převzetí práce', stationWorkPanelHtml(selectedOrder, selectedStation), { subtitle: 'přístup' });
 
-    ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
-    ${productPhotoCardHtml(selectedOrder, true)}
+  const pg = document.getElementById('page-station');
+  pg.innerHTML = `
+    <div class="station-back-link"
+         onclick="openOrder('${selectedOrder.id}')">
+      <span style="color:var(--text2);font-size:20px">←</span>
+      <span style="font-size:12px;color:var(--text2)">Zpět na zakázku</span>
+    </div>
+
+    <div class="station-hero">
+      <div class="station-header">
+        <div class="station-badge">${stInfo?.icon ?? '🔧'}</div>
+        <div class="station-title-block">
+          <div class="station-title">${stInfo?.name ?? 'Stanoviště'}</div>
+          <div class="station-subtitle">${selectedOrder.number} · ${selectedOrder.name}</div>
+        </div>
+      </div>
+      ${stationWorkSummaryHtml(selectedOrder, selectedStation, stInfo)}
+    </div>
+
+    <div class="station-workspace-grid">
+      <div class="station-workspace-main">
+        <div class="card station-primary-card station-qty-card">
+          <div class="card-title">📦 Počty kusů</div>
+          <div class="qty-grid" id="qty-grid">
+            ${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
+            ${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
+            ${qtyFieldHtml('scrap',  'Zmetek',  s.qtyScrap,  'scrap-color')}
+          </div>
+          <div id="qty-summary"></div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
+          </div>
+          ${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
+        </div>
+
+        <div class="card station-primary-card station-status-card">
+          <div class="card-title">🔄 Změnit stav</div>
+          <div class="action-grid">
+            ${stationStatusButton('waiting', '🧰 Příprava')}
+            ${stationStatusButton('in_progress', '▶ Rozpracováno')}
+            ${stationStatusButton('partial', '◐ Částečně hotovo')}
+            ${stationStatusButton('completed', '✅ Hotovo')}
+          </div>
+          <button class="action-btn issue" style="margin-top:8px;width:100%;justify-content:center" onclick="reportIssueModal()">⚠️ Nahlásit problém</button>
+        </div>
+
+        ${stationNotesHtml}
+      </div>
+
+      <div class="station-workspace-side">
+        ${stationProgramPhotoHtml}
+        ${stationAccessHtml}
+        ${stationSupportHtml}
+      </div>
+    </div>
   `;
   updateQtySummary();
 }
@@ -4473,8 +5915,21 @@ function resolveIssue(id) {
     cloneForAudit(i),
   );
   showToast('✅ Problém vyřešen');
+  markNotificationRead(`issue:${id}`);
+  refreshNotificationBadge();
+  buildNav();
   if (currentPage === 'dashboard') renderDashboard();
   if (currentPage === 'issues')    renderIssues();
+}
+
+function resolveIssueFromNotification(id, filter = 'new') {
+  resolveIssue(id);
+  openNotificationsModal(filter);
+}
+
+function resolveIssueFromDetail(id) {
+  resolveIssue(id);
+  openIssueDetail(id);
 }
 
 function forwardQtyModal() {
@@ -4716,6 +6171,77 @@ function rerenderKpiLocation() {
 
 // ── ADMIN ─────────────────────────────────────────────
 let adminTab = 'users';
+let adminGroup = 'people';
+
+function adminGroups() {
+  return [
+    { id:'people', label:'Uživatelé', icon:'👥', tabs:[
+      { id:'users', label:'Uživatelé', icon:'👥' },
+      { id:'role_permissions', label:'Role a práva', icon:'🛡️' },
+      { id:'login_logs', label:'Přihlášení', icon:'🔐' },
+      ...(featureEnabled('featureAttendance') ? [{ id:'team_attendance', label:'Docházka týmu', icon:'🕐' }] : []),
+    ] },
+    { id:'production', label:'Výroba', icon:'🏭', tabs:[
+      { id:'orders_mgmt', label:'Zakázky', icon:'📋' },
+      { id:'stations', label:'Stanoviště', icon:'🏭' },
+      { id:'kpi_report', label:'KPI', icon:'📊' },
+      { id:'announcements', label:'Oznámení', icon:'📢' },
+    ] },
+    { id:'data', label:'Data', icon:'🧾', tabs:[
+      { id:'audit', label:'Audit', icon:'🧾' },
+      { id:'cloud', label:'Cloud', icon:'☁️' },
+    ] },
+    { id:'integrations', label:'Integrace', icon:'🔌', tabs:[
+      ...(featureEnabled('featureLupaNet') ? [{ id:'lupanet', label:'Lupa NET', icon:'🔌' }] : []),
+    ] },
+    { id:'system', label:'Systém', icon:'⚙️', tabs:[
+      { id:'settings', label:'Nastavení', icon:'⚙️' },
+      { id:'ezop4', label:'Ezop4', icon:'🚀' },
+    ] },
+  ].filter(group => group.tabs.length);
+}
+
+function adminTabGroupId(tab = adminTab) {
+  return adminGroups().find(group => group.tabs.some(item => item.id === tab))?.id || 'people';
+}
+
+function normalizeAdminSelection() {
+  const groups = adminGroups();
+  const currentGroup = groups.find(group => group.id === adminGroup) || groups[0];
+  if (!currentGroup) return;
+  adminGroup = currentGroup.id;
+  if (!currentGroup.tabs.some(item => item.id === adminTab)) {
+    adminTab = currentGroup.tabs[0]?.id || 'users';
+  }
+}
+
+function renderAdminGroupTabs() {
+  return `<div class="admin-group-tabs">
+    ${adminGroups().map(group => `
+      <div class="admin-group-section ${adminGroup === group.id ? 'active' : ''}">
+        <button class="admin-group-tab ${adminGroup === group.id ? 'active' : ''}" onclick="switchAdminGroup('${group.id}')">
+          <span>${group.icon}</span><b>${group.label}</b>
+        </button>
+        ${adminGroup === group.id ? renderAdminSubTabs(group) : ''}
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function renderAdminSubTabs(group = adminGroups().find(item => item.id === adminGroup)) {
+  return `<div class="admin-tabs admin-tabs-nested">
+    ${(group?.tabs || []).map(tab => `
+      <div class="admin-tab ${adminTab === tab.id ? 'active' : ''}" onclick="switchAdminTab('${tab.id}')">${tab.icon} ${tab.label}</div>
+    `).join('')}
+  </div>`;
+}
+
+function activeAdminNav() {
+  const group = adminGroups().find(item => item.id === adminGroup) || adminGroups()[0];
+  const tab = group?.tabs?.find(item => item.id === adminTab) || group?.tabs?.[0] || { icon:'⚙️', label:'Správa aplikace' };
+  return { group, tab };
+}
+
 // ── OZNÁMENÍ ──────────────────────────────────────────
 const ANNOUNCE_TYPES = {
   info:    { label: 'Informace', color: 'var(--blue,#60a5fa)', icon: 'ℹ️'  },
@@ -5045,60 +6571,259 @@ function renderAdmin() {
     showToast('🚫 Nemáte oprávnění ke správě aplikace.');
     return;
   }
+  if (adminTab === 'lupanet' && !featureEnabled('featureLupaNet')) adminTab = 'settings';
+  if (adminTab === 'team_attendance' && !featureEnabled('featureAttendance')) adminTab = 'settings';
+  if (adminTab === 'settings' && adminGroup !== 'system') adminGroup = adminTabGroupId(adminTab);
+  normalizeAdminSelection();
+  const activeAdmin = activeAdminNav();
   document.getElementById('page-admin').innerHTML = `
-    <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">⚙️ Správa aplikace</div>
-    <div class="admin-tabs">
-      <div class="admin-tab ${adminTab==='users'?'active':''}" onclick="switchAdminTab('users')">👥 Uživatelé</div>
-      <div class="admin-tab ${adminTab==='login_logs'?'active':''}" onclick="switchAdminTab('login_logs')">🔐 Přihlášení</div>
-      <div class="admin-tab ${adminTab==='audit'?'active':''}" onclick="switchAdminTab('audit')">🧾 Audit</div>
-      <div class="admin-tab ${adminTab==='settings'?'active':''}" onclick="switchAdminTab('settings')">⚙️ Nastavení</div>
-      <div class="admin-tab ${adminTab==='stations'?'active':''}" onclick="switchAdminTab('stations')">🏭 Stanoviště</div>
-      <div class="admin-tab ${adminTab==='orders_mgmt'?'active':''}" onclick="switchAdminTab('orders_mgmt')">📋 Zakázky</div>
-      <div class="admin-tab ${adminTab==='kpi_report'?'active':''}" onclick="switchAdminTab('kpi_report')">📊 KPI</div>
-      <div class="admin-tab ${adminTab==='cloud'?'active':''}" onclick="switchAdminTab('cloud')">☁️ Cloud</div>
-      <div class="admin-tab ${adminTab==='lupanet'?'active':''}" onclick="switchAdminTab('lupanet')">🔌 Lupa NET</div>
-      <div class="admin-tab ${adminTab==='ezop4'?'active':''}" onclick="switchAdminTab('ezop4')">🚀 Ezop4</div>
-      <div class="admin-tab ${adminTab==='announcements'?'active':''}" onclick="switchAdminTab('announcements')">📢 Oznámení</div>
-      <div class="admin-tab ${adminTab==='team_attendance'?'active':''}" onclick="switchAdminTab('team_attendance')">🕐 Docházka týmu</div>
-    </div>
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar-title">
+          <span>⚙️</span>
+          <div>
+            <b>Správa aplikace</b>
+            <small>${escapeHtml(activeAdmin.group?.label || 'Administrace')}</small>
+          </div>
+        </div>
+        ${renderAdminGroupTabs()}
+      </aside>
 
-    <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
-      ${renderAdminUsers()}
-    </div>
-    <div class="admin-section ${adminTab==='login_logs'?'active':''}" id="adm-login-logs">
-      ${renderAdminLoginLogs()}
-    </div>
-    <div class="admin-section ${adminTab==='audit'?'active':''}" id="adm-audit">
-      ${renderAdminAudit()}
-    </div>
-    <div class="admin-section ${adminTab==='settings'?'active':''}" id="adm-settings">
-      ${renderAdminSettings()}
-    </div>
-    <div class="admin-section ${adminTab==='stations'?'active':''}" id="adm-stations">
-      ${renderAdminStations()}
-    </div>
-    <div class="admin-section ${adminTab==='orders_mgmt'?'active':''}" id="adm-orders">
-      ${renderAdminOrders()}
-    </div>
-    <div class="admin-section ${adminTab==='kpi_report'?'active':''}" id="adm-kpi">
-      ${renderKpiHtml()}
-    </div>
-    <div class="admin-section ${adminTab==='cloud'?'active':''}" id="adm-cloud">
-      ${renderAdminCloud()}
-    </div>
-    <div class="admin-section ${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
-      ${renderAdminLupaNet()}
-    </div>
-    <div class="admin-section ${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
-      ${renderAdminEzop4()}
-    </div>
-    <div class="admin-section ${adminTab==='announcements'?'active':''}" id="adm-announcements">
-      ${renderAdminAnnouncements()}
-    </div>
-    <div class="admin-section ${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
-      ${renderAdminTeamAttendance()}
+      <main class="admin-content">
+        <div class="admin-content-head">
+          <div>
+            <div class="admin-eyebrow">${escapeHtml(activeAdmin.group?.icon || '⚙️')} ${escapeHtml(activeAdmin.group?.label || 'Administrace')}</div>
+            <h2>${escapeHtml(activeAdmin.tab.icon)} ${escapeHtml(activeAdmin.tab.label)}</h2>
+            <p>Administrace je na PC rozdělená do levé navigace a pracovní plochy, aby se nastavení lépe četlo a nebralo místo obsahu.</p>
+          </div>
+          <span class="badge badge-admin">ADMIN</span>
+        </div>
+
+        <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
+          ${renderAdminUsers()}
+        </div>
+        <div class="admin-section ${adminTab==='role_permissions'?'active':''}" id="adm-role-permissions">
+          ${renderAdminRolePermissions()}
+        </div>
+        <div class="admin-section ${adminTab==='login_logs'?'active':''}" id="adm-login-logs">
+          ${renderAdminLoginLogs()}
+        </div>
+        <div class="admin-section ${adminTab==='audit'?'active':''}" id="adm-audit">
+          ${renderAdminAudit()}
+        </div>
+        <div class="admin-section ${adminTab==='settings'?'active':''}" id="adm-settings">
+          ${renderAdminSettings()}
+        </div>
+        <div class="admin-section ${adminTab==='stations'?'active':''}" id="adm-stations">
+          ${renderAdminStations()}
+        </div>
+        <div class="admin-section ${adminTab==='orders_mgmt'?'active':''}" id="adm-orders">
+          ${renderAdminOrders()}
+        </div>
+        <div class="admin-section ${adminTab==='kpi_report'?'active':''}" id="adm-kpi">
+          ${renderKpiHtml()}
+        </div>
+        <div class="admin-section ${adminTab==='cloud'?'active':''}" id="adm-cloud">
+          ${renderAdminCloud()}
+        </div>
+        ${featureEnabled('featureLupaNet') ? `<div class="admin-section ${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
+          ${renderAdminLupaNet()}
+        </div>` : ''}
+        <div class="admin-section ${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
+          ${renderAdminEzop4()}
+        </div>
+        <div class="admin-section ${adminTab==='announcements'?'active':''}" id="adm-announcements">
+          ${renderAdminAnnouncements()}
+        </div>
+        ${featureEnabled('featureAttendance') ? `<div class="admin-section ${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
+          ${renderAdminTeamAttendance()}
+        </div>` : ''}
+      </main>
     </div>
   `;
+}
+
+function renderAdminRolePermissions() {
+  const roles = ['operator', 'tpv', 'dispatcher', 'management', 'admin'];
+  const activeOverrides = Object.entries(APP_SETTINGS.rolePermissionOverrides || {})
+    .filter(([role]) => roles.includes(role))
+    .flatMap(([role, actions]) => Object.entries(actions || {})
+      .filter(([action, value]) => ROLE_PERMISSION_ACTIONS.includes(action) && value === false)
+      .map(([action]) => ({ role, action })));
+  return `
+    <div class="card" style="border-left:4px solid var(--gold)">
+      <div class="card-title">🛡️ Role a oprávnění</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Tady admin vypíná méně používané nebo citlivé funkce pro jednotlivé role. Tabulka práva jen ubírá:
+        role nedostane funkci, kterou v základu nemá. Admin zůstává vždy s plnými právy.
+      </div>
+      <div class="role-permission-legend">
+        <span><i class="perm-dot on"></i> povoleno</span>
+        <span><i class="perm-dot off"></i> vypnuto adminem</span>
+        <span><i class="perm-dot none"></i> mimo roli</span>
+      </div>
+    </div>
+
+    <div class="role-permission-list">
+      ${ROLE_PERMISSION_ACTIONS.map(action => `
+        <div class="role-permission-row">
+          <div class="role-permission-name">
+            <strong>${escapeHtml(ROLE_PERMISSION_LABELS[action] || action)}</strong>
+            <span>${escapeHtml(action)}</span>
+          </div>
+          <div class="role-permission-cells">
+            ${roles.map(role => rolePermissionCellHtml(role, action)).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    ${renderRoleNavVisibility()}
+
+    <div class="card">
+      <div class="card-title">📌 Aktivní omezení</div>
+      ${activeOverrides.length === 0
+        ? `<div style="font-size:13px;color:var(--text2)">Žádné roli teď není ručně vypnuté oprávnění.</div>`
+        : activeOverrides.map(item => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:13px;color:var(--text)">${escapeHtml(ROLE_LABELS[item.role] || item.role)} · ${escapeHtml(ROLE_PERMISSION_LABELS[item.action] || item.action)}</span>
+            <button class="btn btn-ghost btn-sm" onclick="toggleRolePermission('${item.role}','${item.action}')">Vrátit</button>
+          </div>
+        `).join('')}
+    </div>
+  `;
+}
+
+function renderRoleNavVisibility() {
+  const roles = ['operator', 'tpv', 'dispatcher', 'management', 'admin'];
+  const activeHidden = Object.entries(APP_SETTINGS.hiddenNavByRole || {})
+    .filter(([role]) => roles.includes(role))
+    .flatMap(([role, items]) => (Array.isArray(items) ? items : [])
+      .filter(navId => ROLE_NAV_ITEMS.some(item => item.id === navId))
+      .map(navId => ({ role, navId })));
+  return `
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧭 Menu podle role</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Tohle pouze uklízí navigaci. Skryté položky nezmizí z aplikace; skutečné zákazy se řídí oprávněními výše.
+      </div>
+      <div class="role-permission-list">
+        ${ROLE_NAV_ITEMS.map(item => `
+          <div class="role-permission-row">
+            <div class="role-permission-name">
+              <strong>${item.icon} ${escapeHtml(item.label)}</strong>
+              <span>${escapeHtml(item.id)}</span>
+            </div>
+            <div class="role-permission-cells">
+              ${roles.map(role => roleNavCellHtml(role, item)).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      ${activeHidden.length === 0
+        ? `<div style="font-size:12px;color:var(--text2)">Žádná položka menu není ručně skrytá.</div>`
+        : `<div style="font-size:12px;color:var(--text2);margin-bottom:8px">Skryté položky: ${
+            activeHidden.map(item => `${ROLE_LABELS[item.role] || item.role} · ${ROLE_NAV_ITEMS.find(nav => nav.id === item.navId)?.label || item.navId}`).join(', ')
+          }</div>`}
+    </div>
+  `;
+}
+
+function roleNavCellHtml(role, item) {
+  const locked = item.lockedFor?.includes(role);
+  const hidden = navHiddenForRole(role, item.id);
+  const label = ROLE_LABELS[role] || role;
+  if (locked) {
+    return `<button class="role-permission-cell locked" disabled title="Tuto položku menu nelze pro roli skrýt">
+      <span>${escapeHtml(label)}</span><b>Vždy</b>
+    </button>`;
+  }
+  return `<button class="role-permission-cell ${hidden ? 'disabled' : 'enabled'}"
+    onclick="toggleRoleNav('${role}','${item.id}')"
+    title="${hidden ? 'Kliknutím vrátit do menu' : 'Kliknutím skrýt v menu'}">
+    <span>${escapeHtml(label)}</span><b>${hidden ? 'Skryto' : 'Vidí'}</b>
+  </button>`;
+}
+
+function toggleRoleNav(role, navId) {
+  if (!can('app_settings')) return;
+  const item = ROLE_NAV_ITEMS.find(nav => nav.id === navId);
+  if (!item) return;
+  if (item.lockedFor?.includes(role)) {
+    showToast('Tuto položku menu nelze skrýt');
+    return;
+  }
+  if (!APP_SETTINGS.hiddenNavByRole) APP_SETTINGS.hiddenNavByRole = {};
+  const current = Array.isArray(APP_SETTINGS.hiddenNavByRole[role]) ? [...APP_SETTINGS.hiddenNavByRole[role]] : [];
+  const hidden = current.includes(navId);
+  APP_SETTINGS.hiddenNavByRole[role] = hidden
+    ? current.filter(id => id !== navId)
+    : [...current, navId];
+  if (APP_SETTINGS.hiddenNavByRole[role].length === 0) {
+    delete APP_SETTINGS.hiddenNavByRole[role];
+  }
+  writeAudit(
+    'nav.visibility_changed',
+    'app_settings',
+    'role-navigation',
+    `${ROLE_LABELS[role] || role}: ${item.label} ${hidden ? 'zobrazeno v menu' : 'skryto z menu'}`
+  );
+  buildNav();
+  renderAdmin();
+  showToast(hidden ? 'Položka menu obnovena' : 'Položka menu skryta');
+}
+
+function rolePermissionCellHtml(role, action) {
+  const baseAllowed = BASE_ROLE_PERMISSIONS[action]?.includes(role) ?? false;
+  const disabled = rolePermissionOverride(role, action) === false;
+  const effective = role === 'admin' || (baseAllowed && !disabled);
+  const label = ROLE_LABELS[role] || role;
+  if (role === 'admin') {
+    return `<button class="role-permission-cell locked" disabled title="Admin má vždy kompletní práva">
+      <span>${escapeHtml(label)}</span><b>Vždy</b>
+    </button>`;
+  }
+  if (!baseAllowed) {
+    return `<button class="role-permission-cell unavailable" disabled title="Tato role nemá právo v základním modelu">
+      <span>${escapeHtml(label)}</span><b>—</b>
+    </button>`;
+  }
+  return `<button class="role-permission-cell ${effective ? 'enabled' : 'disabled'}"
+    onclick="toggleRolePermission('${role}','${action}')"
+    title="${effective ? 'Kliknutím vypnout pro roli' : 'Kliknutím vrátit roli'}">
+    <span>${escapeHtml(label)}</span><b>${effective ? 'Zapnuto' : 'Vypnuto'}</b>
+  </button>`;
+}
+
+function toggleRolePermission(role, action) {
+  if (!can('app_settings')) return;
+  if (role === 'admin') {
+    showToast('Admin má vždy kompletní práva');
+    return;
+  }
+  if (!BASE_ROLE_PERMISSIONS[action]?.includes(role)) {
+    showToast('Tato role nemá právo v základním modelu');
+    return;
+  }
+  if (!APP_SETTINGS.rolePermissionOverrides) APP_SETTINGS.rolePermissionOverrides = {};
+  if (!APP_SETTINGS.rolePermissionOverrides[role]) APP_SETTINGS.rolePermissionOverrides[role] = {};
+  const disabled = rolePermissionOverride(role, action) === false;
+  if (disabled) {
+    delete APP_SETTINGS.rolePermissionOverrides[role][action];
+  } else {
+    APP_SETTINGS.rolePermissionOverrides[role][action] = false;
+  }
+  if (Object.keys(APP_SETTINGS.rolePermissionOverrides[role]).length === 0) {
+    delete APP_SETTINGS.rolePermissionOverrides[role];
+  }
+  writeAudit(
+    'role.permission_changed',
+    'app_settings',
+    'role-permissions',
+    `${ROLE_LABELS[role] || role}: ${ROLE_PERMISSION_LABELS[action] || action} ${disabled ? 'zapnuto' : 'vypnuto'}`
+  );
+  renderAdmin();
+  showToast(disabled ? 'Oprávnění role obnoveno' : 'Oprávnění role vypnuto');
 }
 
 function renderAdminEzop4() {
@@ -5109,6 +6834,8 @@ function renderAdminEzop4() {
   const totalRows = tableExport
     ? Object.values(tableExport).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0)
     : 0;
+  const sessionLockHours = Number(APP_SETTINGS?.lockTimeout) || 0;
+  const strictSupabaseAuth = authMode === 'supabase' && !demoFallbackAllowed();
   const cards = [
     ['Profily', count('profiles'), 'profiles'],
     ['Zakázky', count('orders'), 'orders'],
@@ -5142,17 +6869,32 @@ function renderAdminEzop4() {
       ${ezop4ChecklistRow('schema.sql', 'Tabulky pro zakázky, stanoviště, problémy, poznámky, audit a profily jsou připravené.', true)}
       ${ezop4ChecklistRow('Supabase Auth + RLS', 'Schéma obsahuje role, přiřazená stanoviště operátorů a RLS omezení podle stanoviště.', true)}
       ${ezop4ChecklistRow('Migrace app_state', 'Současná data lze převést na tabulkový JSON export.', Boolean(tableExport))}
-      ${ezop4ChecklistRow('Auth režim', authMode === 'supabase' ? 'Supabase Auth je zapnutý, demo heslo 1234 zůstává fallback.' : 'Aktivní je demo login. Supabase Auth lze zapnout níže.', authMode === 'supabase')}
+      ${ezop4ChecklistRow('Auth režim', authMode === 'supabase' ? (demoFallbackAllowed() ? 'Supabase Auth je zapnutý, ale nouzový demo fallback je povolený.' : 'Supabase Auth je zapnutý v přísném režimu bez demo hesla 1234.') : 'Aktivní je demo login. Supabase Auth lze zapnout níže.', strictSupabaseAuth)}
+      ${ezop4ChecklistRow('Automatické zamčení', sessionLockHours > 0 ? `Relace se uzamkne po ${sessionLockHours} h neaktivity.` : 'Automatické zamčení je vypnuté. Nastavte timeout v Admin → Nastavení.', sessionLockHours > 0)}
       ${ezop4ChecklistRow('Audit log základ', 'Změny počtů, stavů, zakázek, programů, poznámek a problémů se zapisují do auditu.', true)}
       ${ezop4ChecklistRow('Napojení UI na tabulky', 'Další krok: přepnout zakázky z app_state na orders/order_stations.', false)}
     </div>
 
+    <div class="card" style="border-left:4px solid ${strictSupabaseAuth && sessionLockHours > 0 ? 'var(--green)' : 'var(--orange)'}">
+      <div class="card-title">🛡️ Bezpečnost relace</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${authMode === 'supabase' ? 'AUTH' : 'DEMO'}</div><div class="stat-lbl">Login režim</div></div>
+        <div class="stat-card"><div class="stat-val">${demoFallbackAllowed() ? 'ON' : 'OFF'}</div><div class="stat-lbl">Demo fallback</div></div>
+        <div class="stat-card"><div class="stat-val">${sessionLockHours > 0 ? `${sessionLockHours}h` : 'OFF'}</div><div class="stat-lbl">Auto lock</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:10px">
+        Pro ostrý provoz má být aktivní Supabase Auth, nouzový demo fallback vypnutý a automatické zamčení zapnuté.
+      </div>
+    </div>
+
+    ${renderSecurityChecklist(authMode, strictSupabaseAuth, sessionLockHours)}
+
     <div class="card">
       <div class="card-title">🔐 Režim přihlášení</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
-        Demo režim používá lokální uživatele a heslo 1234. Supabase režim se nejdřív pokusí
-        přihlásit přes Supabase Auth a načíst roli z tabulky <b>profiles</b>; pokud selže,
-        uživatel se může pořád přihlásit demo účtem.
+        Demo režim používá lokální uživatele a heslo 1234 pouze pro testování. Supabase režim
+        přihlašuje přes Supabase Auth a načítá roli z tabulky <b>profiles</b>. V ostrém režimu
+        není povolen automatický návrat na demo heslo.
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn ${authMode === 'demo' ? 'btn-primary' : 'btn-ghost'}" onclick="setEzop4AuthModeFromAdmin('demo')">Demo login</button>
@@ -5160,6 +6902,12 @@ function renderAdminEzop4() {
       </div>
       <div style="margin-top:10px;font-size:11px;color:${authReady ? 'var(--green)' : 'var(--orange)'}">
         ${authReady ? '✅ Supabase klient je připravený.' : '⚠️ Supabase klient zatím není připojený.'}
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <label style="display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--text2);line-height:1.4">
+          <input type="checkbox" ${demoFallbackAllowed() ? 'checked' : ''} onchange="setDemoFallbackFromAdmin(this.checked)" style="margin-top:2px">
+          <span><b style="color:var(--text)">Nouzový demo fallback</b><br>Zapnout jen krátkodobě při výpadku Supabase. Vypnuté = bezpečnější ostrý provoz.</span>
+        </label>
       </div>
     </div>
 
@@ -5183,6 +6931,35 @@ function renderAdminEzop4() {
         2. Vytvořit uživatele v Supabase Auth a doplnit tabulku profiles.<br>
         3. Přepnout login na Supabase Auth.<br>
         4. Přesunout zakázky a počty z app_state do tabulek.
+      </div>
+    </div>
+  `;
+}
+
+function renderSecurityChecklist(authMode, strictSupabaseAuth, sessionLockHours) {
+  const disabledOverrides = Object.values(APP_SETTINGS.rolePermissionOverrides || {})
+    .reduce((sum, roleMap) => sum + Object.values(roleMap || {}).filter(v => v === false).length, 0);
+  const lastLogin = (LOGIN_LOGS || [])[0];
+  const operatorSafe =
+    !BASE_ROLE_PERMISSIONS.create_order.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.delete_order.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.manage_users.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.app_settings.includes('operator');
+  const adminOnly =
+    BASE_ROLE_PERMISSIONS.manage_users.length === 1 &&
+    BASE_ROLE_PERMISSIONS.manage_users.includes('admin') &&
+    BASE_ROLE_PERMISSIONS.app_settings.length === 1 &&
+    BASE_ROLE_PERMISSIONS.app_settings.includes('admin');
+  return `
+    <div class="card" style="border-left:4px solid ${operatorSafe && adminOnly ? 'var(--green)' : 'var(--red)'}">
+      <div class="card-title">🔎 Bezpečnostní kontrola rolí</div>
+      ${ezop4ChecklistRow('Operátor bez správy a mazání', 'Operátor nemá vytváření zakázek, mazání, správu uživatelů ani nastavení aplikace.', operatorSafe)}
+      ${ezop4ChecklistRow('Admin-only nastavení', 'Správa uživatelů a nastavení aplikace jsou v základních právech pouze pro admina.', adminOnly)}
+      ${ezop4ChecklistRow('Role lze omezovat z aplikace', disabledOverrides ? `Admin už vypnul ${disabledOverrides} oprávnění přes Role a práva.` : 'Zatím nejsou vypnutá žádná dodatečná oprávnění rolí.', true)}
+      ${ezop4ChecklistRow('Produkční přihlášení', authMode === 'supabase' ? (strictSupabaseAuth ? 'Supabase Auth běží bez demo fallbacku.' : 'Supabase Auth je zapnutý, ale fallback na demo je stále povolený.') : 'Stále běží demo login. Pro ostrý provoz přepnout na Supabase Auth.', strictSupabaseAuth)}
+      ${ezop4ChecklistRow('Auto lock relace', sessionLockHours > 0 ? `Relace se uzamkne po ${sessionLockHours} h neaktivity.` : 'Doporučení: zapnout automatické zamčení v Nastavení.', sessionLockHours > 0)}
+      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:10px">
+        Poslední lokální login: ${lastLogin ? `${escapeHtml(lastLogin.login || lastLogin.userLogin || 'uživatel')} · ${formatDateTime(lastLogin.at || lastLogin.time || lastLogin.createdAt)}` : 'zatím bez záznamu'}.
       </div>
     </div>
   `;
@@ -5233,7 +7010,15 @@ function auditLogHtml(row) {
   const role = row.role ? ROLE_LABELS[row.role] : 'systém';
   const actionLabel = {
     'auth.mode_changed': 'Režim přihlášení',
+    'auth.demo_fallback_changed': 'Nouzový demo fallback',
     'auth.login': 'Přihlášení',
+    'auth.session_locked': 'Relace uzamčena',
+    'role.permission_changed': 'Oprávnění role',
+    'nav.visibility_changed': 'Viditelnost menu',
+    'app.display_mode_changed': 'Režim aplikace',
+    'app.setting_changed': 'Nastavení aplikace',
+    'direct_message.sent': 'Přímá zpráva odeslána',
+    'direct_message.deleted': 'Přímá zpráva smazána',
     'station.counts_saved': 'Počty uloženy',
     'station.counts_reset': 'Počty reset',
     'station.completed': 'Stanoviště hotovo',
@@ -5532,8 +7317,23 @@ window.setEzop4AuthModeFromAdmin = function(mode) {
   );
   renderAdmin();
   showToast(nextMode === 'supabase'
-    ? 'Supabase Auth režim zapnutý, demo login zůstává fallback.'
+    ? 'Supabase Auth režim zapnutý v přísném režimu.'
     : 'Demo login režim zapnutý.');
+};
+
+window.setDemoFallbackFromAdmin = function(enabled) {
+  const before = { enabled: demoFallbackAllowed() };
+  setDemoFallbackAllowed(Boolean(enabled));
+  writeAudit(
+    'auth.demo_fallback_changed',
+    'app_settings',
+    'ezop4-demo-fallback',
+    `Nouzový demo fallback ${enabled ? 'zapnut' : 'vypnut'}`,
+    before,
+    { enabled: demoFallbackAllowed() },
+  );
+  renderAdmin();
+  showToast(enabled ? '⚠️ Nouzový demo fallback zapnutý' : '🔐 Nouzový demo fallback vypnutý');
 };
 
 window.saveLupaNetConfig = function() {
@@ -5602,7 +7402,19 @@ window.clearAuditLogFromAdmin = function() {
   showToast('Audit log vymazán');
 };
 
-function switchAdminTab(tab) { adminTab = tab; renderAdmin(); }
+function switchAdminGroup(group) {
+  const found = adminGroups().find(item => item.id === group);
+  if (!found) return;
+  adminGroup = found.id;
+  adminTab = found.tabs[0]?.id || adminTab;
+  renderAdmin();
+}
+
+function switchAdminTab(tab) {
+  adminTab = tab;
+  adminGroup = adminTabGroupId(tab);
+  renderAdmin();
+}
 
 function accountModeNoticeHtml(context = 'admin') {
   const authMode = ezop4AuthMode();
@@ -5732,14 +7544,35 @@ function formatDateTime(value) {
 }
 
 function renderAdminSettings() {
-  return Object.entries({
+  const displayMode = APP_SETTINGS.appDisplayMode || 'standard';
+  const displayModes = [
+    { id:'simple', label:'Jednoduchý provoz', desc:'Maximum věcí je sbalené, operátor má nejklidnější obrazovku.' },
+    { id:'standard', label:'Standard', desc:'Doporučený režim: kompaktní zobrazení a plné manažerské možnosti.' },
+    { id:'service', label:'Servisní režim', desc:'Vše je víc otevřené pro nastavování, testování a ladění.' },
+  ];
+  const generalSettings = Object.entries({
     companyName:        { label:'Název firmy', desc:'Zobrazuje se v záhlaví aplikace', type:'text' },
     lockTimeout:        { label:'Timeout zamčení (hod)', desc:'Po jaké době neaktivity se zamkne', type:'number' },
     showKpiOperator:    { label:'KPI pro operátory', desc:'Operátoři vidí KPI záložku', type:'toggle' },
     requireNoteOnIssue: { label:'Poznámka povinná u problému', desc:'Při nahlášení problému vyžadovat text', type:'toggle' },
     notifyOnIssue:      { label:'Notifikovat při problému', desc:'Zasílat notifikace mistrovi', type:'toggle' },
     shiftHours:         { label:'Délka směny (hod)', desc:'Pro výpočet KPI a kapacity', type:'number' },
-  }).map(([key, cfg]) => `
+  });
+  const featureSettings = Object.entries({
+    compactAdvancedUi:       { label:'Kompaktní obrazovky', desc:'Méně používané karty schovat do rozbalovacích sekcí', type:'toggle' },
+    operatorSimpleMode:      { label:'Jednoduchý režim operátora', desc:'Operátor vidí hlavně úkol, počty a stav; podpůrné karty jsou sbalené', type:'toggle' },
+    featureProductMemory:    { label:'Programy a fotky výrobku', desc:'Programy strojů, fotka výrobku a paměť pro opakovanou výrobu', type:'toggle' },
+    featureAiSummary:        { label:'AI přehled zakázky', desc:'Stručné shrnutí zakázky a rizik', type:'toggle' },
+    featureReadiness:        { label:'Připravenost zakázky', desc:'Materiál, dokumentace, program a další semafory připravenosti', type:'toggle' },
+    featureOrderBlocking:    { label:'Blokování zakázek', desc:'Možnost dočasně zastavit zakázku kvůli materiálu nebo dokumentaci', type:'toggle' },
+    featureScrapManagement:  { label:'Správa zmetků', desc:'Vyjmutí zmetků a detailní práce s neshodnými kusy', type:'toggle' },
+    featureAttendance:       { label:'Docházka a můj prostor', desc:'Osobní pracovní prostor, docházka a předávky směn', type:'toggle' },
+    featureLupaNet:          { label:'Lupa NET integrace', desc:'Admin příprava exportů a propojení s Lupa NET', type:'toggle' },
+    featureMessenger:        { label:'Messenger', desc:'Přímé zprávy mezi uživateli a upozornění na nepřečtené zprávy', type:'toggle' },
+    messengerAllowDeleteOwn: { label:'Mazání vlastních zpráv', desc:'Uživatel může odstranit vlastní odeslané zprávy; admin může odstranit každou', type:'toggle' },
+    messengerMaxLength:      { label:'Max délka zprávy', desc:'Limit znaků pro jednu přímou zprávu', type:'number' },
+  });
+  const rowHtml = ([key, cfg]) => `
     <div class="settings-row">
       <div>
         <div class="settings-label">${cfg.label}</div>
@@ -5748,15 +7581,89 @@ function renderAdminSettings() {
       ${cfg.type === 'toggle'
         ? `<div class="toggle ${APP_SETTINGS[key]?'on':''}" onclick="toggleSetting('${key}')"></div>`
         : `<input class="input" style="width:140px" type="${cfg.type}" value="${APP_SETTINGS[key]}"
-             onchange="APP_SETTINGS['${key}']=(this.type==='number'?Number(this.value):this.value);showToast('Uloženo')">`
+             onchange="updateSetting('${key}', this.value, '${cfg.type}')">`
       }
-    </div>`).join('');
+    </div>`;
+  return `
+    <div class="card" style="border-left:4px solid var(--gold)">
+      <div class="card-title">🎚️ Režim aplikace</div>
+      <div class="display-mode-grid">
+        ${displayModes.map(mode => `
+          <button class="display-mode-card ${displayMode === mode.id ? 'active' : ''}" onclick="setAppDisplayMode('${mode.id}')">
+            <strong>${mode.label}</strong>
+            <span>${mode.desc}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚙️ Základní nastavení</div>
+      ${generalSettings.map(rowHtml).join('')}
+    </div>
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧩 Viditelnost funkcí</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
+        Funkce zůstanou v aplikaci, ale běžným uživatelům se nebudou zobrazovat. Admin je může kdykoliv znovu zapnout.
+      </div>
+      ${featureSettings.map(rowHtml).join('')}
+    </div>`;
 }
 
 function toggleSetting(key) {
+  const before = APP_SETTINGS[key];
   APP_SETTINGS[key] = !APP_SETTINGS[key];
+  saveSettingChange(key, before, APP_SETTINGS[key]);
   renderAdmin();
+}
+
+function updateSetting(key, rawValue, type = 'text') {
+  const before = APP_SETTINGS[key];
+  let value = type === 'number' ? Number(rawValue) : rawValue;
+  if (key === 'messengerMaxLength') value = Math.max(50, Math.min(2000, Number(value) || 500));
+  APP_SETTINGS[key] = value;
+  saveSettingChange(key, before, value);
+  renderAdmin();
+}
+
+function saveSettingChange(key, before, after) {
+  if (before === after) return;
+  writeAudit(
+    'app.setting_changed',
+    'app_settings',
+    key,
+    `${key}: ${String(before)} → ${String(after)}`,
+    { value: before },
+    { value: after }
+  );
+  saveState();
+  buildNav();
+  refreshTopbarUser();
   showToast('Nastavení uloženo');
+}
+
+function setAppDisplayMode(mode) {
+  const valid = ['simple', 'standard', 'service'];
+  if (!valid.includes(mode)) return;
+  const before = APP_SETTINGS.appDisplayMode || 'standard';
+  APP_SETTINGS.appDisplayMode = mode;
+  if (mode === 'simple') {
+    APP_SETTINGS.compactAdvancedUi = true;
+    APP_SETTINGS.operatorSimpleMode = true;
+  } else if (mode === 'standard') {
+    APP_SETTINGS.compactAdvancedUi = true;
+    APP_SETTINGS.operatorSimpleMode = true;
+  } else if (mode === 'service') {
+    APP_SETTINGS.compactAdvancedUi = false;
+    APP_SETTINGS.operatorSimpleMode = false;
+  }
+  writeAudit(
+    'app.display_mode_changed',
+    'app_settings',
+    'display-mode',
+    `Režim aplikace změněn: ${before} → ${mode}`
+  );
+  renderAdmin();
+  showToast('Režim aplikace uložen');
 }
 
 function renderAdminStations() {
@@ -5776,7 +7683,11 @@ function renderAdminOrders() {
     <button class="btn btn-primary btn-sm" onclick="newOrderModal()">+ Nová zakázka</button>
   </div>
   ${[...ORDERS].sort((a,b)=>a.number.localeCompare(b.number)).map(o => `
-    <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card2);
+    <div class="admin-order-row" role="button" tabindex="0"
+      aria-label="Otevřít detail zakázky ${escapeHtml(o.number)}"
+      onclick="adminOrderRowOpen(event,'${o.id}')"
+      onkeydown="adminOrderRowKeyOpen(event,'${o.id}')"
+      style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card2);
       border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px">
       <div style="font-family:'SF Mono',Menlo,monospace;font-size:14px;font-weight:800;color:var(--gold);min-width:62px">${o.number}</div>
       <div style="flex:1">
@@ -5786,8 +7697,19 @@ function renderAdminOrders() {
       </div>
       <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
       <button class="btn btn-ghost btn-sm" onclick="editOrderModal('${o.id}')">✏️</button>
-      ${can('delete_order') ? `<button class="btn btn-danger btn-sm" onclick="deleteOrderModal('${o.id}')">🗑️</button>` : ''}
+      ${orderMoreButton(o.id)}
     </div>`).join('')}`;
+}
+
+function adminOrderRowOpen(event, orderId) {
+  if (event?.target?.closest?.('button,a,input,select,textarea,[data-no-card-open]')) return;
+  openOrder(orderId);
+}
+
+function adminOrderRowKeyOpen(event, orderId) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  openOrder(orderId);
 }
 
 // ── MŮJ PROSTOR ──────────────────────────────────────
@@ -6455,6 +8377,8 @@ function formatTime(iso) {
 // ── PROFILE ───────────────────────────────────────────
 function renderProfile() {
   const u = currentUser;
+  const passkey = passkeyForCurrentUser();
+  const passkeyAvailable = passkeySupported();
   document.getElementById('page-profile').innerHTML = `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">👤 Profil</div>
     <div class="card" style="text-align:center;padding:28px">
@@ -6462,6 +8386,28 @@ function renderProfile() {
       <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">${escapeHtml(u.name)}</div>
       <span class="role-badge role-${u.role}" style="font-size:12px">${ROLE_LABELS[u.role]}</span>
       <div style="margin-top:14px;font-size:12px;color:var(--text2)">Login: <b>${escapeHtml(u.login)}</b></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔐 Biometrie / Passkey</div>
+      <div class="profile-passkey">
+        <div>
+          <strong>${passkey ? 'Zapnuto na tomto zařízení' : 'Není zapnuto'}</strong>
+          <span>
+            ${passkey
+              ? `Vytvořeno ${escapeHtml(formatDateTime(passkey.createdAt))}. Přihlášení použije Face ID, Touch ID, Windows Hello nebo PIN zařízení.`
+              : passkeyAvailable
+                ? 'Po zapnutí se budete moct přihlásit bez hesla na tomto telefonu nebo počítači.'
+                : 'Tento prohlížeč nebo adresa nepodporuje WebAuthn. Použijte HTTPS, localhost a podporované zařízení.'}
+          </span>
+        </div>
+        ${passkey
+          ? `<button class="btn btn-ghost" onclick="removeCurrentUserPasskey()">Vypnout</button>`
+          : `<button class="btn btn-teal" ${passkeyAvailable ? '' : 'disabled'} onclick="registerCurrentUserPasskey()">Zapnout biometrii</button>`}
+      </div>
+      <div class="profile-passkey-note">
+        Otisk prstu ani obličej se do aplikace neukládá. EZOP4 si lokálně pamatuje jen ID passkey pro tento prohlížeč.
+      </div>
     </div>
 
     <div class="card">
@@ -6475,6 +8421,8 @@ function renderProfile() {
         ['manage_order_stations','Správa a pořadí stanovišť'],
         ['edit_order_info','Úprava údajů zakázky'],
         ['edit_product_memory','Programy a fotky výrobku'],
+        ['manage_scrap','Správa zmetků'],
+        ['block_order','Blokování zakázek'],
         ['view_kpi','Přístup ke KPI'],
         ['manage_users','Správa uživatelů'],
         ['app_settings','Nastavení aplikace'],
@@ -7171,3 +9119,39 @@ document.getElementById('modal-overlay').addEventListener('click', function(e) {
 document.getElementById('numpad-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeNumpad();
 });
+
+function isInteractiveSwipeTarget(target) {
+  return Boolean(target?.closest?.('input, textarea, select, button, a, [contenteditable="true"], .qty-field, .numpad-box, .modal-box'));
+}
+
+document.addEventListener('touchstart', function(e) {
+  if (!currentUser || window.innerWidth > 700 || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  if (t.clientX > 28 || isInteractiveSwipeTarget(e.target)) return;
+  mobileSwipe = {
+    startX: t.clientX,
+    startY: t.clientY,
+    active: true,
+    moved: false,
+  };
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+  if (!mobileSwipe?.active || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  const dx = t.clientX - mobileSwipe.startX;
+  const dy = Math.abs(t.clientY - mobileSwipe.startY);
+  if (dx > 24 && dy < 55) {
+    mobileSwipe.moved = true;
+    e.preventDefault();
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', function(e) {
+  if (!mobileSwipe?.active) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - mobileSwipe.startX;
+  const dy = Math.abs(t.clientY - mobileSwipe.startY);
+  mobileSwipe = null;
+  if (dx > 86 && dy < 70) mobileBackStep();
+}, { passive: true });

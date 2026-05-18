@@ -27,8 +27,19 @@ Hotovo v prvním milníku:
 - RLS policy základ pro Supabase Auth role
 - TypeScript repository rozhraní v `src/services/productionRepository.ts`
 - migrační převod `app_state` do tabulkových JSON exportů
-- Auth port a helpery pro budoucí Supabase Auth přihlášení
+- Auth port a helpery pro Supabase Auth přihlášení
 - přepínač Demo login / Supabase Auth v Admin → Ezop4
+- přísný Supabase Auth režim bez automatického demo fallbacku
+- automatické uzamčení relace po neaktivitě podle nastavení aplikace
+- admin přepínače viditelnosti funkcí a kompaktní zobrazení pokročilých karet
+- admin správa rolí a vypínání vybraných oprávnění bez úpravy kódu
+- admin nastavení viditelnosti menu podle role a režim aplikace pro jednodušší provoz
+- rozdílná navigace pro mobil a PC: desktop má plnou horní navigaci, mobil kratší spodní lištu s tlačítkem Více
+- mobilní gesto zpět tahem od levého okraje a automatický návrat nahoru při přepnutí obrazovky
+- notifikační centrum v horní liště pro problémy, vzkazy, předání směny, blokace a systémová oznámení
+- messenger pro přímou komunikaci uživatel–uživatel mimo stanoviště; admin ho může vypnout podle role, nastavit délku zprávy a audit neukládá obsah zpráv
+- jednoduchý režim operátora se sbalenými podpůrnými kartami
+- admin správa rozdělená do skupin: Uživatelé, Výroba, Data, Integrace a Systém
 - audit log základ v Admin → Audit pro počty, stavy, poznámky, problémy, programy a úpravy zakázek
 - integrační příprava pro Lupa NET v Admin → Lupa NET
 
@@ -42,8 +53,9 @@ UI zatím běží přes kompatibilní runtime z Ezop3. To je záměr: Ezop4 se b
 4. Pro každého uživatele vytvořte účet v Auth.
 5. Do tabulky `profiles` vložte řádek s `user_id`, `login`, `role`, `name`.
 6. V aplikaci otevřete Admin → Ezop4 a přepněte režim přihlášení na Supabase Auth.
+7. Nouzový demo fallback nechte vypnutý pro ostrý provoz.
 
-Poznámka: GitHub účet ani GitHub repozitář nejsou zdroj uživatelů aplikace. GitHub slouží pro kód a deploy. Sdílené produkční účty musí být v Supabase Auth a v tabulce `profiles`; demo účty vytvořené v aplikaci jsou lokální pro konkrétní prohlížeč/zařízení.
+Bezpečnostní pravidla jsou v `docs/SECURITY.md`. Poznámka: GitHub účet ani GitHub repozitář nejsou zdroj uživatelů aplikace. GitHub slouží pro kód a deploy. Sdílené produkční účty musí být v Supabase Auth a v tabulce `profiles`; demo účty vytvořené v aplikaci jsou lokální pro konkrétní prohlížeč/zařízení.
 
 Role:
 

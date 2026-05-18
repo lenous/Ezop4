@@ -12,12 +12,38 @@ export type Permission =
   | 'edit_product_memory'
   | 'manage_scrap'
   | 'block_order'
+  | 'use_messenger'
   | 'view_kpi'
   | 'manage_users'
   | 'app_settings';
 
 export interface UserProfile { id: string; login: string; role: Role; name: string; avatar: string; color: string; stationIds?: number[]; }
-export interface AppSettings { companyName: string; lockTimeout: number; allowOperatorQty: boolean; showKpiOperator: boolean; requireNoteOnIssue: boolean; notifyOnIssue: boolean; darkMode: boolean; language: string; shiftHours: number; }
+export interface AppSettings {
+  companyName: string;
+  lockTimeout: number;
+  allowOperatorQty: boolean;
+  showKpiOperator: boolean;
+  requireNoteOnIssue: boolean;
+  notifyOnIssue: boolean;
+  darkMode: boolean;
+  language: string;
+  shiftHours: number;
+  compactAdvancedUi?: boolean;
+  operatorSimpleMode?: boolean;
+  featureProductMemory?: boolean;
+  featureAiSummary?: boolean;
+  featureReadiness?: boolean;
+  featureOrderBlocking?: boolean;
+  featureScrapManagement?: boolean;
+  featureAttendance?: boolean;
+  featureLupaNet?: boolean;
+  featureMessenger?: boolean;
+  messengerAllowDeleteOwn?: boolean;
+  messengerMaxLength?: number;
+  rolePermissionOverrides?: Partial<Record<Role, Partial<Record<Permission, boolean>>>>;
+  hiddenNavByRole?: Partial<Record<Role, string[]>>;
+  appDisplayMode?: 'simple' | 'standard' | 'service';
+}
 export interface StationProgress {
   stId: number;
   status: StationStatus;
@@ -108,4 +134,5 @@ export interface ProductMemoryEntry { customer: string; name: string; stationPro
 export type ProductMemory = Record<string, ProductMemoryEntry>;
 export interface LoginLog { id: string; at: string; success: boolean; login: string; userId: string | null; name: string; role: Role | null; source: Record<string, string>; }
 export interface AuditLog { id: string; at: string; userId: string | null; userName: string; role: Role | null; action: string; entityType: string; entityId: string; summary: string; }
-export interface AppState { ORDERS: Order[]; ISSUES: Issue[]; PROD_NOTES: ProductionNote[]; USERS?: UserProfile[]; APP_SETTINGS: AppSettings; NEXT_ORDER_CODE: number; LOGIN_LOGS?: LoginLog[]; PRODUCT_MEMORY: ProductMemory; securityVersion?: number; }
+export interface DirectMessage { id: string; fromUserId: string; fromLogin: string; fromName: string; toUserId: string; toLogin: string; toName: string; text: string; createdAt: string; readBy?: string[]; }
+export interface AppState { ORDERS: Order[]; ISSUES: Issue[]; PROD_NOTES: ProductionNote[]; USERS?: UserProfile[]; APP_SETTINGS: AppSettings; NEXT_ORDER_CODE: number; LOGIN_LOGS?: LoginLog[]; PRODUCT_MEMORY: ProductMemory; DIRECT_MESSAGES?: DirectMessage[]; securityVersion?: number; }
