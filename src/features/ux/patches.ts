@@ -343,12 +343,42 @@ function injectPrintButton() {
   toolbar.appendChild(btn);
 }
 
+function injectTimelineToggle() {
+  const card = document.querySelector<HTMLElement>('.order-timeline-card');
+  if (!card || card.querySelector('.ux-timeline-toggle')) return;
+  const list = card.querySelector<HTMLElement>('.order-timeline-list');
+  if (!list) return;
+  const count = list.querySelectorAll('.order-timeline-item').length;
+  if (count <= 3) return; // few items — no need to collapse
+  const btn = document.createElement('button');
+  btn.className = 'ux-timeline-toggle';
+  btn.dataset.uxTimeline = '0';
+  btn.textContent = `▼  Zobrazit celou historii (${count} událostí)`;
+  btn.addEventListener('click', () => {
+    const expanded = btn.dataset.uxTimeline === '1';
+    if (expanded) {
+      list.classList.remove('ux-expanded');
+      btn.dataset.uxTimeline = '0';
+      btn.textContent = `▼  Zobrazit celou historii (${count} událostí)`;
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      list.classList.add('ux-expanded');
+      btn.dataset.uxTimeline = '1';
+      btn.textContent = `▲  Sbalit historii`;
+    }
+  });
+  card.appendChild(btn);
+}
+
 function patchOrderDetail() {
   if (typeof W.openOrder !== 'function' || W.__uxPatchedOpenOrder) return;
   const original = W.openOrder;
   W.openOrder = function (...args: any[]) {
     const result = original.apply(this, args);
-    setTimeout(injectPrintButton, 0);
+    setTimeout(() => {
+      injectPrintButton();
+      injectTimelineToggle();
+    }, 0);
     return result;
   };
   W.__uxPatchedOpenOrder = true;
