@@ -921,3 +921,128 @@
   #app .page.active { display: block; }
   #app #page-station,
   #app #page-profile { max-width: 980px; }
+
+/* ── NEW LANDING PAGE (lp-*) ── */
+.lp-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  gap: 24px;
+}
+.lp-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 20px;
+  padding: 48px 40px 36px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.4);
+}
+.lp-logo {
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: var(--gold, #e2b820);
+  line-height: 1;
+}
+.lp-logo span {
+  color: var(--teal2, #36b0ae);
+}
+.lp-tagline {
+  font-size: 14px;
+  color: var(--text2);
+  text-align: center;
+  margin-top: -8px;
+}
+.lp-features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin: 4px 0;
+}
+.lp-feat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+.lp-feat > span:first-child {
+  font-size: 18px;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.lp-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+.lp-btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--gold, #e2b820);
+  color: #111;
+  font-weight: 800;
+  font-size: 15px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+  letter-spacing: .2px;
+}
+.lp-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(226,184,32,.35);
+}
+.lp-btn-secondary {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255,255,255,.04);
+  color: var(--text2);
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.lp-btn-secondary:hover {
+  border-color: var(--teal2, #36b0ae);
+  color: var(--teal2, #36b0ae);
+  background: rgba(54,176,174,.06);
+}
+.lp-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 4px;
+}
+.lp-role {
+  font-size: 11px;
+  color: var(--text2);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.lp-footer {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text2);
+  opacity: .6;
+  flex-wrap: wrap;
+  justify-content: center;
+}

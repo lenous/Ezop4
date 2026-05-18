@@ -16,6 +16,7 @@ import { installKpiCharts } from './kpiCharts';
 import { installAlertCenter } from './alertCenter';
 import { installBottleneck } from './bottleneck';
 import { installIssueAnalysis } from './issueAnalysis';
+import { installWorkspaceFix } from './workspaceFix';
 
 const W = window as any;
 
@@ -596,6 +597,7 @@ export function installPatches() {
     installAlertCenter();
     installBottleneck();
     installIssueAnalysis();
+    installWorkspaceFix();
     const allDone = W.__uxPatchedReportIssue && W.__uxPatchedSubmitIssue
       && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders
       && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
@@ -604,7 +606,8 @@ export function installPatches() {
       && W.__uxPatchedOrderEstimate && W.__uxPatchedRenderOrdersEst
       && W.__uxPatchedDashboardEst && W.__uxPatchedDashboardKpi
       && W.__uxPatchedTopbarUser && W.__uxAlertInstalled && W.__uxPatchedDashboardBn
-      && W.__uxPatchedIssuesPareto;
+      && W.__uxPatchedIssuesPareto
+      && W.__uxPatchedWorkspaceLabel && W.__uxPatchedNavItemsWs;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };
