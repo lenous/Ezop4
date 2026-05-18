@@ -1776,3 +1776,71 @@ html.ux-banner-active .topbar { top: 36px; }
 .ux-pareto-insight b {
   color: var(--text);
 }
+
+/* ════════════════════════════════
+   TIMELINE TRIGGER (kompaktní karta → modal)
+════════════════════════════════ */
+.ux-tl-trigger {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.ux-tl-trigger:hover {
+  background: rgba(255,255,255,.04);
+  border-color: rgba(125,214,210,.35);
+}
+.ux-tl-trigger:active {
+  transform: scale(.998);
+}
+.ux-tl-trigger-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.ux-tl-trigger-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ux-tl-trigger-text b {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ux-tl-trigger-text span {
+  display: block;
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+.ux-tl-trigger-arrow {
+  font-size: 24px;
+  color: var(--text2);
+  flex-shrink: 0;
+  transition: transform .15s, color .15s;
+}
+.ux-tl-trigger:hover .ux-tl-trigger-arrow {
+  transform: translateX(2px);
+  color: var(--teal2, #36b0ae);
+}
+
+/* Modal pro historii — širší / vyšší */
+.modal-box.ux-tl-modal {
+  max-width: min(720px, 96vw) !important;
+  width: 720px !important;
+  max-height: 86vh !important;
+}
+.modal-box.ux-tl-modal #modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.modal-box.ux-tl-modal .ux-tl-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}

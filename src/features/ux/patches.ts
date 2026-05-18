@@ -574,10 +574,60 @@ function patchTimelineRender() {
     if (role === 'operator') return '';
     // Globálně vypnuto v APP_SETTINGS (nastavuje admin, syncuje cloud)
     if (W.APP_SETTINGS?.showOrderTimeline === false) return '';
-    try { return renderTimelineCard(order); }
+    try { return timelineTriggerHtml(order); }
     catch { return ''; }
   };
   W.__uxPatchedTimeline = true;
+
+  // Window funkce pro otevření modal s historií
+  W.uxOpenOrderHistory = function (orderId: string) {
+    try {
+      const orders = W.__ezopBridge?.orders?.() || [];
+      const order = orders.find((o: any) => o.id === orderId);
+      if (!order) return;
+      if (typeof W.openModal !== 'function') return;
+      const html = renderTimelineCard(order);
+      W.openModal('🕒 Historie zakázky', html, [
+        { cls: 'btn-primary', action: 'closeModal()', label: 'Zavřít' },
+      ]);
+      // Modal používá #modal-box → přidat třídu pro širší zobrazení
+      document.getElementById('modal-box')?.classList.add('ux-tl-modal');
+      setTimeout(() => {
+        bindTimelineCardEvents();
+        // Po zavření modalu odstranit třídu
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay && !(overlay as any).__uxTlCleanup) {
+          (overlay as any).__uxTlCleanup = true;
+          const cleanup = () => {
+            if (!overlay.classList.contains('visible')) {
+              document.getElementById('modal-box')?.classList.remove('ux-tl-modal');
+            }
+          };
+          new MutationObserver(cleanup).observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        }
+      }, 30);
+    } catch { /* ignore */ }
+  };
+}
+
+function timelineTriggerHtml(order: any): string {
+  const items: any[] = (typeof W.orderTimelineItems === 'function' ? W.orderTimelineItems(order) : []) || [];
+  const count = items.length;
+  const latestAt = items[0]?.at ? new Date(items[0].at) : null;
+  const latestLabel = latestAt
+    ? `Naposledy ${latestAt.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })} ${latestAt.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}`
+    : 'Zatím žádné události';
+  const countLabel = count === 0
+    ? 'bez záznamů'
+    : `${count} ${count === 1 ? 'událost' : count < 5 ? 'události' : 'událostí'}`;
+  return `<div class="card ux-tl-trigger" onclick="uxOpenOrderHistory('${escapeText(order.id)}')" role="button" tabindex="0">
+    <div class="ux-tl-trigger-icon">🕒</div>
+    <div class="ux-tl-trigger-text">
+      <b>Historie zakázky</b>
+      <span>${countLabel} · ${escapeText(latestLabel)}</span>
+    </div>
+    <div class="ux-tl-trigger-arrow">›</div>
+  </div>`;
 }
 
 /* ════════════════════════════════
