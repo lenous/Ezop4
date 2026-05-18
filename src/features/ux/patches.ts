@@ -9,6 +9,15 @@
  *  - openOrder → tlačítko „🖨 Tisk zakázky" v detailu
  */
 
+import { installKanbanPatch } from './kanban';
+import { installIssueSla } from './issueSla';
+import { installPredictive } from './predictive';
+import { installKpiCharts } from './kpiCharts';
+import { installAlertCenter } from './alertCenter';
+import { installBottleneck } from './bottleneck';
+import { installIssueAnalysis } from './issueAnalysis';
+import { installWorkspaceFix } from './workspaceFix';
+
 const W = window as any;
 
 const PHOTO_INPUT_ID = 'ux-issue-photo-input';
@@ -182,8 +191,28 @@ function openPhotoLightbox(src: string) {
 }
 
 /* ════════════════════════════════
-   QUICK FILTERS V ZAKÁZKÁCH
+   TOPBAR: odstraň duplikát role/jméno
 ════════════════════════════════ */
+
+function patchTopbarUserDisplay() {
+  if (W.__uxPatchedTopbarUser) return;
+  if (typeof W.refreshTopbarUser !== 'function') return;
+  const original = W.refreshTopbarUser;
+  W.refreshTopbarUser = function (...args: any[]) {
+    original.apply(this, args);
+    const nameEl = document.getElementById('tbar-name');
+    const roleEl = document.getElementById('tbar-role');
+    if (!nameEl || !roleEl) return;
+    const name = (nameEl.textContent || '').toLowerCase().trim();
+    const role = (roleEl.textContent || '').toLowerCase().trim();
+    // Skryj role badge když je název nadřazený nebo stejný jako role (Administrátor ⊃ admin)
+    const duplicate = name.includes(role) || role.includes(name) || name === role;
+    roleEl.style.display = duplicate ? 'none' : '';
+  };
+  W.__uxPatchedTopbarUser = true;
+}
+
+
 
 type FilterId = 'all' | 'urgent' | 'today' | 'week' | 'blocked' | 'issue' | 'mine';
 
@@ -348,10 +377,286 @@ function patchOrderDetail() {
   const original = W.openOrder;
   W.openOrder = function (...args: any[]) {
     const result = original.apply(this, args);
-    setTimeout(injectPrintButton, 0);
+    setTimeout(() => {
+      injectPrintButton();
+      bindTimelineCardEvents();
+    }, 0);
     return result;
   };
   W.__uxPatchedOpenOrder = true;
+}
+
+/* ════════════════════════════════
+   TIMELINE REDESIGN
+════════════════════════════════ */
+
+const INITIAL_TL_LIMIT = 6;
+
+function escapeText(s: any): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function tlCategoryOf(item: any): 'prod' | 'issue' | 'note' | 'audit' {
+  const icon = item.icon || '';
+  const title = String(item.title || '').toLowerCase();
+  if (icon === '🧾') return 'audit';
+  if (icon === '🧩' || icon === '📝' || title.startsWith('připravenost') || title.startsWith('poznámka')) return 'note';
+  if (title.includes('problém')) return 'issue';
+  return 'prod';
+}
+
+function tlDayKey(dateStr: string): string {
+  if (!dateStr) return 'no-date';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'no-date';
+  // Local date YYYY-MM-DD
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function tlDayLabel(key: string): string {
+  if (key === 'no-date') return '<b>Bez data</b>';
+  const today = new Date();
+  const tk = tlDayKey(today.toISOString());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const yk = tlDayKey(yesterday.toISOString());
+  const d = new Date(key + 'T00:00:00');
+  const dateText = d.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  if (key === tk)  return `<b>Dnes</b> · ${dateText}`;
+  if (key === yk)  return `<b>Včera</b> · ${dateText}`;
+  return dateText;
+}
+
+function tlTime(dateStr: string): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+}
+
+const CAT_META: Record<string, { label: string; icon: string }> = {
+  all:   { label: 'Vše',       icon: '◯' },
+  prod:  { label: 'Výroba',    icon: '⚙️' },
+  issue: { label: 'Problémy',  icon: '⚠️' },
+  note:  { label: 'Poznámky',  icon: '📝' },
+  audit: { label: 'Audit',     icon: '🧾' },
+};
+
+function renderTimelineCard(order: any): string {
+  if (!order || typeof W.orderTimelineItems !== 'function') return '';
+  const items = (W.orderTimelineItems(order) || []) as any[];
+  const total = items.length;
+
+  if (total === 0) {
+    return `<div class="card ux-tl-card">
+      <div class="ux-tl-head"><div class="card-title">🕒 Historie zakázky</div></div>
+      <div class="ux-tl-empty">Zatím není z čeho složit historii zakázky.</div>
+    </div>`;
+  }
+
+  // Counts per category
+  const counts: Record<string, number> = { all: total, prod: 0, issue: 0, note: 0, audit: 0 };
+  items.forEach(it => { counts[tlCategoryOf(it)]++; });
+
+  // Group by day preserving date-desc order
+  const days: { key: string; rows: string[] }[] = [];
+  const dayIndex: Record<string, number> = {};
+  let visibleRendered = 0;
+
+  items.forEach(item => {
+    const cat = tlCategoryOf(item);
+    const tone = item.tone || 'info';
+    const dk = tlDayKey(item.at);
+    if (!(dk in dayIndex)) {
+      dayIndex[dk] = days.length;
+      days.push({ key: dk, rows: [] });
+    }
+    const hidden = visibleRendered >= INITIAL_TL_LIMIT ? 'ux-tl-hidden' : '';
+    visibleRendered++;
+    const time = tlTime(item.at);
+    const actor = item.actor ? `<span class="ux-tl-who">👤 ${escapeText(item.actor)}</span>` : '';
+    const role = item.role ? `<span class="ux-tl-role">${escapeText(item.role)}</span>` : '';
+    days[dayIndex[dk]].rows.push(`
+      <div class="ux-tl-row tone-${tone} ${hidden}" data-cat="${cat}">
+        <div class="ux-tl-time">${time}</div>
+        <div class="ux-tl-marker">${item.icon || '•'}</div>
+        <div class="ux-tl-content">
+          <div class="ux-tl-title">${escapeText(item.title || '')}</div>
+          <div class="ux-tl-body-text">${escapeText(item.body || '')}</div>
+          <div class="ux-tl-meta">${actor}${role}</div>
+        </div>
+      </div>
+    `);
+  });
+
+  const daysHtml = days.map(d => `
+    <div class="ux-tl-day">
+      <div class="ux-tl-day-label">${tlDayLabel(d.key)}</div>
+      ${d.rows.join('')}
+    </div>
+  `).join('');
+
+  const filterButtons = (['all', 'prod', 'issue', 'note', 'audit'] as const).map(cat => {
+    const m = CAT_META[cat];
+    const active = cat === 'all' ? 'active' : '';
+    return `<button class="ux-tl-filter ${active}" data-tl-cat="${cat}">
+      <span>${m.icon}</span>${m.label}<em>${counts[cat]}</em>
+    </button>`;
+  }).join('');
+
+  const auditBtn = (typeof W.can === 'function' && W.can('app_settings'))
+    ? `<button class="btn btn-ghost btn-sm" onclick="switchAdminTab('audit');navigateTo('admin')">Otevřít audit</button>`
+    : '';
+
+  const moreBtn = total > INITIAL_TL_LIMIT
+    ? `<button class="ux-tl-more" data-tl-more="0">▼ Zobrazit starší (${total - INITIAL_TL_LIMIT})</button>`
+    : '';
+
+  return `<div class="card ux-tl-card">
+    <div class="ux-tl-head">
+      <div>
+        <div class="card-title">🕒 Historie zakázky</div>
+        <div class="app-muted">${total} událostí · od nejnovější</div>
+      </div>
+      ${auditBtn}
+    </div>
+    <div class="ux-tl-filters">${filterButtons}</div>
+    <div class="ux-tl-body" data-active="all">${daysHtml}</div>
+    ${moreBtn}
+  </div>`;
+}
+
+function bindTimelineCardEvents() {
+  const card = document.querySelector<HTMLElement>('.ux-tl-card');
+  if (!card || card.dataset.uxBound === '1') return;
+  card.dataset.uxBound = '1';
+
+  const body = card.querySelector<HTMLElement>('.ux-tl-body');
+  card.querySelectorAll<HTMLButtonElement>('[data-tl-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const cat = btn.dataset.tlCat || 'all';
+      if (body) body.dataset.active = cat;
+      card.querySelectorAll('[data-tl-cat]').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+
+  const moreBtn = card.querySelector<HTMLButtonElement>('[data-tl-more]');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', () => {
+      const expanded = moreBtn.dataset.tlMore === '1';
+      if (expanded) {
+        card.classList.remove('ux-tl-show-all');
+        moreBtn.dataset.tlMore = '0';
+        const hidden = card.querySelectorAll('.ux-tl-hidden').length;
+        moreBtn.textContent = `▼ Zobrazit starší (${hidden})`;
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        card.classList.add('ux-tl-show-all');
+        moreBtn.dataset.tlMore = '1';
+        moreBtn.textContent = `▲ Sbalit starší`;
+      }
+    });
+  }
+}
+
+function patchTimelineRender() {
+  if (W.__uxPatchedTimeline) return;
+  if (typeof W.orderTimelineCardHtml !== 'function' || typeof W.orderTimelineItems !== 'function') return;
+  W.orderTimelineCardHtml = function (order: any) {
+    // Vypnuto pro operátora vždy
+    const role = (W.__ezopBridge?.user?.()?.role || '').toLowerCase();
+    if (role === 'operator') return '';
+    // Globálně vypnuto v APP_SETTINGS (nastavuje admin, syncuje cloud)
+    if (W.APP_SETTINGS?.showOrderTimeline === false) return '';
+    try { return timelineTriggerHtml(order); }
+    catch { return ''; }
+  };
+  W.__uxPatchedTimeline = true;
+
+  // Window funkce pro otevření modal s historií
+  W.uxOpenOrderHistory = function (orderId: string) {
+    try {
+      const orders = W.__ezopBridge?.orders?.() || [];
+      const order = orders.find((o: any) => o.id === orderId);
+      if (!order) return;
+      if (typeof W.openModal !== 'function') return;
+      const html = renderTimelineCard(order);
+      W.openModal('🕒 Historie zakázky', html, [
+        { cls: 'btn-primary', action: 'closeModal()', label: 'Zavřít' },
+      ]);
+      // Modal používá #modal-box → přidat třídu pro širší zobrazení
+      document.getElementById('modal-box')?.classList.add('ux-tl-modal');
+      setTimeout(() => {
+        bindTimelineCardEvents();
+        // Po zavření modalu odstranit třídu
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay && !(overlay as any).__uxTlCleanup) {
+          (overlay as any).__uxTlCleanup = true;
+          const cleanup = () => {
+            if (!overlay.classList.contains('visible')) {
+              document.getElementById('modal-box')?.classList.remove('ux-tl-modal');
+            }
+          };
+          new MutationObserver(cleanup).observe(overlay, { attributes: true, attributeFilter: ['class'] });
+        }
+      }, 30);
+    } catch { /* ignore */ }
+  };
+}
+
+function timelineTriggerHtml(order: any): string {
+  const items: any[] = (typeof W.orderTimelineItems === 'function' ? W.orderTimelineItems(order) : []) || [];
+  const count = items.length;
+  const latestAt = items[0]?.at ? new Date(items[0].at) : null;
+  const latestLabel = latestAt
+    ? `Naposledy ${latestAt.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })} ${latestAt.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}`
+    : 'Zatím žádné události';
+  const countLabel = count === 0
+    ? 'bez záznamů'
+    : `${count} ${count === 1 ? 'událost' : count < 5 ? 'události' : 'událostí'}`;
+  return `<div class="card ux-tl-trigger" onclick="uxOpenOrderHistory('${escapeText(order.id)}')" role="button" tabindex="0">
+    <div class="ux-tl-trigger-icon">🕒</div>
+    <div class="ux-tl-trigger-text">
+      <b>Historie zakázky</b>
+      <span>${countLabel} · ${escapeText(latestLabel)}</span>
+    </div>
+    <div class="ux-tl-trigger-arrow">›</div>
+  </div>`;
+}
+
+/* ════════════════════════════════
+   DASHBOARD: skryj "Můj prostor" widget
+════════════════════════════════ */
+
+function hideDashboardWorkspaceWidget() {
+  const page = document.getElementById('page-dashboard');
+  if (!page) return;
+  // Najdi card s textem "Můj prostor" a skryj/odstraň
+  page.querySelectorAll<HTMLElement>('.card').forEach(card => {
+    if (card.dataset.uxHiddenWs === '1') return;
+    if (card.textContent?.includes('Můj prostor')) {
+      card.dataset.uxHiddenWs = '1';
+      card.style.display = 'none';
+    }
+  });
+}
+
+function patchHideWorkspaceWidget() {
+  if (W.__uxPatchedHideWsWidget) return;
+  if (typeof W.renderDashboard !== 'function') return;
+  const original = W.renderDashboard;
+  W.renderDashboard = function (...args: any[]) {
+    const result = original.apply(this, args);
+    setTimeout(hideDashboardWorkspaceWidget, 5);
+    return result;
+  };
+  W.__uxPatchedHideWsWidget = true;
 }
 
 /* ════════════════════════════════
@@ -367,8 +672,28 @@ export function installPatches() {
     patchIssueReporting();
     patchOrderList();
     patchOrderDetail();
+    patchTimelineRender();
+    patchHideWorkspaceWidget();
+    patchTopbarUserDisplay();
+    installKanbanPatch();
+    installIssueSla();
+    installPredictive();
+    installKpiCharts();
+    installAlertCenter();
+    installBottleneck();
+    installIssueAnalysis();
+    installWorkspaceFix();
     const allDone = W.__uxPatchedReportIssue && W.__uxPatchedSubmitIssue
-      && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders && W.__uxPatchedOpenOrder;
+      && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders
+      && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
+      && W.__uxPatchedKanbanNav && W.__uxPatchedIssueCard
+      && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign
+      && W.__uxPatchedOrderEstimate && W.__uxPatchedRenderOrdersEst
+      && W.__uxPatchedDashboardEst && W.__uxPatchedDashboardKpi
+      && W.__uxPatchedTopbarUser && W.__uxPatchedHideWsWidget
+      && W.__uxAlertInstalled && W.__uxPatchedDashboardBn
+      && W.__uxPatchedIssuesPareto
+      && W.__uxPatchedWorkspaceLabel && W.__uxPatchedNavItemsWs;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };
