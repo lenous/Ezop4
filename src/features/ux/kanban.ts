@@ -33,6 +33,50 @@ function bridgeStations(): any[]  { return W.__ezopBridge?.stations?.() || []; }
 function bridgeIssues(): any[]    { return W.__ezopBridge?.issues?.() || []; }
 function bridgeUser(): any        { return W.__ezopBridge?.user?.() || null; }
 
+type FilterId = 'all' | 'urgent' | 'today' | 'week' | 'blocked' | 'issue' | 'mine';
+const FILTERS: { id: FilterId; label: string; icon: string }[] = [
+  { id: 'all',     label: 'Vše',         icon: '◯' },
+  { id: 'urgent',  label: 'Urgentní',    icon: '⚡' },
+  { id: 'today',   label: 'Dnes',        icon: '📅' },
+  { id: 'week',    label: 'Tento týden', icon: '🗓' },
+  { id: 'blocked', label: 'Blokované',   icon: '⛔' },
+  { id: 'issue',   label: 'S problémem', icon: '⚠️' },
+  { id: 'mine',    label: 'Moje',        icon: '👤' },
+];
+let activeFilter: FilterId = 'all';
+
+function matchesFilter(order: any, id: FilterId, user: any): boolean {
+  if (!order) return false;
+  switch (id) {
+    case 'all': return true;
+    case 'urgent': return order.priority === 'urgent' || order.priority === 'high';
+    case 'today': {
+      if (!order.due) return false;
+      const d = new Date(order.due);
+      const today = new Date();
+      return d.toDateString() === today.toDateString();
+    }
+    case 'week': {
+      if (!order.due) return false;
+      const d = new Date(order.due);
+      const now = new Date();
+      const diff = (d.getTime() - now.getTime()) / 86400000;
+      return diff >= 0 && diff <= 7;
+    }
+    case 'blocked': return !!order.blocked;
+    case 'issue': return (order.stations || []).some((s: any) => s.status === 'issue');
+    case 'mine': {
+      if (!user) return false;
+      const stationIds = (user.stationIds || []).map((n: any) => Number(n));
+      const login = String(user.login || '').toLowerCase();
+      return (order.stations || []).some((s: any) =>
+        stationIds.includes(Number(s.stId)) ||
+        (s.workerLogin && String(s.workerLogin).toLowerCase() === login)
+      );
+    }
+  }
+}
+
 function escapeText(s: any): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -148,7 +192,9 @@ export function renderKanbanPage() {
   if (!root) return;
   const orders = bridgeOrders();
   const user = bridgeUser();
-  const visible = orders.filter(o => userCanSeeOrder(o, user));
+  const visible = orders
+    .filter(o => userCanSeeOrder(o, user))
+    .filter(o => matchesFilter(o, activeFilter, user));
 
   // Rozdělení do sloupců
   const buckets: Record<string, any[]> = {};
@@ -178,14 +224,25 @@ export function renderKanbanPage() {
     return true;
   });
 
+  // Filter counts use orders visible-to-user (not filtered ones)
+  const visibleToUser = orders.filter(o => userCanSeeOrder(o, user));
+  const filterCount = (id: FilterId) => visibleToUser.filter(o => matchesFilter(o, id, user)).length;
+  const filterChips = FILTERS.map(f => {
+    const active = activeFilter === f.id ? 'active' : '';
+    return `<button class="ux-chip ${active}" data-kb-filter="${f.id}">
+      <span>${f.icon}</span>${f.label}<em>${filterCount(f.id)}</em>
+    </button>`;
+  }).join('');
+
   root.innerHTML = `
     <div class="ux-kb-header">
       <div>
         <div class="card-title" style="margin:0">📌 Kanban — průchod zakázek</div>
-        <div class="app-muted" style="font-size:12px;margin-top:2px">${visible.length} zakázek · klikni na kartu pro detail</div>
+        <div class="app-muted" style="font-size:12px;margin-top:2px">${visible.length} z ${visibleToUser.length} zakázek · klikni na kartu pro detail</div>
       </div>
       <button class="btn btn-ghost btn-sm" id="ux-kb-refresh">🔄 Obnovit</button>
     </div>
+    <div class="ux-quick-filters" id="ux-kb-filters">${filterChips}</div>
     <div class="ux-kanban">
       ${cols.map(c => `
         <div class="ux-kb-col tone-${c.tone}" data-col="${c.id}">
@@ -211,6 +268,14 @@ export function renderKanbanPage() {
 
   // Refresh
   document.getElementById('ux-kb-refresh')?.addEventListener('click', () => renderKanbanPage());
+
+  // Filter chips
+  root.querySelectorAll<HTMLButtonElement>('[data-kb-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeFilter = btn.dataset.kbFilter as FilterId;
+      renderKanbanPage();
+    });
+  });
 }
 
 function patchNavigation() {
