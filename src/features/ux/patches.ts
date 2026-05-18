@@ -11,6 +11,7 @@
 
 import { installKanbanPatch } from './kanban';
 import { installIssueSla } from './issueSla';
+import { installPredictive } from './predictive';
 
 const W = window as any;
 
@@ -565,11 +566,13 @@ export function installPatches() {
     patchTimelineRender();
     installKanbanPatch();
     installIssueSla();
+    installPredictive();
     const allDone = W.__uxPatchedReportIssue && W.__uxPatchedSubmitIssue
       && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders
       && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
       && W.__uxPatchedKanbanNav && W.__uxPatchedIssueCard
-      && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign;
+      && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign
+      && W.__uxPatchedOrderEstimate;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };

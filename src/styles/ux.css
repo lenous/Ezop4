@@ -1144,6 +1144,36 @@ html.ux-banner-active .topbar { top: 36px; }
 }
 
 /* ──────────────────────────
+   PREDIKCE TERMÍNU DOKONČENÍ
+   ────────────────────────── */
+.ux-est-card {
+  border-left: 4px solid rgba(168,180,189,.4);
+  padding: 14px 16px;
+}
+.ux-est-card.tone-success { border-left-color: var(--green, #22c55e); background: linear-gradient(90deg, rgba(34,197,94,.08), transparent 60%); }
+.ux-est-card.tone-warning { border-left-color: var(--amber, #f59e0b); background: linear-gradient(90deg, rgba(245,158,11,.08), transparent 60%); }
+.ux-est-card.tone-danger  { border-left-color: var(--red, #ef4444);   background: linear-gradient(90deg, rgba(239,68,68,.1),  transparent 60%); }
+.ux-est-card.tone-muted   { border-left-color: rgba(168,180,189,.4); }
+
+.ux-est-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.ux-est-icon { font-size: 26px; line-height: 1; padding-top: 2px; }
+.ux-est-text { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.ux-est-text b { font-size: 14px; color: var(--text); font-weight: 800; }
+.ux-est-text small { font-size: 11px; color: var(--text3); }
+.ux-est-status {
+  font-size: 12px;
+  font-weight: 700;
+}
+.ux-est-card.tone-success .ux-est-status { color: var(--green, #22c55e); }
+.ux-est-card.tone-warning .ux-est-status { color: var(--amber, #f59e0b); }
+.ux-est-card.tone-danger  .ux-est-status { color: var(--red, #ef4444); }
+.ux-est-card.tone-muted   .ux-est-status { color: var(--text2); }
+
+/* ──────────────────────────
    RYCHLÉ FILTRY (CHIPY)
    ────────────────────────── */
 .ux-quick-filters {

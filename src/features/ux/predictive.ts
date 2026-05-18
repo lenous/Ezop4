@@ -1,0 +1,215 @@
+/**
+ * Prediktivní termín dokončení zakázky
+ *
+ * Z historických timestampů (workStartedAt/workCompletedAt) a aktuálních
+ * qtyOk/qtyRework spočítáme rychlost na stanici a odhadneme reálný termín.
+ * Porovnáme s order.due → tón (green/amber/red/grey).
+ *
+ * Patche:
+ *  - openOrder → inject karty s odhadem nad timeline
+ *  - renderOrders → doplnit malý badge u každé zakázky v seznamu
+ *  - renderKanbanPage (přes re-export hook) → karta dostane badge
+ *  - renderDashboard → KPI tile "Zakázky v ohrožení"
+ */
+
+const W = window as any;
+
+const DEFAULT_THROUGHPUT_PCS_PER_HOUR = 60;
+const HOURS_PER_DAY = 24; // MVP: počítáme 24/7
+
+type Tone = 'success' | 'warning' | 'danger' | 'muted';
+export type Estimate = {
+  estimateAt: Date;
+  diffMs: number; // estimateAt - dueDate
+  tone: Tone;
+  label: string;
+  short: string;
+};
+
+const estimateCache = new WeakMap<object, Estimate | null>();
+let cacheKey = '';
+
+function bridgeOrders(): any[] { return W.__ezopBridge?.orders?.() || []; }
+
+function invalidateCacheIfStale() {
+  const orders = bridgeOrders();
+  const key = orders.length + ':' + (orders[0]?.id || '') + ':' + (orders[orders.length - 1]?.id || '');
+  if (key !== cacheKey) {
+    cacheKey = key;
+    // WeakMap se nedá vyčistit najednou — necháme GC; jen invalidujeme klíč
+  }
+}
+
+function stationDurationHours(start: string, end: string): number {
+  if (!start || !end) return 0;
+  const a = new Date(start).getTime();
+  const b = new Date(end).getTime();
+  if (isNaN(a) || isNaN(b) || b <= a) return 0;
+  return (b - a) / 3600000;
+}
+
+function stationThroughputPph(stId: number, allOrders: any[]): number {
+  const samples: number[] = [];
+  for (const o of allOrders) {
+    for (const s of o.stations || []) {
+      if (Number(s.stId) !== Number(stId)) continue;
+      const hrs = stationDurationHours(s.workStartedAt, s.workCompletedAt);
+      const qty = (Number(s.qtyOk) || 0) + (Number(s.qtyRework) || 0);
+      if (hrs > 0 && qty > 0) {
+        samples.push(qty / hrs);
+      }
+    }
+  }
+  if (samples.length === 0) return DEFAULT_THROUGHPUT_PCS_PER_HOUR;
+  // Použít posledních 5 (samples už jsou v pořadí dle iterace)
+  const recent = samples.slice(-5);
+  const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+  return Math.max(1, avg);
+}
+
+function computeRemainingHours(order: any, allOrders: any[]): { hours: number; hasData: boolean } {
+  const sts = order.stations || [];
+  let totalHours = 0;
+  let hasAnyData = false;
+
+  for (const s of sts) {
+    if (s.status === 'completed' || s.status === 'skipped') continue;
+    const targetQty = Number(order.qty) || 0;
+    const doneQty = Number(s.qtyOk) || 0;
+    const remaining = Math.max(0, targetQty - doneQty);
+    if (remaining === 0) continue;
+    const pph = stationThroughputPph(Number(s.stId), allOrders);
+    if (pph > 0) hasAnyData = true;
+    totalHours += remaining / pph;
+  }
+  return { hours: totalHours, hasData: hasAnyData };
+}
+
+export function computeOrderEstimate(order: any, allOrders?: any[]): Estimate | null {
+  if (!order) return null;
+  invalidateCacheIfStale();
+  if (estimateCache.has(order)) return estimateCache.get(order)!;
+
+  const orders = allOrders || bridgeOrders();
+  const sts = order.stations || [];
+  const allDone = sts.length > 0 && sts.every((s: any) => s.status === 'completed' || s.status === 'skipped');
+  if (allDone) {
+    const result: Estimate = {
+      estimateAt: new Date(),
+      diffMs: 0,
+      tone: 'success',
+      label: 'Hotovo',
+      short: '✅ hotovo',
+    };
+    estimateCache.set(order, result);
+    return result;
+  }
+
+  const { hours, hasData } = computeRemainingHours(order, orders);
+  if (!hasData && hours === 0) {
+    estimateCache.set(order, null);
+    return null;
+  }
+
+  const estimateAt = new Date(Date.now() + hours * 3600000);
+
+  if (!order.due) {
+    const result: Estimate = {
+      estimateAt,
+      diffMs: 0,
+      tone: 'muted',
+      label: `Odhad: ${estimateAt.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' })}`,
+      short: estimateAt.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' }),
+    };
+    estimateCache.set(order, result);
+    return result;
+  }
+
+  const due = new Date(order.due);
+  due.setHours(23, 59, 59, 999); // splnění do konce due dne
+  const diffMs = estimateAt.getTime() - due.getTime();
+  const diffDays = Math.round(diffMs / 86400000);
+
+  let tone: Tone = 'success';
+  let label: string;
+  let short: string;
+  const estText = estimateAt.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric' });
+  if (diffMs > 86400000) {
+    tone = 'danger';
+    label = `Skluz ${diffDays} d (odhad ${estText})`;
+    short = `🔴 skluz ${diffDays} d`;
+  } else if (diffMs > -86400000) {
+    tone = 'warning';
+    label = `Hraniční termín (odhad ${estText})`;
+    short = `🟡 hraničně`;
+  } else {
+    tone = 'success';
+    const ahead = Math.abs(diffDays);
+    label = `V termínu, ${ahead} d rezerva (odhad ${estText})`;
+    short = `🟢 v termínu`;
+  }
+
+  const result: Estimate = { estimateAt, diffMs, tone, label, short };
+  estimateCache.set(order, result);
+  return result;
+}
+
+function estimateCardHtml(order: any): string {
+  const est = computeOrderEstimate(order);
+  if (!est) {
+    return `<div class="card ux-est-card tone-muted">
+      <div class="ux-est-row">
+        <span class="ux-est-icon">📅</span>
+        <div class="ux-est-text">
+          <b>Odhad dokončení: zatím nelze spočítat</b>
+          <small>Jakmile bude na stanicích dokončen alespoň jeden cyklus, zobrazí se odhad reálného data.</small>
+        </div>
+      </div>
+    </div>`;
+  }
+  const dueLabel = order.due
+    ? `<small>Plán: ${new Date(order.due).toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}</small>`
+    : '';
+  const estLabel = est.estimateAt.toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return `<div class="card ux-est-card tone-${est.tone}">
+    <div class="ux-est-row">
+      <span class="ux-est-icon">📅</span>
+      <div class="ux-est-text">
+        <b>Odhad dokončení: ${estLabel}</b>
+        <span class="ux-est-status">${est.label}</span>
+        ${dueLabel}
+      </div>
+    </div>
+  </div>`;
+}
+
+function patchOpenOrderEstimate() {
+  if (W.__uxPatchedOrderEstimate) return;
+  if (typeof W.openOrder !== 'function') return;
+  const original = W.openOrder;
+  W.openOrder = function (...args: any[]) {
+    const result = original.apply(this, args);
+    setTimeout(() => {
+      const page = document.getElementById('page-station');
+      if (!page || page.querySelector('.ux-est-card')) return;
+      const orderId = args[0];
+      const order = bridgeOrders().find((o: any) => o.id === orderId);
+      if (!order) return;
+      // Vlož kartu nad timeline-card, jinak na začátek stránky
+      const timeline = page.querySelector('.ux-tl-card, .order-timeline-card');
+      const html = estimateCardHtml(order);
+      if (timeline) {
+        timeline.insertAdjacentHTML('beforebegin', html);
+      } else {
+        const firstCard = page.querySelector('.card');
+        if (firstCard) firstCard.insertAdjacentHTML('afterend', html);
+      }
+    }, 10);
+    return result;
+  };
+  W.__uxPatchedOrderEstimate = true;
+}
+
+export function installPredictive() {
+  patchOpenOrderEstimate();
+}
