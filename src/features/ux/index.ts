@@ -311,10 +311,10 @@ function openSettingsPanel() {
       </div>
       ${getCurrentUser()?.role === 'admin' ? `
       <div class="ux-section">
-        <h3>Historie zakázky (admin)</h3>
+        <h3>Historie zakázky (admin · pro všechny uživatele)</h3>
         <div class="ux-toggle-row">
-          <span>Zobrazit timeline zakázky<small>Pro operátora je vždy skryto. Tento přepínač skryje i pro mistry, TPV a vedení.</small></span>
-          <div class="ux-switch ${localStorage.getItem('ezop4_ux_show_timeline_v1') === 'off' ? '' : 'on'}" id="ux-toggle-timeline"></div>
+          <span>Zobrazit timeline zakázky<small>Pro operátora je vždy skryto. Tento přepínač skryje historii i pro mistry, TPV a vedení. Nastavení se synchronizuje přes cloud.</small></span>
+          <div class="ux-switch ${(W.APP_SETTINGS?.showOrderTimeline === false) ? '' : 'on'}" id="ux-toggle-timeline"></div>
         </div>
       </div>` : ''}
       <div class="ux-section">
@@ -327,11 +327,13 @@ function openSettingsPanel() {
       bindShiftProfileForm(root);
       const timelineToggle = root.querySelector<HTMLElement>('#ux-toggle-timeline');
       timelineToggle?.addEventListener('click', () => {
-        const off = localStorage.getItem('ezop4_ux_show_timeline_v1') === 'off';
-        const next = off ? 'on' : 'off';
-        try { localStorage.setItem('ezop4_ux_show_timeline_v1', next); } catch { /* quota */ }
-        timelineToggle.classList.toggle('on', next === 'on');
-        audit('ux:toggle-timeline', { value: next });
+        if (!W.APP_SETTINGS) W.APP_SETTINGS = {};
+        const newValue = W.APP_SETTINGS.showOrderTimeline === false; // toggling ON
+        W.APP_SETTINGS.showOrderTimeline = newValue;
+        timelineToggle.classList.toggle('on', newValue);
+        try { if (typeof W.saveState === 'function') W.saveState(); } catch { /* ignore */ }
+        audit('ux:toggle-timeline', { value: newValue });
+        safeToast(newValue ? 'Historie zakázky zapnuta pro všechny' : 'Historie zakázky skryta pro všechny');
       });
       root.querySelectorAll<HTMLButtonElement>('#ux-theme-seg button').forEach(btn => {
         btn.addEventListener('click', () => {

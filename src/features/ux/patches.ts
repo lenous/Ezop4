@@ -572,10 +572,8 @@ function patchTimelineRender() {
     // Vypnuto pro operátora vždy
     const role = (W.__ezopBridge?.user?.()?.role || '').toLowerCase();
     if (role === 'operator') return '';
-    // Volitelně vypnuto adminem pro všechny role
-    try {
-      if (localStorage.getItem('ezop4_ux_show_timeline_v1') === 'off') return '';
-    } catch { /* ignore */ }
+    // Globálně vypnuto v APP_SETTINGS (nastavuje admin, syncuje cloud)
+    if (W.APP_SETTINGS?.showOrderTimeline === false) return '';
     try { return renderTimelineCard(order); }
     catch { return ''; }
   };
