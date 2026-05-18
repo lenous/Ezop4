@@ -183,6 +183,96 @@ function estimateCardHtml(order: any): string {
   </div>`;
 }
 
+export function estimateBadgeHtml(order: any): string {
+  const est = computeOrderEstimate(order);
+  if (!est) return `<span class="ux-est-pill ux-est-muted" title="Odhad nedostupný">📅 —</span>`;
+  return `<span class="ux-est-pill ux-est-${est.tone}" title="${est.label}">${est.short}</span>`;
+}
+
+export function decorateOrderListBadges() {
+  const page = document.getElementById('page-orders');
+  if (!page) return;
+  const orders = bridgeOrders();
+  page.querySelectorAll<HTMLElement>('.app-order-card').forEach(card => {
+    if (card.querySelector('.ux-est-pill')) return;
+    const onclick = card.getAttribute('onclick') || '';
+    const m = onclick.match(/openOrder\('([^']+)'\)/);
+    if (!m) return;
+    const order = orders.find((o: any) => o.id === m[1]);
+    if (!order) return;
+    // Vlož badge vedle čísla zakázky / priority
+    const priorityRow = card.querySelector('.badge-' + (order.priority || 'normal'))
+      || card.querySelector('[class^="badge-"]');
+    const badge = document.createElement('span');
+    badge.innerHTML = estimateBadgeHtml(order);
+    const pill = badge.firstChild as HTMLElement | null;
+    if (!pill) return;
+    if (priorityRow && priorityRow.parentElement) {
+      priorityRow.parentElement.insertBefore(pill, priorityRow.nextSibling);
+    } else {
+      card.appendChild(pill);
+    }
+  });
+}
+
+export function dangerOrderCount(): number {
+  let n = 0;
+  for (const o of bridgeOrders()) {
+    const est = computeOrderEstimate(o);
+    if (est && (est.tone === 'danger' || est.tone === 'warning')) n++;
+  }
+  return n;
+}
+
+function patchRenderOrdersEstimate() {
+  if (W.__uxPatchedRenderOrdersEst) return;
+  if (typeof W.renderOrders !== 'function') return;
+  const original = W.renderOrders;
+  W.renderOrders = function (...args: any[]) {
+    const result = original.apply(this, args);
+    setTimeout(decorateOrderListBadges, 0);
+    return result;
+  };
+  W.__uxPatchedRenderOrdersEst = true;
+}
+
+function patchRenderDashboardEstimate() {
+  if (W.__uxPatchedDashboardEst) return;
+  if (typeof W.renderDashboard !== 'function') return;
+  const original = W.renderDashboard;
+  W.renderDashboard = function (...args: any[]) {
+    const result = original.apply(this, args);
+    setTimeout(() => {
+      const page = document.getElementById('page-dashboard');
+      if (!page || page.querySelector('.ux-est-dash-tile')) return;
+      const danger = dangerOrderCount();
+      if (danger === 0) return;
+      const tile = document.createElement('div');
+      tile.className = 'card ux-est-dash-tile';
+      tile.innerHTML = `
+        <div class="ux-est-row">
+          <span class="ux-est-icon">⚠️</span>
+          <div class="ux-est-text">
+            <b>Zakázky v ohrožení: ${danger}</b>
+            <span class="ux-est-status">Odhadovaný termín dokončení je hraniční nebo po plánovaném datu.</span>
+            <small>Klikni pro otevření Kanbanu se seznamem.</small>
+          </div>
+        </div>
+      `;
+      tile.style.cursor = 'pointer';
+      tile.addEventListener('click', () => {
+        if (typeof W.navigateTo === 'function') W.navigateTo('kanban');
+      });
+      // Vlož za hero
+      const hero = page.querySelector('.app-page-hero');
+      if (hero) hero.insertAdjacentElement('afterend', tile);
+      else page.prepend(tile);
+    }, 10);
+    return result;
+  };
+  W.__uxPatchedDashboardEst = true;
+}
+
 function patchOpenOrderEstimate() {
   if (W.__uxPatchedOrderEstimate) return;
   if (typeof W.openOrder !== 'function') return;
@@ -212,4 +302,6 @@ function patchOpenOrderEstimate() {
 
 export function installPredictive() {
   patchOpenOrderEstimate();
+  patchRenderOrdersEstimate();
+  patchRenderDashboardEstimate();
 }

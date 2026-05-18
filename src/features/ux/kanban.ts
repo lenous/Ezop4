@@ -8,6 +8,8 @@
  *  - getNavItems → vložíme záložku Kanban pro role mistr/management/tpv/admin
  */
 
+import { estimateBadgeHtml } from './predictive';
+
 const W = window as any;
 
 type Column = {
@@ -169,6 +171,7 @@ function orderCardHtml(order: any): string {
       ${dueLabel(order)}
       ${openIssues ? `<span class="ux-kb-issues">⚠️ ${openIssues}</span>` : ''}
       <span class="ux-kb-qty">${order.qty || 0} ks</span>
+      ${estimateBadgeHtml(order)}
     </div>
     <div class="ux-kb-progress"><div class="ux-kb-progress-bar" style="width:${pct}%"></div></div>
   </div>`;

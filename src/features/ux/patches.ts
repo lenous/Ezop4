@@ -572,7 +572,8 @@ export function installPatches() {
       && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
       && W.__uxPatchedKanbanNav && W.__uxPatchedIssueCard
       && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign
-      && W.__uxPatchedOrderEstimate;
+      && W.__uxPatchedOrderEstimate && W.__uxPatchedRenderOrdersEst
+      && W.__uxPatchedDashboardEst;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };
