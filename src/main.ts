@@ -2,6 +2,7 @@ import './styles/theme.css';
 import './styles/layout.css';
 import './styles/components.css';
 import './styles/mobile.css';
+import './styles/ux.css';
 
 import { shellHtml } from './ui/shell';
 import { defaults } from './domain/defaultData';
@@ -11,6 +12,7 @@ import { appStateToEzop4Tables } from './services/appStateMigration';
 import * as ezop4Auth from './auth/supabaseAuth';
 import * as lupaNetIntegration from './services/lupaNetIntegration';
 import * as ezop4Ai from './services/aiAssistant';
+import { initUx } from './features/ux';
 import legacyRuntimeSource from './legacy/runtime.js?raw';
 
 declare global {
@@ -44,3 +46,21 @@ const runtimeScript = document.createElement('script');
 runtimeScript.dataset.ezopRuntime = 'legacy-compatible';
 runtimeScript.textContent = legacyRuntimeSource;
 document.body.appendChild(runtimeScript);
+
+// Bridge: zpřístupní runtime let/const proměnné (které nejsou na window) přes funkce.
+// Musí to být classic <script> ve stejném globálním lexikálním scope jako runtime.
+const bridgeScript = document.createElement('script');
+bridgeScript.dataset.ezopRuntime = 'ux-bridge';
+bridgeScript.textContent = `
+  window.__ezopBridge = {
+    user: function() { return typeof currentUser !== 'undefined' ? currentUser : null; },
+    page: function() { return typeof currentPage !== 'undefined' ? currentPage : ''; },
+    stations: function() { return typeof STATIONS !== 'undefined' ? STATIONS : []; },
+    orders: function() { return typeof ORDERS !== 'undefined' ? ORDERS : []; },
+    issues: function() { return typeof ISSUES !== 'undefined' ? ISSUES : []; },
+    users: function() { return typeof USERS !== 'undefined' ? USERS : []; }
+  };
+`;
+document.body.appendChild(bridgeScript);
+
+initUx();

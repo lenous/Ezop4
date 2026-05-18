@@ -1,0 +1,734 @@
+/* ════════════════════════════════
+   UX ENHANCEMENTS (Ezop4)
+   - velký režim, noční režim, tichý režim
+   - Floating Action Bar
+   - panely Můj den / Briefing / Recap
+   - F1 nápověda, zpětná vazba, „co je nového"
+   - lepší prázdné stavy
+════════════════════════════════ */
+
+/* Velký režim */
+html.ux-big {
+  font-size: 18px;
+}
+html.ux-big #app .btn,
+html.ux-big .modal-overlay .btn,
+html.ux-big .numpad-overlay .btn {
+  font-size: 16px;
+  padding: 14px 22px;
+  min-height: 52px;
+}
+html.ux-big #app .stat-val { font-size: 40px; }
+html.ux-big #app .tbl { font-size: 15px; }
+html.ux-big #app .tbl td { padding: 16px; }
+html.ux-big #app .navtab { font-size: 14px; padding: 14px 18px; }
+html.ux-big .bn-item { font-size: 12px; padding: 10px 6px; }
+
+/* Noční režim — hlubší tmavá, méně zlatého glow */
+html.ux-night body {
+  background:
+    linear-gradient(145deg, #03050780 0%, #07090b 100%),
+    #030507;
+}
+html.ux-night body::before { opacity: .35; }
+html.ux-night #app .card { box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+html.ux-night .pcb-corner { opacity: .25; }
+html.ux-night #app .stat-val { color: #f2cf4d; text-shadow: none; }
+
+/* Tichý režim — vypnout animace a glow */
+html.ux-quiet *,
+html.ux-quiet *::before,
+html.ux-quiet *::after {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+html.ux-quiet body::before { display: none; }
+html.ux-quiet #app .card::before { display: none; }
+html.ux-quiet .pcb-corner { display: none; }
+
+/* ──────────────────────────
+   Floating Action Bar (FAB)
+   ────────────────────────── */
+.ux-fab {
+  position: fixed;
+  right: 14px;
+  bottom: 84px; /* nad mobilním bottom-nav */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 800;
+  align-items: flex-end;
+}
+@media (min-width: 900px) {
+  .ux-fab { bottom: 18px; right: 18px; }
+}
+.ux-fab-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(168,180,189,.22);
+  background: linear-gradient(180deg, rgba(54,176,174,.18), rgba(13,20,24,.94));
+  color: var(--gold);
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s, border-color .2s, background .2s;
+}
+.ux-fab-btn:hover {
+  transform: translateY(-2px);
+  border-color: rgba(125,214,210,.5);
+  background: linear-gradient(180deg, rgba(54,176,174,.26), rgba(13,20,24,1));
+}
+.ux-fab-btn:active { transform: translateY(0); }
+.ux-fab-btn[data-primary="1"] {
+  background: linear-gradient(135deg, var(--gold2), var(--gold));
+  color: #111;
+}
+.ux-fab-label {
+  position: absolute;
+  right: 60px;
+  background: rgba(13,20,24,.94);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(168,180,189,.18);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.ux-fab-btn:hover .ux-fab-label { opacity: 1; }
+
+/* ──────────────────────────
+   Panely (overlay vpravo)
+   ────────────────────────── */
+.ux-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 1500;
+  display: none;
+  align-items: stretch;
+  justify-content: flex-end;
+  backdrop-filter: blur(6px);
+}
+.ux-panel-overlay.show { display: flex; }
+.ux-panel {
+  width: min(560px, 96vw);
+  height: 100%;
+  background: linear-gradient(180deg, #101417 0%, #07090b 100%);
+  border-left: 1px solid rgba(168,180,189,.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: ux-slide-in .22s ease-out;
+}
+@keyframes ux-slide-in {
+  from { transform: translateX(40px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.ux-panel-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(168,180,189,.14);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ux-panel-head h2 {
+  font-size: 15px;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: .85px;
+  font-weight: 900;
+  margin: 0;
+}
+.ux-panel-head h2 small {
+  display: block;
+  font-size: 11px;
+  color: var(--text2);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.ux-panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 20px 24px;
+}
+.ux-panel-foot {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(168,180,189,.14);
+  display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+}
+.ux-panel-close {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(168,180,189,.18);
+  color: var(--text);
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.ux-panel-close:hover { border-color: rgba(125,214,210,.4); }
+
+/* Můj den / Briefing panely */
+.ux-greet {
+  font-size: 22px;
+  color: var(--text);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.ux-greet em {
+  font-style: normal;
+  color: var(--gold);
+}
+.ux-sub {
+  color: var(--text2);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.ux-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.ux-tile {
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(168,180,189,.12);
+  border-radius: 8px;
+  padding: 14px;
+}
+.ux-tile b {
+  display: block;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+}
+.ux-tile span {
+  font-size: 11px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .55px;
+  display: block;
+  margin-top: 8px;
+}
+.ux-tile em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text3);
+  display: block;
+  margin-top: 4px;
+}
+.ux-tile.green b { color: var(--green); }
+.ux-tile.red b { color: var(--red); }
+.ux-tile.amber b { color: var(--amber); }
+.ux-list {
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+.ux-list li {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(168,180,189,.1);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ux-list li small { color: var(--text2); }
+.ux-list.empty {
+  background: rgba(255,255,255,.02);
+  border: 1px dashed rgba(168,180,189,.2);
+  border-radius: 8px;
+  padding: 22px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 13px;
+}
+.ux-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.ux-actions .ux-btn { flex: 1; }
+
+/* Tlačítka v panelech */
+.ux-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(168,180,189,.18);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, transform .15s;
+}
+.ux-btn:hover { border-color: rgba(125,214,210,.4); background: rgba(125,214,210,.06); transform: translateY(-1px); }
+.ux-btn.primary { background: linear-gradient(135deg, var(--gold2), var(--gold)); color: #111; border-color: transparent; }
+.ux-btn.teal { background: linear-gradient(135deg, #1e9e9b, var(--teal)); color: #fff; border-color: transparent; }
+.ux-btn.danger { background: rgba(239,68,68,.14); color: var(--red); border-color: rgba(239,68,68,.3); }
+.ux-btn.danger:hover { background: rgba(239,68,68,.22); }
+
+/* Formuláře v panelech */
+.ux-field { margin-bottom: 12px; }
+.ux-field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.ux-field input, .ux-field textarea, .ux-field select {
+  width: 100%;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(168,180,189,.2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  outline: none;
+  transition: border-color .2s;
+}
+.ux-field input:focus, .ux-field textarea:focus, .ux-field select:focus {
+  border-color: var(--teal2);
+}
+.ux-field textarea { min-height: 88px; resize: vertical; }
+
+/* Sekce v panelu */
+.ux-section {
+  margin-bottom: 18px;
+}
+.ux-section h3 {
+  font-size: 11px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+/* Toggle row */
+.ux-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(168,180,189,.08);
+}
+.ux-toggle-row:last-child { border-bottom: none; }
+.ux-toggle-row span { font-size: 13px; }
+.ux-toggle-row small { display: block; color: var(--text3); font-size: 11px; margin-top: 2px; }
+.ux-switch {
+  position: relative;
+  width: 42px; height: 22px;
+  background: rgba(168,180,189,.18);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.ux-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: left .2s;
+}
+.ux-switch.on { background: var(--teal); }
+.ux-switch.on::after { left: 22px; }
+
+/* Pill segmented */
+.ux-segmented {
+  display: inline-flex;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(168,180,189,.18);
+  border-radius: 8px;
+  padding: 2px;
+}
+.ux-segmented button {
+  background: transparent;
+  color: var(--text2);
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.ux-segmented button.active {
+  background: var(--teal);
+  color: #fff;
+}
+
+/* ──────────────────────────
+   Undo toast (větší než systémový)
+   ────────────────────────── */
+.ux-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(13,20,24,.96);
+  color: var(--text);
+  border: 1px solid rgba(168,180,189,.24);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5);
+  z-index: 2200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  min-width: 260px;
+  max-width: 92vw;
+}
+.ux-undo-toast.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.ux-undo-toast .ux-undo-msg { flex: 1; font-size: 13px; }
+.ux-undo-toast button {
+  background: rgba(226,184,32,.18);
+  color: var(--gold);
+  border: 1px solid rgba(226,184,32,.4);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.ux-undo-toast button:hover { background: rgba(226,184,32,.28); }
+.ux-undo-bar {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  background: var(--gold);
+  transition: width linear;
+  border-radius: 0 0 10px 10px;
+}
+
+/* ──────────────────────────
+   F1 / nápověda overlay
+   ────────────────────────── */
+.ux-help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.78);
+  backdrop-filter: blur(4px);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+}
+.ux-help-overlay.show { display: flex; }
+.ux-help-box {
+  background: linear-gradient(180deg, #101417, #07090b);
+  border: 1px solid rgba(168,180,189,.22);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.ux-help-box h2 {
+  color: var(--gold);
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 14px;
+}
+.ux-help-box h3 {
+  color: var(--text);
+  font-size: 13px;
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.ux-help-box p { color: var(--text2); font-size: 13px; line-height: 1.55; margin: 0 0 8px; }
+.ux-help-box ul { color: var(--text2); font-size: 13px; line-height: 1.6; padding-left: 22px; }
+.ux-help-box kbd {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(168,180,189,.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--gold);
+}
+
+/* ──────────────────────────
+   Co je nového
+   ────────────────────────── */
+.ux-news-box {
+  background: linear-gradient(180deg, #1a2024, #0d1214);
+  border: 1px solid rgba(226,184,32,.3);
+}
+.ux-news-box h2 { color: var(--gold); }
+.ux-news-box .ux-news-version {
+  display: inline-block;
+  background: rgba(226,184,32,.15);
+  color: var(--gold);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  margin-bottom: 12px;
+}
+.ux-news-box ul li { margin-bottom: 6px; }
+
+/* ──────────────────────────
+   Banner pro impersonate / preview
+   ────────────────────────── */
+.ux-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(90deg, #b91c1c, #ef4444);
+  color: #fff;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  z-index: 2400;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.ux-banner.show { display: flex; }
+.ux-banner button {
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.3);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ux-banner button:hover { background: rgba(255,255,255,.28); }
+
+html.ux-banner-active body { padding-top: 36px; }
+html.ux-banner-active .topbar { top: 36px; }
+
+/* ──────────────────────────
+   Lepší prázdné stavy
+   ────────────────────────── */
+.ux-empty {
+  text-align: center;
+  padding: 36px 20px;
+  background: rgba(255,255,255,.02);
+  border: 1px dashed rgba(168,180,189,.22);
+  border-radius: 12px;
+  margin: 14px 0;
+}
+.ux-empty-icon {
+  font-size: 36px;
+  opacity: .55;
+  margin-bottom: 10px;
+}
+.ux-empty-title {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.ux-empty-sub {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 14px;
+}
+
+/* ──────────────────────────
+   Feedback emoji rate
+   ────────────────────────── */
+.ux-rate {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.ux-rate button {
+  flex: 1;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(168,180,189,.18);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 28px;
+  cursor: pointer;
+  transition: transform .15s, border-color .2s, background .2s;
+}
+.ux-rate button:hover { transform: translateY(-2px); border-color: rgba(125,214,210,.4); }
+.ux-rate button.active {
+  border-color: var(--gold);
+  background: rgba(226,184,32,.12);
+}
+
+/* ──────────────────────────
+   Print-friendly view
+   ────────────────────────── */
+@media print {
+  .topbar, .navtabs, .bottom-nav, .ux-fab, .ux-banner, .pcb-corner { display: none !important; }
+  body, #app, .page { background: #fff !important; color: #000 !important; }
+  #app .card { border: 1px solid #ccc !important; background: #fff !important; box-shadow: none !important; }
+  #app .card::before { display: none !important; }
+  #app .stat-val, .ux-greet em { color: #000 !important; }
+  .ux-quick-filters, #ux-print-order { display: none !important; }
+  .ux-photo-img { max-width: 50% !important; page-break-inside: avoid; }
+}
+
+/* ──────────────────────────
+   FOTO K PROBLÉMU
+   ────────────────────────── */
+.ux-photo-pad {
+  background: rgba(255,255,255,.02);
+  border: 1px dashed rgba(168,180,189,.28);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.ux-photo-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(54,176,174,.1);
+  border: 1px solid rgba(54,176,174,.35);
+  color: var(--cyan);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+.ux-photo-trigger:hover { background: rgba(54,176,174,.18); }
+.ux-photo-icon { font-size: 18px; }
+.ux-photo-loading {
+  color: var(--text2);
+  font-size: 13px;
+  padding: 16px;
+}
+.ux-photo-error {
+  color: var(--red);
+  font-size: 12px;
+  padding: 10px;
+}
+.ux-photo-img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+.ux-photo-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Lightbox pro náhled fotky */
+.ux-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.94);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.ux-photo-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.7);
+}
+.ux-photo-lightbox-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.3);
+  background: rgba(0,0,0,.5);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+.ux-photo-lightbox-close:hover { background: rgba(0,0,0,.8); }
+
+/* ──────────────────────────
+   RYCHLÉ FILTRY (CHIPY)
+   ────────────────────────── */
+.ux-quick-filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.ux-quick-filters::-webkit-scrollbar { display: none; }
+.ux-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(168,180,189,.18);
+  color: var(--text2);
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color .2s, background .2s, color .2s;
+  font-family: inherit;
+}
+.ux-chip:hover {
+  border-color: rgba(125,214,210,.4);
+  color: var(--text);
+}
+.ux-chip.active {
+  background: linear-gradient(135deg, rgba(54,176,174,.2), rgba(226,184,32,.12));
+  border-color: var(--teal2);
+  color: var(--text);
+}
+.ux-chip em {
+  font-style: normal;
+  background: rgba(255,255,255,.08);
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  color: var(--text2);
+}
+.ux-chip.active em {
+  background: var(--gold);
+  color: #111;
+}
