@@ -2,11 +2,11 @@
  * Alert centrum — proaktivní upozornění o stavu výroby.
  *
  * Vypočítá ze stavu seznam alertů (po termínu, v ohrožení, blokované,
- * zaseknuté, nové vážné problémy). Floating bell vpravo dole s badge,
- * klik otevře panel se seznamem.
+ * zaseknuté, nové vážné problémy). Záměrně se napojuje na EXISTUJÍCÍ
+ * tlačítko #tbar-notifications — neruší vlastní plovoucí bell, sjednocuje.
  *
- * Read state perzistován v localStorage; alerty se přepočítávají
- * každých 60 s a při změně stránky.
+ * Read state perzistován v localStorage; přepočítává se každých 60 s
+ * a při změně stránky.
  */
 
 import { computeOrderEstimate } from './predictive';
@@ -27,7 +27,7 @@ interface Alert {
   detail: string;
   orderId?: string;
   issueId?: string;
-  at: number; // sort key
+  at: number;
 }
 
 function bridge(): any { return W.__ezopBridge || null; }
@@ -82,7 +82,6 @@ function computeAlerts(): Alert[] {
   for (const o of orders) {
     if (orderAllDone(o)) continue;
 
-    // overdue
     if (o.due) {
       const due = new Date(o.due);
       due.setHours(23, 59, 59, 999);
@@ -99,7 +98,6 @@ function computeAlerts(): Alert[] {
       }
     }
 
-    // blocked
     if (o.blocked) {
       out.push({
         id: `blocked:${o.id}`,
@@ -112,7 +110,6 @@ function computeAlerts(): Alert[] {
       });
     }
 
-    // stuck (waiting > N hours, no in_progress)
     const sts = o.stations || [];
     const hasActive = sts.some((s: any) => s.status === 'in_progress' || s.status === 'progress');
     if (!hasActive && !o.blocked) {
@@ -131,9 +128,8 @@ function computeAlerts(): Alert[] {
       }
     }
 
-    // predicted at risk
     const est = computeOrderEstimate(o, orders);
-    if (est && (est.tone === 'danger')) {
+    if (est && est.tone === 'danger') {
       out.push({
         id: `risk:${o.id}:${Math.floor(est.estimateAt.getTime() / 3600000)}`,
         severity: 'warning',
@@ -146,12 +142,11 @@ function computeAlerts(): Alert[] {
     }
   }
 
-  // open high-severity issues
   for (const i of issues) {
     if (i.resolved) continue;
     if (String(i.severity).toLowerCase() !== 'high') continue;
     const reported = i.reportedAt ? new Date(i.reportedAt).getTime() : now;
-    const order = orders.find(o => o.id === i.orderId);
+    const order = orders.find((o: any) => o.id === i.orderId);
     out.push({
       id: `issue:${i.id}`,
       severity: 'danger',
@@ -164,7 +159,6 @@ function computeAlerts(): Alert[] {
     });
   }
 
-  // sort: danger first, then most recent
   out.sort((a, b) => {
     const sev = (x: AlertSeverity) => x === 'danger' ? 0 : x === 'warning' ? 1 : 2;
     if (sev(a.severity) !== sev(b.severity)) return sev(a.severity) - sev(b.severity);
@@ -175,43 +169,46 @@ function computeAlerts(): Alert[] {
 }
 
 /* ════════════════════════════════
-   UI
+   HOOK DO EXISTUJÍCÍHO ZVONKU
 ════════════════════════════════ */
 
 let lastAlerts: Alert[] = [];
 
-function isAuthed(): boolean {
-  return !!bridgeUser();
-}
-
-function renderBell() {
-  document.getElementById('ux-alert-bell')?.remove();
-  if (!isAuthed()) return;
-
+function updateBell() {
+  if (!bridgeUser()) return;
   const alerts = computeAlerts();
   lastAlerts = alerts;
   const read = loadReadIds();
   const unread = alerts.filter(a => !read.has(a.id));
-  const dangerCount = unread.filter(a => a.severity === 'danger').length;
   const totalUnread = unread.length;
-  const hasDanger = dangerCount > 0;
-  const hasAny = totalUnread > 0;
+  const hasDanger = unread.some(a => a.severity === 'danger');
 
-  const btn = document.createElement('button');
-  btn.id = 'ux-alert-bell';
-  btn.className = `ux-alert-bell ${hasDanger ? 'pulse-danger' : hasAny ? 'pulse-warn' : ''}`;
-  btn.type = 'button';
-  btn.title = totalUnread === 0
-    ? 'Žádná nová upozornění'
-    : `${totalUnread} ${totalUnread === 1 ? 'nové upozornění' : 'nových upozornění'}`;
-  btn.setAttribute('aria-label', btn.title);
-  btn.innerHTML = `
-    <span class="ux-alert-icon">🔔</span>
-    ${totalUnread > 0 ? `<span class="ux-alert-badge ${hasDanger ? 'danger' : 'warning'}">${Math.min(99, totalUnread)}</span>` : ''}
-  `;
-  btn.addEventListener('click', () => openAlertPanel());
-  document.body.appendChild(btn);
+  const btn = document.getElementById('tbar-notifications');
+  const countEl = document.getElementById('notification-count');
+  if (!btn || !countEl) return;
+
+  btn.style.display = '';
+  btn.classList.toggle('has-unread', totalUnread > 0);
+  btn.classList.toggle('ux-bell-danger', hasDanger);
+  btn.classList.toggle('ux-bell-warn', !hasDanger && totalUnread > 0);
+  countEl.textContent = totalUnread > 0 ? String(Math.min(99, totalUnread)) : '';
 }
+
+function hookExistingBell() {
+  if (W.__uxAlertBellHooked) return;
+  if (typeof W.openNotificationsModal !== 'function') return;
+
+  W.__uxOrigOpenNotificationsModal = W.openNotificationsModal;
+  W.openNotificationsModal = function (...args: any[]) {
+    openAlertPanel();
+    return undefined;
+  };
+  W.__uxAlertBellHooked = true;
+}
+
+/* ════════════════════════════════
+   ALERT PANEL
+════════════════════════════════ */
 
 function openAlertPanel() {
   document.getElementById('ux-alert-panel')?.remove();
@@ -238,6 +235,16 @@ function openAlertPanel() {
     </div>`;
   }).join('');
 
+  // Legacy prod notes link
+  const prodNotes: any[] = W.PROD_NOTES || [];
+  const legacyBtn = prodNotes.length > 0
+    ? `<div class="ux-alert-legacy">
+        <button class="ux-btn" id="ux-alert-open-legacy">
+          📝 Výrobní zprávy (${prodNotes.length})
+        </button>
+      </div>`
+    : '';
+
   const panel = document.createElement('div');
   panel.id = 'ux-alert-panel';
   panel.className = 'ux-alert-panel';
@@ -248,7 +255,7 @@ function openAlertPanel() {
         <small>${alerts.length} celkem · auto-refresh 60 s</small>
       </div>
       <div class="ux-alert-panel-actions">
-        <button class="ux-btn" id="ux-alert-mark-all">Označit vše jako přečtené</button>
+        <button class="ux-btn" id="ux-alert-mark-all">Přečíst vše</button>
         <button class="ux-btn" id="ux-alert-close">✕</button>
       </div>
     </div>
@@ -256,6 +263,7 @@ function openAlertPanel() {
       ${alerts.length === 0
         ? `<div class="ux-alert-empty">😌 Žádná otevřená upozornění. Hezký den!</div>`
         : sections}
+      ${legacyBtn}
     </div>
   `;
   document.body.appendChild(panel);
@@ -267,7 +275,11 @@ function openAlertPanel() {
     alerts.forEach(a => r.add(a.id));
     saveReadIds(r);
     close();
-    renderBell();
+    updateBell();
+  });
+  panel.querySelector('#ux-alert-open-legacy')?.addEventListener('click', () => {
+    close();
+    if (W.__uxOrigOpenNotificationsModal) W.__uxOrigOpenNotificationsModal('all');
   });
 
   panel.querySelectorAll<HTMLElement>('[data-alert-id]').forEach(row => {
@@ -287,13 +299,14 @@ function openAlertPanel() {
       } else {
         row.classList.add('read');
       }
-      renderBell();
+      updateBell();
     });
   });
 
   setTimeout(() => {
     const outsideClick = (e: MouseEvent) => {
-      if (!panel.contains(e.target as Node) && (e.target as HTMLElement)?.id !== 'ux-alert-bell') {
+      const tgt = e.target as HTMLElement;
+      if (!panel.contains(tgt) && tgt?.id !== 'tbar-notifications') {
         close();
         document.removeEventListener('click', outsideClick);
       }
@@ -324,16 +337,16 @@ export function installAlertCenter() {
   W.__uxAlertInstalled = true;
 
   const tick = () => {
-    if (isAuthed()) renderBell();
+    hookExistingBell();
+    updateBell();
   };
   tick();
 
   if (refreshTimer) window.clearInterval(refreshTimer);
   refreshTimer = window.setInterval(tick, REFRESH_MS);
 
-  // Refresh when user navigates
-  const origNav = W.navigateTo;
-  if (typeof origNav === 'function' && !W.__uxAlertNavHook) {
+  if (typeof W.navigateTo === 'function' && !W.__uxAlertNavHook) {
+    const origNav = W.navigateTo;
     W.navigateTo = function (...args: any[]) {
       const r = origNav.apply(this, args);
       setTimeout(tick, 100);

@@ -190,8 +190,28 @@ function openPhotoLightbox(src: string) {
 }
 
 /* ════════════════════════════════
-   QUICK FILTERS V ZAKÁZKÁCH
+   TOPBAR: odstraň duplikát role/jméno
 ════════════════════════════════ */
+
+function patchTopbarUserDisplay() {
+  if (W.__uxPatchedTopbarUser) return;
+  if (typeof W.refreshTopbarUser !== 'function') return;
+  const original = W.refreshTopbarUser;
+  W.refreshTopbarUser = function (...args: any[]) {
+    original.apply(this, args);
+    const nameEl = document.getElementById('tbar-name');
+    const roleEl = document.getElementById('tbar-role');
+    if (!nameEl || !roleEl) return;
+    const name = (nameEl.textContent || '').toLowerCase().trim();
+    const role = (roleEl.textContent || '').toLowerCase().trim();
+    // Skryj role badge když je název nadřazený nebo stejný jako role (Administrátor ⊃ admin)
+    const duplicate = name.includes(role) || role.includes(name) || name === role;
+    roleEl.style.display = duplicate ? 'none' : '';
+  };
+  W.__uxPatchedTopbarUser = true;
+}
+
+
 
 type FilterId = 'all' | 'urgent' | 'today' | 'week' | 'blocked' | 'issue' | 'mine';
 
@@ -568,6 +588,7 @@ export function installPatches() {
     patchOrderList();
     patchOrderDetail();
     patchTimelineRender();
+    patchTopbarUserDisplay();
     installKanbanPatch();
     installIssueSla();
     installPredictive();
@@ -582,7 +603,7 @@ export function installPatches() {
       && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign
       && W.__uxPatchedOrderEstimate && W.__uxPatchedRenderOrdersEst
       && W.__uxPatchedDashboardEst && W.__uxPatchedDashboardKpi
-      && W.__uxAlertInstalled && W.__uxPatchedDashboardBn
+      && W.__uxPatchedTopbarUser && W.__uxAlertInstalled && W.__uxPatchedDashboardBn
       && W.__uxPatchedIssuesPareto;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
