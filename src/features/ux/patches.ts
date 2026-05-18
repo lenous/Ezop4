@@ -15,6 +15,7 @@ import { installPredictive } from './predictive';
 import { installKpiCharts } from './kpiCharts';
 import { installAlertCenter } from './alertCenter';
 import { installBottleneck } from './bottleneck';
+import { installIssueAnalysis } from './issueAnalysis';
 
 const W = window as any;
 
@@ -573,6 +574,7 @@ export function installPatches() {
     installKpiCharts();
     installAlertCenter();
     installBottleneck();
+    installIssueAnalysis();
     const allDone = W.__uxPatchedReportIssue && W.__uxPatchedSubmitIssue
       && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders
       && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
@@ -580,7 +582,8 @@ export function installPatches() {
       && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign
       && W.__uxPatchedOrderEstimate && W.__uxPatchedRenderOrdersEst
       && W.__uxPatchedDashboardEst && W.__uxPatchedDashboardKpi
-      && W.__uxAlertInstalled && W.__uxPatchedDashboardBn;
+      && W.__uxAlertInstalled && W.__uxPatchedDashboardBn
+      && W.__uxPatchedIssuesPareto;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };

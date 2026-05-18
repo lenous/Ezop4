@@ -1742,3 +1742,56 @@ html.ux-banner-active .topbar { top: 36px; }
   background: rgba(239,68,68,.15);
   color: #ef4444;
 }
+
+/* ════════════════════════════════
+   PARETO ISSUE ANALYSIS
+════════════════════════════════ */
+.ux-pareto-card {
+  margin: 14px 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ux-pareto-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ux-pareto-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text2);
+}
+.ux-pareto-legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ux-pareto-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.ux-pareto-svg {
+  width: 100%;
+  height: auto;
+  max-height: 280px;
+  color: var(--text);
+}
+.ux-pareto-insight {
+  background: rgba(245,158,11,.1);
+  border-left: 3px solid #f59e0b;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+.ux-pareto-insight b {
+  color: var(--text);
+}
