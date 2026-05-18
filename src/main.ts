@@ -47,4 +47,20 @@ runtimeScript.dataset.ezopRuntime = 'legacy-compatible';
 runtimeScript.textContent = legacyRuntimeSource;
 document.body.appendChild(runtimeScript);
 
+// Bridge: zpřístupní runtime let/const proměnné (které nejsou na window) přes funkce.
+// Musí to být classic <script> ve stejném globálním lexikálním scope jako runtime.
+const bridgeScript = document.createElement('script');
+bridgeScript.dataset.ezopRuntime = 'ux-bridge';
+bridgeScript.textContent = `
+  window.__ezopBridge = {
+    user: function() { return typeof currentUser !== 'undefined' ? currentUser : null; },
+    page: function() { return typeof currentPage !== 'undefined' ? currentPage : ''; },
+    stations: function() { return typeof STATIONS !== 'undefined' ? STATIONS : []; },
+    orders: function() { return typeof ORDERS !== 'undefined' ? ORDERS : []; },
+    issues: function() { return typeof ISSUES !== 'undefined' ? ISSUES : []; },
+    users: function() { return typeof USERS !== 'undefined' ? USERS : []; }
+  };
+`;
+document.body.appendChild(bridgeScript);
+
 initUx();

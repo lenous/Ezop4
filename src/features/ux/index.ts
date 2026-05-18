@@ -48,21 +48,44 @@ function saveState(patch: Partial<UxState>): UxState {
   return next;
 }
 
+function bridge() {
+  return W.__ezopBridge || null;
+}
+
 function audit(action: string, detail?: Record<string, unknown>) {
   try {
     const a = W.EZOP4_AUDIT;
+    const user = getCurrentUser();
     if (a && typeof a.recordAudit === 'function') {
-      a.recordAudit({ action, detail: detail || {}, source: 'ux' });
+      a.recordAudit({
+        user: user ? { id: user.id || '', name: user.name || user.login || '', role: user.role || 'operator' } : null,
+        action,
+        entityType: 'ux',
+        entityId: getCurrentPage() || 'app',
+        summary: detail ? JSON.stringify(detail).slice(0, 200) : action,
+      });
     }
   } catch { /* never break UI */ }
 }
 
-function getCurrentUser(): { name?: string; login?: string; role?: string; id?: string; stationIds?: string[] } | null {
-  return W.currentUser || null;
+interface BridgeUser {
+  name?: string;
+  login?: string;
+  role?: string;
+  id?: string;
+  stationIds?: number[];
+}
+
+function getCurrentUser(): BridgeUser | null {
+  const b = bridge();
+  if (b && typeof b.user === 'function') return b.user() || null;
+  return null;
 }
 
 function getCurrentPage(): string {
-  return W.currentPage || '';
+  const b = bridge();
+  if (b && typeof b.page === 'function') return b.page() || '';
+  return '';
 }
 
 function safeToast(msg: string) {
@@ -231,15 +254,8 @@ function shiftLabel(): string {
   return 'Noční směna';
 }
 
-function readState(): any {
-  try {
-    const raw = localStorage.getItem('vyrobais_state_v1');
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
 function operatorStats() {
-  const s = readState();
+  const b = bridge();
   const user = getCurrentUser();
   const result = {
     queueCount: 0,
@@ -249,46 +265,45 @@ function operatorStats() {
     stations: [] as string[],
     todayQty: 0,
   };
-  if (!s) return result;
+  if (!b || !user) return result;
 
-  const stationIds: string[] = user?.stationIds || [];
-  const stations = (s.stations || []) as any[];
-  const orders = (s.orders || []) as any[];
-  const issues = (s.issues || []) as any[];
+  const stationIds: number[] = (user.stationIds || []).map((x: unknown) => Number(x)).filter((x: number) => !isNaN(x));
+  const stations: any[] = b.stations() || [];
+  const orders: any[] = b.orders() || [];
+  const issues: any[] = b.issues() || [];
+  const userLogin = String(user.login || '').toLowerCase();
 
-  if (stationIds.length === 0) {
-    result.stations = stations
-      .filter(st => st?.workerLogin && user?.login && String(st.workerLogin).toLowerCase() === String(user.login).toLowerCase())
-      .map(st => st?.name || st?.stId)
-      .filter(Boolean);
-  } else {
-    result.stations = stations
-      .filter(st => stationIds.includes(st?.stId))
-      .map(st => st?.name || st?.stId);
-  }
+  result.stations = stations
+    .filter(st => stationIds.includes(Number(st?.id)))
+    .map(st => `${st?.icon || ''} ${st?.name || st?.id || ''}`.trim())
+    .filter(Boolean);
 
   for (const o of orders) {
     const orderStations: any[] = o?.stations || [];
-    const inMyStation = orderStations.some(st => stationIds.includes(st?.stId)
-      || (st?.workerLogin && user?.login && String(st.workerLogin).toLowerCase() === String(user.login).toLowerCase()));
-    if (inMyStation) {
-      result.queueCount++;
-      if (o.status === 'progress') result.activeOrders++;
-      if (o.blocked) result.blockedOrders++;
-    }
+    let inMyStation = false;
+    let isActive = false;
     for (const st of orderStations) {
-      if (stationIds.includes(st?.stId)) {
+      const stIdNum = Number(st?.stId);
+      const mine = stationIds.includes(stIdNum)
+        || (st?.workerLogin && userLogin && String(st.workerLogin).toLowerCase() === userLogin);
+      if (mine) {
+        inMyStation = true;
+        if (st.status === 'in_progress' || st.status === 'progress') isActive = true;
         result.todayQty += Number(st?.qtyOk || 0);
       }
     }
+    if (inMyStation) {
+      result.queueCount++;
+      if (isActive) result.activeOrders++;
+      if (o.blocked) result.blockedOrders++;
+    }
   }
 
-  result.issuesMine = issues.filter(i =>
-    !i.resolvedAt && (
-      (i.assignedToLogin && user?.login && String(i.assignedToLogin).toLowerCase() === String(user.login).toLowerCase()) ||
-      (i.createdByLogin && user?.login && String(i.createdByLogin).toLowerCase() === String(user.login).toLowerCase())
-    )
-  ).length;
+  result.issuesMine = issues.filter(i => !i.resolved && (
+    (i.assignedToLogin && userLogin && String(i.assignedToLogin).toLowerCase() === userLogin) ||
+    (i.reportedBy && userLogin && String(i.reportedBy).toLowerCase() === userLogin) ||
+    (i.createdByLogin && userLogin && String(i.createdByLogin).toLowerCase() === userLogin)
+  )).length;
 
   return result;
 }
@@ -349,7 +364,7 @@ function openMyDayPanel() {
 ════════════════════════════════ */
 
 function managementSnapshot() {
-  const s = readState();
+  const b = bridge();
   const out = {
     activeOrders: 0,
     blockedOrders: 0,
@@ -360,41 +375,53 @@ function managementSnapshot() {
     todayRepair: 0,
     bottleneck: '' as string,
   };
-  if (!s) return out;
+  if (!b) return out;
 
-  const orders: any[] = s.orders || [];
-  const issues: any[] = s.issues || [];
-  const stations: any[] = s.stations || [];
+  const orders: any[] = b.orders() || [];
+  const issues: any[] = b.issues() || [];
+  const stations: any[] = b.stations() || [];
+
+  const activeWorkers = new Set<string>();
 
   for (const o of orders) {
-    if (o.status === 'progress') out.activeOrders++;
-    if (o.blocked) out.blockedOrders++;
-    const sts: any[] = o.stations || [];
+    const sts: any[] = o?.stations || [];
+    let isActive = false;
+    let isDone = true;
     for (const st of sts) {
       out.todayOk += Number(st?.qtyOk || 0);
-      out.todayRepair += Number(st?.qtyRepair || 0);
+      out.todayRepair += Number(st?.qtyRework || st?.qtyRepair || 0);
       out.todayScrap += Number(st?.qtyScrap || 0);
+      if (st?.status === 'in_progress' || st?.status === 'progress') isActive = true;
+      if (st?.status !== 'completed' && st?.status !== 'skipped') isDone = false;
+      if (st?.workerLogin) activeWorkers.add(String(st.workerLogin).toLowerCase());
     }
+    if (sts.length === 0) isDone = false;
+    if (isActive) out.activeOrders++;
+    if (o?.blocked) out.blockedOrders++;
+    void isDone;
   }
-  out.openIssues = issues.filter(i => !i.resolvedAt).length;
-  out.operators = stations.filter(st => st?.workerLogin).length;
+  out.openIssues = issues.filter(i => !i.resolved).length;
+  out.operators = activeWorkers.size;
 
-  const load = new Map<string, number>();
+  // Bottleneck: kolik zakázek čeká nebo právě běží na každém stanovišti
+  const load = new Map<number, number>();
   for (const o of orders) {
-    if (!o || o.status === 'done') continue;
+    if (!o) continue;
     for (const st of (o.stations || [])) {
-      if (!st?.stId) continue;
-      load.set(st.stId, (load.get(st.stId) || 0) + 1);
+      const id = Number(st?.stId);
+      if (!id) continue;
+      if (st?.status === 'completed' || st?.status === 'skipped') continue;
+      load.set(id, (load.get(id) || 0) + 1);
     }
   }
-  let topLoadId = '';
+  let topLoadId = 0;
   let topLoad = 0;
   for (const [id, count] of load) {
     if (count > topLoad) { topLoadId = id; topLoad = count; }
   }
   if (topLoadId) {
-    const stMeta = stations.find(st => st?.stId === topLoadId);
-    out.bottleneck = `${stMeta?.name || topLoadId} (${topLoad} zakázek)`;
+    const stMeta = stations.find((st: any) => Number(st?.id) === topLoadId);
+    out.bottleneck = `${stMeta?.icon ? stMeta.icon + ' ' : ''}${stMeta?.name || topLoadId} (${topLoad} zakázek)`;
   }
   return out;
 }
