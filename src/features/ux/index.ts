@@ -1162,17 +1162,23 @@ function showUndoToast(msg: string, undo: null | (() => void), durationMs = 5000
 }
 
 /* ════════════════════════════════
-   FLOATING ACTION BAR
+   FLOATING ACTION BUTTON (speed-dial)
 ════════════════════════════════ */
 
+let _fabOutsideClick: ((e: MouseEvent) => void) | null = null;
+
 function renderFab() {
+  if (_fabOutsideClick) {
+    document.removeEventListener('click', _fabOutsideClick);
+    _fabOutsideClick = null;
+  }
   document.getElementById('ux-fab')?.remove();
   const user = getCurrentUser();
-  if (!user) return; // FAB jen po přihlášení
+  if (!user) return;
 
   const role = user.role || 'operator';
   const fab = document.createElement('div');
-  fab.className = 'ux-fab';
+  fab.className = 'ux-fab collapsed'; // starts collapsed on mobile
   fab.id = 'ux-fab';
 
   const primaryAction = role === 'management' || role === 'admin'
@@ -1193,13 +1199,28 @@ function renderFab() {
       <span>${b.icon}</span>
       <span class="ux-fab-label">${b.label}</span>
     </button>
-  `).join('');
+  `).join('') + `
+    <button class="ux-fab-toggle" aria-label="Otevřít akce" title="Akce">
+      <span class="ux-fab-toggle-icon">✦</span>
+    </button>
+  `;
 
   document.body.appendChild(fab);
+
+  fab.querySelector('.ux-fab-toggle')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fab.classList.toggle('collapsed');
+  });
+
+  _fabOutsideClick = (e: MouseEvent) => {
+    if (!fab.contains(e.target as Node)) fab.classList.add('collapsed');
+  };
+  document.addEventListener('click', _fabOutsideClick);
 
   fab.addEventListener('click', (e) => {
     const target = (e.target as HTMLElement).closest<HTMLButtonElement>('.ux-fab-btn');
     if (!target) return;
+    fab.classList.add('collapsed');
     const id = target.dataset.fab;
     switch (id) {
       case 'myday': openMyDayPanel(); break;
