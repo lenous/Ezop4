@@ -270,6 +270,7 @@ export const shellHtml = `<!-- ════════════════�
   <div style="padding-bottom:8px">
     <div class="page" id="page-dashboard"><!-- filled by JS --></div>
     <div class="page" id="page-orders"><!-- filled by JS --></div>
+    <div class="page" id="page-kanban"><!-- filled by UX (kanban.ts) --></div>
     <div class="page" id="page-station"><!-- filled by JS --></div>
     <div class="page" id="page-issues"><!-- filled by JS --></div>
     <div class="page" id="page-kpi"><!-- filled by JS --></div>

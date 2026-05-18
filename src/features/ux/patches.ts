@@ -9,6 +9,8 @@
  *  - openOrder → tlačítko „🖨 Tisk zakázky" v detailu
  */
 
+import { installKanbanPatch } from './kanban';
+
 const W = window as any;
 
 const PHOTO_INPUT_ID = 'ux-issue-photo-input';
@@ -560,9 +562,11 @@ export function installPatches() {
     patchOrderList();
     patchOrderDetail();
     patchTimelineRender();
+    installKanbanPatch();
     const allDone = W.__uxPatchedReportIssue && W.__uxPatchedSubmitIssue
       && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders
-      && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline;
+      && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
+      && W.__uxPatchedKanbanNav;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };
