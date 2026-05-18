@@ -1403,3 +1403,25 @@ html.ux-banner-active .topbar { top: 36px; }
     max-width: 100%;
   }
 }
+
+/* ════════════════════════════════
+   SHIFT PROFILE FORM (settings)
+════════════════════════════════ */
+.ux-select, .ux-input {
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.ux-select {
+  width: 100%;
+}
+.ux-input {
+  width: 70px;
+}
+.ux-shift-custom .ux-quick-filters {
+  flex-wrap: wrap;
+}

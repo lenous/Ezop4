@@ -15,7 +15,118 @@
 const W = window as any;
 
 const DEFAULT_THROUGHPUT_PCS_PER_HOUR = 60;
-const HOURS_PER_DAY = 24; // MVP: počítáme 24/7
+
+/* ════════════════════════════════
+   SHIFT-AWARE TIME CALCULATION
+════════════════════════════════ */
+
+const SHIFT_PROFILE_KEY = 'ezop4_ux_shift_profile_v1';
+
+export interface ShiftProfile {
+  startHour: number;   // 0–23
+  endHour: number;     // 1–24 (24 = midnight; > startHour)
+  weekdays: number[];  // 0 = Sunday … 6 = Saturday
+}
+
+const DEFAULT_SHIFT_PROFILE: ShiftProfile = {
+  startHour: 6,
+  endHour: 22,        // dvě směny 6–14 a 14–22 = 16 h/den
+  weekdays: [1, 2, 3, 4, 5],
+};
+
+export function loadShiftProfile(): ShiftProfile {
+  try {
+    const raw = localStorage.getItem(SHIFT_PROFILE_KEY);
+    if (!raw) return { ...DEFAULT_SHIFT_PROFILE };
+    const parsed = JSON.parse(raw);
+    const startHour = Number(parsed.startHour);
+    const endHour = Number(parsed.endHour);
+    const weekdays = Array.isArray(parsed.weekdays) ? parsed.weekdays.map((x: any) => Number(x)).filter((x: number) => x >= 0 && x <= 6) : null;
+    if (isNaN(startHour) || isNaN(endHour) || endHour <= startHour || !weekdays || weekdays.length === 0) {
+      return { ...DEFAULT_SHIFT_PROFILE };
+    }
+    return { startHour, endHour, weekdays };
+  } catch {
+    return { ...DEFAULT_SHIFT_PROFILE };
+  }
+}
+
+export function saveShiftProfile(profile: ShiftProfile) {
+  try { localStorage.setItem(SHIFT_PROFILE_KEY, JSON.stringify(profile)); } catch { /* quota */ }
+  cacheKey = ''; // invalidate cached estimates
+}
+
+function shiftHoursPerDay(p: ShiftProfile): number {
+  return p.endHour - p.startHour;
+}
+
+function isWorkingDay(d: Date, p: ShiftProfile): boolean {
+  return p.weekdays.includes(d.getDay());
+}
+
+function startOfWorkdayAtDate(d: Date, p: ShiftProfile): Date {
+  const r = new Date(d);
+  r.setHours(p.startHour, 0, 0, 0);
+  return r;
+}
+
+function endOfWorkdayAtDate(d: Date, p: ShiftProfile): Date {
+  const r = new Date(d);
+  if (p.endHour >= 24) {
+    r.setHours(0, 0, 0, 0);
+    r.setDate(r.getDate() + 1);
+  } else {
+    r.setHours(p.endHour, 0, 0, 0);
+  }
+  return r;
+}
+
+function nextWorkingDayStart(d: Date, p: ShiftProfile): Date {
+  const next = new Date(d);
+  next.setDate(next.getDate() + 1);
+  next.setHours(p.startHour, 0, 0, 0);
+  let guard = 0;
+  while (!isWorkingDay(next, p) && guard < 14) {
+    next.setDate(next.getDate() + 1);
+    guard++;
+  }
+  return next;
+}
+
+/** Posune `from` dopředu o `hours` pracovních hodin podle profilu. */
+function addWorkingHours(from: Date, hours: number, p: ShiftProfile): Date {
+  if (hours <= 0) return new Date(from);
+  if (shiftHoursPerDay(p) <= 0) return new Date(from.getTime() + hours * 3600000);
+
+  let current = new Date(from);
+  let remaining = hours;
+  let guard = 0;
+
+  while (remaining > 0 && guard < 365) {
+    guard++;
+    if (!isWorkingDay(current, p)) {
+      current = nextWorkingDayStart(current, p);
+      continue;
+    }
+    const dayStart = startOfWorkdayAtDate(current, p);
+    const dayEnd = endOfWorkdayAtDate(current, p);
+    if (current < dayStart) current = dayStart;
+    if (current >= dayEnd) {
+      current = nextWorkingDayStart(current, p);
+      continue;
+    }
+    const availableMs = dayEnd.getTime() - current.getTime();
+    const availableHours = availableMs / 3600000;
+    if (availableHours >= remaining) {
+      current = new Date(current.getTime() + remaining * 3600000);
+      remaining = 0;
+    } else {
+      remaining -= availableHours;
+      current = nextWorkingDayStart(current, p);
+    }
+  }
+  return current;
+}
 
 type Tone = 'success' | 'warning' | 'danger' | 'muted';
 export type Estimate = {
@@ -111,7 +222,8 @@ export function computeOrderEstimate(order: any, allOrders?: any[]): Estimate | 
     return null;
   }
 
-  const estimateAt = new Date(Date.now() + hours * 3600000);
+  const profile = loadShiftProfile();
+  const estimateAt = addWorkingHours(new Date(), hours, profile);
 
   if (!order.due) {
     const result: Estimate = {

@@ -8,6 +8,7 @@
  */
 
 import { installPatches } from './patches';
+import { loadShiftProfile, saveShiftProfile, type ShiftProfile } from './predictive';
 
 type ThemeMode = 'auto' | 'night' | 'normal';
 
@@ -168,6 +169,106 @@ function closePanel() {
    SETTINGS PANEL (theme / big / quiet)
 ════════════════════════════════ */
 
+const WEEKDAY_LABELS = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So'];
+const SHIFT_PRESETS: { id: string; label: string; profile: ShiftProfile }[] = [
+  { id: 'one',  label: 'Jedna směna (6–14, Po–Pá)',     profile: { startHour: 6, endHour: 14, weekdays: [1,2,3,4,5] } },
+  { id: 'two',  label: 'Dvě směny (6–22, Po–Pá)',       profile: { startHour: 6, endHour: 22, weekdays: [1,2,3,4,5] } },
+  { id: 'three',label: 'Třísměnný provoz (0–24, Po–Pá)',profile: { startHour: 0, endHour: 24, weekdays: [1,2,3,4,5] } },
+  { id: 'cont', label: 'Nepřetržitý provoz (24/7)',     profile: { startHour: 0, endHour: 24, weekdays: [0,1,2,3,4,5,6] } },
+];
+
+function matchPreset(p: ShiftProfile): string {
+  const eq = (a: ShiftProfile, b: ShiftProfile) =>
+    a.startHour === b.startHour && a.endHour === b.endHour &&
+    a.weekdays.length === b.weekdays.length && a.weekdays.every(d => b.weekdays.includes(d));
+  for (const preset of SHIFT_PRESETS) {
+    if (eq(p, preset.profile)) return preset.id;
+  }
+  return '';
+}
+
+function shiftProfileFormHtml(): string {
+  const p = loadShiftProfile();
+  const presetId = matchPreset(p);
+  const presetOptions = SHIFT_PRESETS.map(x =>
+    `<option value="${x.id}" ${x.id === presetId ? 'selected' : ''}>${x.label}</option>`
+  ).join('') + `<option value="custom" ${!presetId ? 'selected' : ''}>Vlastní…</option>`;
+
+  const weekdayChips = [1,2,3,4,5,6,0].map(d =>
+    `<button type="button" class="ux-chip ${p.weekdays.includes(d) ? 'active' : ''}" data-ux-wd="${d}">${WEEKDAY_LABELS[d]}</button>`
+  ).join('');
+
+  return `
+    <select id="ux-shift-preset" class="ux-select">${presetOptions}</select>
+    <div id="ux-shift-custom" class="ux-shift-custom" style="margin-top:10px;${presetId ? 'display:none' : ''}">
+      <div class="ux-toggle-row" style="gap:8px">
+        <label style="display:flex;flex-direction:column;font-size:11px;color:var(--text2)">
+          Od (h)
+          <input type="number" id="ux-shift-start" min="0" max="23" value="${p.startHour}" class="ux-input" style="width:70px">
+        </label>
+        <label style="display:flex;flex-direction:column;font-size:11px;color:var(--text2)">
+          Do (h)
+          <input type="number" id="ux-shift-end" min="1" max="24" value="${p.endHour}" class="ux-input" style="width:70px">
+        </label>
+      </div>
+      <div class="ux-quick-filters" id="ux-shift-weekdays" style="margin-top:8px">${weekdayChips}</div>
+    </div>
+    <p style="color:var(--text3);font-size:11px;margin-top:8px;">
+      Predikované termíny dokončení se spočítají s ohledem na zvolenou pracovní dobu (přeskakují noci a víkendy).
+    </p>
+  `;
+}
+
+function readShiftFormState(root: HTMLElement): ShiftProfile {
+  const startEl = root.querySelector<HTMLInputElement>('#ux-shift-start');
+  const endEl = root.querySelector<HTMLInputElement>('#ux-shift-end');
+  const wdEls = root.querySelectorAll<HTMLButtonElement>('#ux-shift-weekdays .ux-chip.active');
+  const startHour = Math.max(0, Math.min(23, Number(startEl?.value) || 6));
+  const endHourRaw = Math.max(1, Math.min(24, Number(endEl?.value) || 22));
+  const endHour = endHourRaw > startHour ? endHourRaw : startHour + 1;
+  const weekdays = Array.from(wdEls).map(b => Number(b.dataset.uxWd)).filter(n => !isNaN(n));
+  return { startHour, endHour, weekdays: weekdays.length ? weekdays : [1,2,3,4,5] };
+}
+
+function bindShiftProfileForm(root: HTMLElement) {
+  const preset = root.querySelector<HTMLSelectElement>('#ux-shift-preset');
+  const custom = root.querySelector<HTMLElement>('#ux-shift-custom');
+  if (!preset || !custom) return;
+
+  const persist = () => {
+    const profile = readShiftFormState(root);
+    saveShiftProfile(profile);
+    audit('ux:shift-profile', { startHour: profile.startHour, endHour: profile.endHour });
+  };
+
+  preset.addEventListener('change', () => {
+    const found = SHIFT_PRESETS.find(p => p.id === preset.value);
+    if (found) {
+      saveShiftProfile(found.profile);
+      // Re-render section in place
+      const section = preset.closest('.ux-section');
+      if (section) {
+        section.innerHTML = `<h3>Pracovní doba (pro odhad termínů)</h3>` + shiftProfileFormHtml();
+        bindShiftProfileForm(section as HTMLElement);
+      }
+      audit('ux:shift-profile', { preset: found.id });
+    } else {
+      custom.style.display = '';
+    }
+  });
+
+  root.querySelectorAll<HTMLButtonElement>('#ux-shift-weekdays .ux-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      persist();
+    });
+  });
+
+  root.querySelectorAll<HTMLInputElement>('#ux-shift-start, #ux-shift-end').forEach(inp => {
+    inp.addEventListener('change', persist);
+  });
+}
+
 function openSettingsPanel() {
   const s = loadState();
   const segHtml = (modes: { id: ThemeMode; label: string }[]) =>
@@ -205,12 +306,17 @@ function openSettingsPanel() {
         </div>
       </div>
       <div class="ux-section">
+        <h3>Pracovní doba (pro odhad termínů)</h3>
+        ${shiftProfileFormHtml()}
+      </div>
+      <div class="ux-section">
         <h3>Tisk</h3>
         <button class="ux-btn" id="ux-print-btn">🖨 Vytisknout aktuální stránku</button>
       </div>
     `,
     foot: `<button class="ux-btn primary" data-ux-close>Hotovo</button>`,
     onMount: (root) => {
+      bindShiftProfileForm(root);
       root.querySelectorAll<HTMLButtonElement>('#ux-theme-seg button').forEach(btn => {
         btn.addEventListener('click', () => {
           const mode = btn.dataset.uxTheme as ThemeMode;
