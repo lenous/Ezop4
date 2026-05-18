@@ -10,6 +10,7 @@
  */
 
 import { installKanbanPatch } from './kanban';
+import { installIssueSla } from './issueSla';
 
 const W = window as any;
 
@@ -563,10 +564,12 @@ export function installPatches() {
     patchOrderDetail();
     patchTimelineRender();
     installKanbanPatch();
+    installIssueSla();
     const allDone = W.__uxPatchedReportIssue && W.__uxPatchedSubmitIssue
       && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders
       && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
-      && W.__uxPatchedKanbanNav;
+      && W.__uxPatchedKanbanNav && W.__uxPatchedIssueCard
+      && W.__uxPatchedRenderIssues;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };

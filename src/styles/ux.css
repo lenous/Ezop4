@@ -1053,6 +1053,57 @@ html.ux-banner-active .topbar { top: 36px; }
 }
 
 /* ──────────────────────────
+   ISSUE SLA AGING + ASSIGN
+   ────────────────────────── */
+.ux-sla {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: .3px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ux-sla-success { background: rgba(34,197,94,.14);  color: var(--green, #22c55e); border-color: rgba(34,197,94,.32); }
+.ux-sla-warning { background: rgba(245,158,11,.16); color: var(--amber, #f59e0b); border-color: rgba(245,158,11,.4); animation: ux-sla-pulse-warn 2.6s ease-in-out infinite; }
+.ux-sla-danger  { background: rgba(239,68,68,.18);  color: var(--red, #ef4444);   border-color: rgba(239,68,68,.45);  animation: ux-sla-pulse-danger 1.8s ease-in-out infinite; }
+
+@keyframes ux-sla-pulse-warn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,.18); }
+  50%      { box-shadow: 0 0 0 4px rgba(245,158,11,0); }
+}
+@keyframes ux-sla-pulse-danger {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
+  50%      { box-shadow: 0 0 0 5px rgba(239,68,68,0); }
+}
+
+.ux-sla-spacer { display: inline-block; width: 6px; }
+
+.ux-assign {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(54,176,174,.13);
+  color: var(--teal2, #36b0ae);
+  border: 1px solid rgba(54,176,174,.32);
+  letter-spacing: .2px;
+}
+.ux-assign-empty {
+  background: rgba(255,255,255,.04);
+  color: var(--text3);
+  border-color: rgba(168,180,189,.18);
+  font-style: italic;
+}
+
+/* ──────────────────────────
    RYCHLÉ FILTRY (CHIPY)
    ────────────────────────── */
 .ux-quick-filters {
