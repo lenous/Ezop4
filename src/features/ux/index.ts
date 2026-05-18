@@ -7,6 +7,8 @@
  * navigateTo, EZOP4_AUDIT, ...).
  */
 
+import { installPatches } from './patches';
+
 type ThemeMode = 'auto' | 'night' | 'normal';
 
 interface UxState {
@@ -1200,6 +1202,7 @@ export function initUx() {
     installKeyboardShortcuts();
     installEmptyStateBooster();
     installErrorBeautifier();
+    installPatches();
     watchAuth();
     // vystavit globální API pro případné využití z runtime
     W.EZOP4_UX = {
