@@ -110,7 +110,7 @@ html.ux-quiet .pcb-corner { display: none; }
   pointer-events: none;
 }
 
-/* Toggle button (visible only on mobile) */
+/* Toggle button */
 .ux-fab-toggle {
   width: 52px;
   height: 52px;
@@ -131,16 +131,6 @@ html.ux-quiet .pcb-corner { display: none; }
   transition: transform .25s cubic-bezier(.34,1.56,.64,1);
 }
 .ux-fab:not(.collapsed) .ux-fab-toggle-icon { transform: rotate(45deg); }
-
-/* Desktop: always show all, hide toggle */
-@media (min-width: 900px) {
-  .ux-fab.collapsed .ux-fab-btn {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-  }
-  .ux-fab-toggle { display: none; }
-}
 
 /* ──────────────────────────
    Panely (overlay vpravo)
