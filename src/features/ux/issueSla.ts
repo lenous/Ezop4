@@ -222,7 +222,118 @@ function patchRenderIssues() {
   W.__uxPatchedRenderIssues = true;
 }
 
+/* ════════════════════════════════
+   ASSIGNMENT — detail modal
+════════════════════════════════ */
+
+function findIssue(id: string): any | null {
+  return bridgeIssues().find((i: any) => i.id === id) || null;
+}
+
+export function assignIssue(issueId: string, userId: string | null): boolean {
+  const issue = findIssue(issueId);
+  if (!issue) return false;
+  const user = W.__ezopBridge?.user?.() || null;
+  const prevAssignee = issue.assignedTo || null;
+
+  if (!userId) {
+    delete issue.assignedTo;
+    delete issue.assignedAt;
+    delete issue.assignedBy;
+  } else {
+    issue.assignedTo = userId;
+    issue.assignedAt = new Date().toISOString();
+    issue.assignedBy = user?.name || user?.login || 'systém';
+  }
+
+  if (typeof W.saveState === 'function') W.saveState();
+
+  if (typeof W.writeAudit === 'function') {
+    try {
+      const assignee = userId
+        ? bridgeUsers().find((u: any) => u.id === userId)?.name || userId
+        : 'nikdo';
+      W.writeAudit(
+        userId ? 'issue.assigned' : 'issue.unassigned',
+        'issue', issueId,
+        `Přiřazení problému: ${assignee}`,
+        { assignedTo: prevAssignee },
+        { assignedTo: userId }
+      );
+    } catch { /* ignore audit failures */ }
+  }
+
+  if (typeof W.showToast === 'function') {
+    const name = userId
+      ? bridgeUsers().find((u: any) => u.id === userId)?.name || 'uživateli'
+      : null;
+    W.showToast(name ? `✅ Přiřazeno: ${name}` : '↩️ Přiřazení zrušeno');
+  }
+  return true;
+}
+
+// Expose for inline onclick handlers
+W.uxAssignIssue = function (issueId: string, selectEl: HTMLSelectElement) {
+  const userId = selectEl.value || null;
+  assignIssue(issueId, userId);
+  // Refresh views
+  if (typeof W.renderIssues === 'function' && W.__ezopBridge?.page?.() === 'issues') {
+    W.renderIssues();
+  }
+  if (typeof W.openIssueDetail === 'function') {
+    W.openIssueDetail(issueId);
+  }
+};
+
+function assignmentSectionHtml(issue: any): string {
+  const users = bridgeUsers();
+  const opts = users.map((u: any) => {
+    const sel = issue.assignedTo === u.id ? 'selected' : '';
+    return `<option value="${escapeText(u.id)}" ${sel}>${escapeText(u.name)} · ${escapeText(u.login)}</option>`;
+  }).join('');
+  const age = calcIssueAge(issue);
+  const ageBlock = age
+    ? `<div class="ux-assign-meta">⏱ Stáří hlášení: <b class="ux-sla-${age.tone}">${age.label}</b></div>`
+    : '';
+  const assignedInfo = issue.assignedTo
+    ? `<div class="ux-assign-meta">📌 Přiřazeno: <b>${escapeText(users.find((u: any) => u.id === issue.assignedTo)?.name || issue.assignedTo)}</b>${issue.assignedAt ? ` · ${new Date(issue.assignedAt).toLocaleString('cs-CZ')}` : ''}</div>`
+    : '';
+  return `
+    <div class="ux-issue-assign-section">
+      <div class="ux-issue-assign-title">👥 Přiřazení odpovědné osoby</div>
+      ${ageBlock}
+      ${assignedInfo}
+      <div class="ux-issue-assign-row">
+        <select class="input ux-issue-assign-select" id="ux-issue-assign-select"
+          onchange="uxAssignIssue('${escapeText(issue.id)}', this)">
+          <option value="">— Nepřiřazeno —</option>
+          ${opts}
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+function patchOpenIssueDetail() {
+  if (W.__uxPatchedIssueDetailAssign) return;
+  if (typeof W.openIssueDetail !== 'function') return;
+  const original = W.openIssueDetail;
+  W.openIssueDetail = function (issueId: string, ...rest: any[]) {
+    const result = original.call(this, issueId, ...rest);
+    setTimeout(() => {
+      const issue = findIssue(issueId);
+      if (!issue || issue.resolved) return;
+      const body = document.getElementById('modal-body');
+      if (!body || body.querySelector('.ux-issue-assign-section')) return;
+      body.insertAdjacentHTML('beforeend', assignmentSectionHtml(issue));
+    }, 0);
+    return result;
+  };
+  W.__uxPatchedIssueDetailAssign = true;
+}
+
 export function installIssueSla() {
   patchIssueCard();
   patchRenderIssues();
+  patchOpenIssueDetail();
 }

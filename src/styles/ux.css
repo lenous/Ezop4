@@ -1103,6 +1103,46 @@ html.ux-banner-active .topbar { top: 36px; }
   font-style: italic;
 }
 
+.ux-issue-assign-section {
+  margin-top: 16px;
+  padding: 14px;
+  background: rgba(54,176,174,.06);
+  border: 1px solid rgba(54,176,174,.25);
+  border-radius: 10px;
+}
+.ux-issue-assign-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--teal2, #36b0ae);
+  margin-bottom: 10px;
+}
+.ux-assign-meta {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+.ux-assign-meta b { color: var(--text); font-weight: 700; }
+.ux-assign-meta b.ux-sla-success { color: var(--green, #22c55e); }
+.ux-assign-meta b.ux-sla-warning { color: var(--amber, #f59e0b); }
+.ux-assign-meta b.ux-sla-danger  { color: var(--red, #ef4444); }
+.ux-issue-assign-row { margin-top: 8px; }
+.ux-issue-assign-select {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(168,180,189,.28);
+  color: var(--text);
+  font-family: inherit;
+}
+.ux-issue-assign-select:focus {
+  outline: none;
+  border-color: var(--teal2);
+}
+
 /* ──────────────────────────
    RYCHLÉ FILTRY (CHIPY)
    ────────────────────────── */

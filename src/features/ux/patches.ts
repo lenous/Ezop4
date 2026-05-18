@@ -569,7 +569,7 @@ export function installPatches() {
       && W.__uxPatchedOpenIssue && W.__uxPatchedRenderOrders
       && W.__uxPatchedOpenOrder && W.__uxPatchedTimeline
       && W.__uxPatchedKanbanNav && W.__uxPatchedIssueCard
-      && W.__uxPatchedRenderIssues;
+      && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign;
     if (allDone || attempts > 40) return;
     setTimeout(tick, 100);
   };
