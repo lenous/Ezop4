@@ -569,10 +569,46 @@ function patchTimelineRender() {
   if (W.__uxPatchedTimeline) return;
   if (typeof W.orderTimelineCardHtml !== 'function' || typeof W.orderTimelineItems !== 'function') return;
   W.orderTimelineCardHtml = function (order: any) {
+    // Vypnuto pro operátora vždy
+    const role = (W.__ezopBridge?.user?.()?.role || '').toLowerCase();
+    if (role === 'operator') return '';
+    // Volitelně vypnuto adminem pro všechny role
+    try {
+      if (localStorage.getItem('ezop4_ux_show_timeline_v1') === 'off') return '';
+    } catch { /* ignore */ }
     try { return renderTimelineCard(order); }
     catch { return ''; }
   };
   W.__uxPatchedTimeline = true;
+}
+
+/* ════════════════════════════════
+   DASHBOARD: skryj "Můj prostor" widget
+════════════════════════════════ */
+
+function hideDashboardWorkspaceWidget() {
+  const page = document.getElementById('page-dashboard');
+  if (!page) return;
+  // Najdi card s textem "Můj prostor" a skryj/odstraň
+  page.querySelectorAll<HTMLElement>('.card').forEach(card => {
+    if (card.dataset.uxHiddenWs === '1') return;
+    if (card.textContent?.includes('Můj prostor')) {
+      card.dataset.uxHiddenWs = '1';
+      card.style.display = 'none';
+    }
+  });
+}
+
+function patchHideWorkspaceWidget() {
+  if (W.__uxPatchedHideWsWidget) return;
+  if (typeof W.renderDashboard !== 'function') return;
+  const original = W.renderDashboard;
+  W.renderDashboard = function (...args: any[]) {
+    const result = original.apply(this, args);
+    setTimeout(hideDashboardWorkspaceWidget, 5);
+    return result;
+  };
+  W.__uxPatchedHideWsWidget = true;
 }
 
 /* ════════════════════════════════
@@ -589,6 +625,7 @@ export function installPatches() {
     patchOrderList();
     patchOrderDetail();
     patchTimelineRender();
+    patchHideWorkspaceWidget();
     patchTopbarUserDisplay();
     installKanbanPatch();
     installIssueSla();
@@ -605,7 +642,8 @@ export function installPatches() {
       && W.__uxPatchedRenderIssues && W.__uxPatchedIssueDetailAssign
       && W.__uxPatchedOrderEstimate && W.__uxPatchedRenderOrdersEst
       && W.__uxPatchedDashboardEst && W.__uxPatchedDashboardKpi
-      && W.__uxPatchedTopbarUser && W.__uxAlertInstalled && W.__uxPatchedDashboardBn
+      && W.__uxPatchedTopbarUser && W.__uxPatchedHideWsWidget
+      && W.__uxAlertInstalled && W.__uxPatchedDashboardBn
       && W.__uxPatchedIssuesPareto
       && W.__uxPatchedWorkspaceLabel && W.__uxPatchedNavItemsWs;
     if (allDone || attempts > 40) return;

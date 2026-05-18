@@ -309,6 +309,14 @@ function openSettingsPanel() {
         <h3>Pracovní doba (pro odhad termínů)</h3>
         ${shiftProfileFormHtml()}
       </div>
+      ${getCurrentUser()?.role === 'admin' ? `
+      <div class="ux-section">
+        <h3>Historie zakázky (admin)</h3>
+        <div class="ux-toggle-row">
+          <span>Zobrazit timeline zakázky<small>Pro operátora je vždy skryto. Tento přepínač skryje i pro mistry, TPV a vedení.</small></span>
+          <div class="ux-switch ${localStorage.getItem('ezop4_ux_show_timeline_v1') === 'off' ? '' : 'on'}" id="ux-toggle-timeline"></div>
+        </div>
+      </div>` : ''}
       <div class="ux-section">
         <h3>Tisk</h3>
         <button class="ux-btn" id="ux-print-btn">🖨 Vytisknout aktuální stránku</button>
@@ -317,6 +325,14 @@ function openSettingsPanel() {
     foot: `<button class="ux-btn primary" data-ux-close>Hotovo</button>`,
     onMount: (root) => {
       bindShiftProfileForm(root);
+      const timelineToggle = root.querySelector<HTMLElement>('#ux-toggle-timeline');
+      timelineToggle?.addEventListener('click', () => {
+        const off = localStorage.getItem('ezop4_ux_show_timeline_v1') === 'off';
+        const next = off ? 'on' : 'off';
+        try { localStorage.setItem('ezop4_ux_show_timeline_v1', next); } catch { /* quota */ }
+        timelineToggle.classList.toggle('on', next === 'on');
+        audit('ux:toggle-timeline', { value: next });
+      });
       root.querySelectorAll<HTMLButtonElement>('#ux-theme-seg button').forEach(btn => {
         btn.addEventListener('click', () => {
           const mode = btn.dataset.uxTheme as ThemeMode;
