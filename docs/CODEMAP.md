@@ -14,10 +14,12 @@ Use this map before opening large files. It keeps future changes focused and che
 - Role permission overrides: `src/legacy/runtime.js`, search `renderAdminRolePermissions`; defaults in `src/domain/defaultData.ts`
 - Security checklist: `src/legacy/runtime.js`, search `renderSecurityChecklist`; shown in Admin → Systém → Ezop4
 - Role menu visibility: `src/legacy/runtime.js`, search `renderRoleNavVisibility` and `navVisibleForCurrentUser`
+- User start page preference: `src/legacy/runtime.js`, search `START_PAGE_KEY`, `preferredStartPage`, and `updateStartPagePreference`; shown in Profile.
 - Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
 - Notification center: `src/legacy/runtime.js`, search `buildNotifications`, `openNotificationsModal`, `snoozeNotification`, and `resolveIssueFromNotification`; styles in `src/styles/components.css`
 - Issue detail workflow: `src/legacy/runtime.js`, search `renderIssues`, `issueCardHtml`, `openIssueDetail`, and `resolveIssueFromDetail`; styles use `issue-detail-*`
+- Issue summary on Problems page: `src/features/ux/issueAnalysis.ts`; styles use `ux-issue-summary-*` in `src/styles/ux.css`
 - Dashboard clean overview: `src/legacy/runtime.js`, search `dashboardCleanOverviewHtml`, `dashboardSecondaryOverviewHtml`, `dashboardStopMiniHtml`, and `orderStopItems`; styles use `dashboard-*`
 - Dashboard UX add-ons: `src/features/ux/bottleneck.ts`, `kpiCharts.ts`, and `predictive.ts`; they must not inject large panels when `.dashboard-clean` is present.
 - Work queue cards and click-through: `src/legacy/runtime.js`, search `renderWorkQueue`, `queueCardHtml`, and `queueCardOpen`

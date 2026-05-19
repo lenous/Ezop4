@@ -132,35 +132,34 @@ function buildCardHtml(): string {
   const total = buckets.reduce((s, b) => s + b.count, 0);
   if (total === 0) return '';
 
-  // 80/20 detection
-  let cum = 0;
-  let stationsFor80 = buckets.length;
-  for (let i = 0; i < buckets.length; i++) {
-    cum += buckets[i].count;
-    if (cum / total >= 0.8) { stationsFor80 = i + 1; break; }
-  }
   const top = buckets[0];
   const topPct = Math.round(top.count / total * 100);
+  const rows = buckets.slice(0, 4).map(b => {
+    const pct = Math.round((b.count / total) * 100);
+    return `
+      <div class="ux-issue-summary-row">
+        <span>${escText(b.icon)}</span>
+        <b>${escText(b.label)}</b>
+        <em>${b.unresolved} otevřené / ${b.count} celkem</em>
+        <i style="width:${pct}%"></i>
+      </div>`;
+  }).join('');
 
-  const insight = stationsFor80 === 1
-    ? `<b>${escText(top.label)}</b> má ${topPct} % všech problémů — soustřeď řešení sem.`
-    : `Top ${stationsFor80} stanic generují 80 % problémů. <b>${escText(top.label)}</b> vede s ${topPct} %.`;
-
-  return `<section class="card ux-pareto-card">
-    <div class="ux-pareto-head">
-      <div>
-        <div class="card-title">📈 Pareto analýza příčin</div>
-        <div class="app-muted">${total} problémů za posledních ${LOOKBACK_DAYS} dnů · podle stanic</div>
-      </div>
-      <div class="ux-pareto-legend">
-        <span><i style="background:#4f8df9;opacity:.5"></i>Celkem</span>
-        <span><i style="background:#ef4444"></i>Otevřené</span>
-        <span><i style="background:#f59e0b"></i>Kumul. %</span>
+  return `<details class="advanced-panel ux-issue-summary-panel">
+    <summary>
+      <span>Souhrn problémů</span>
+      <span class="advanced-panel-subtitle">${total} za ${LOOKBACK_DAYS} dnů · nejvíc ${escText(top.label)} (${topPct} %)</span>
+    </summary>
+    <div class="advanced-panel-body">
+      <div class="ux-issue-summary-card">
+        <div class="ux-issue-summary-head">
+          <strong>Kde se problémy hromadí</strong>
+          <small>Stručný přehled podle stanovišť. Detailní řešení je níže v seznamu problémů.</small>
+        </div>
+        <div class="ux-issue-summary-list">${rows}</div>
       </div>
     </div>
-    ${paretoSvg(buckets)}
-    <div class="ux-pareto-insight">💡 ${insight}</div>
-  </section>`;
+  </details>`;
 }
 
 function injectCard() {

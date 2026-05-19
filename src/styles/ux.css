@@ -1870,6 +1870,79 @@ html.ux-banner-active .topbar { top: 36px; }
   color: var(--text);
 }
 
+.ux-issue-summary-panel {
+  margin: 12px 0;
+}
+
+.ux-issue-summary-card {
+  display: grid;
+  gap: 12px;
+}
+
+.ux-issue-summary-head strong,
+.ux-issue-summary-head small {
+  display: block;
+}
+
+.ux-issue-summary-head strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.ux-issue-summary-head small {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
+.ux-issue-summary-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ux-issue-summary-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(168,180,189,.13);
+  border-radius: 8px;
+  background: rgba(255,255,255,.028);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.ux-issue-summary-row > *:not(i) {
+  position: relative;
+  z-index: 1;
+}
+
+.ux-issue-summary-row b {
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ux-issue-summary-row em {
+  color: var(--text2);
+  font-size: 11px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.ux-issue-summary-row i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #ef4444, #f59e0b);
+  opacity: .75;
+}
+
 /* ════════════════════════════════
    TIMELINE TRIGGER (kompaktní karta → modal)
 ════════════════════════════════ */

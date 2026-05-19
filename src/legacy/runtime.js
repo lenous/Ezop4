@@ -1531,8 +1531,62 @@ function stationAuditId(order, station) {
 const REMEMBER_USER_KEY = 'vyrobais-remember-user';
 const LOGIN_GUARD_KEY = 'vyrobais-login-guard-v1';
 const PASSKEYS_KEY = 'ezop4-passkeys-v1';
+const START_PAGE_KEY = 'ezop4-start-page';
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MS = 60 * 1000;
+
+function startPageStorageKey(user = currentUser) {
+  return `${START_PAGE_KEY}:${normalizeLogin(user?.login || user?.id || 'anonymous')}`;
+}
+
+function defaultStartPageForRole(role = currentUser?.role) {
+  if (role === 'operator') return 'orders';
+  if (role === 'dispatcher') return 'issues';
+  if (role === 'management') return 'issues';
+  if (role === 'tpv') return 'orders';
+  return 'dashboard';
+}
+
+function startPageOptions() {
+  const labels = {
+    dashboard: 'Přehled',
+    orders: 'Zakázky',
+    queue: 'Fronty pracovišť',
+    issues: 'Problémy',
+    kpi: 'KPI',
+    admin: 'Správa',
+    workspace: 'Můj prostor',
+    profile: 'Profil',
+  };
+  return getNavItems().map(item => ({
+    id: item.id,
+    label: labels[item.id] || item.label.replace(/\s*\(\d+\)/, ''),
+  }));
+}
+
+function preferredStartPage() {
+  const options = startPageOptions();
+  const allowed = new Set(options.map(item => item.id));
+  let saved = '';
+  try { saved = localStorage.getItem(startPageStorageKey()) || ''; }
+  catch { saved = ''; }
+  if (saved && allowed.has(saved)) return saved;
+  const fallback = defaultStartPageForRole();
+  return allowed.has(fallback) ? fallback : (options[0]?.id || 'dashboard');
+}
+
+function updateStartPagePreference(page) {
+  const allowed = new Set(startPageOptions().map(item => item.id));
+  if (!allowed.has(page)) {
+    showToast('Tuto stránku nelze nastavit jako úvodní.');
+    renderProfile();
+    return;
+  }
+  try { localStorage.setItem(startPageStorageKey(), page); }
+  catch { /* Osobní nastavení je jen lokální volba v prohlížeči. */ }
+  showToast('Úvodní stránka nastavena');
+  renderProfile();
+}
 
 function loadLoginGuard() {
   try {
@@ -2615,11 +2669,11 @@ async function initApp() {
   const target = params.get('go');
   const orderCode = params.get('order') || params.get('code') || params.get('qr');
   const stationCode = params.get('station');
-  const validTargets = ['dashboard','orders','queue','issues','workspace','profile','kpi','admin'];
+  const validTargets = ['dashboard','orders','queue','kanban','issues','workspace','profile','kpi','admin'];
   if (orderCode && openOrderByCode(orderCode, { station: stationCode, silent: true })) {
     // Deeplink otevřel zakázku nebo stanoviště.
   } else {
-    navigateTo(validTargets.includes(target) ? target : 'dashboard');
+    navigateTo(validTargets.includes(target) ? target : preferredStartPage());
   }
 
   refreshAttendanceIndicator();
@@ -8589,6 +8643,8 @@ function renderProfile() {
   const u = currentUser;
   const passkey = passkeyForCurrentUser();
   const passkeyAvailable = passkeySupported();
+  const startOptions = startPageOptions();
+  const selectedStartPage = preferredStartPage();
   document.getElementById('page-profile').innerHTML = `
     <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">👤 Profil</div>
     <div class="card" style="text-align:center;padding:28px">
@@ -8621,7 +8677,26 @@ function renderProfile() {
     </div>
 
     <div class="card">
+      <div class="card-title">🏁 Spuštění aplikace</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+        Vyberte stránku, která se otevře hned po přihlášení na tomto zařízení.
+      </div>
+      <select class="input" onchange="updateStartPagePreference(this.value)">
+        ${startOptions.map(item => `
+          <option value="${escapeHtml(item.id)}" ${item.id === selectedStartPage ? 'selected' : ''}>${escapeHtml(item.label)}</option>
+        `).join('')}
+      </select>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">
+        Výchozí návrh: operátor → Zakázky, mistr/vedení → Problémy.
+      </div>
+    </div>
+
+    ${u.role === 'admin' ? `
+    <div class="card">
       <div class="card-title">🔐 Oprávnění role</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
+        Kompletní seznam oprávnění je dostupný jen adminovi.
+      </div>
       ${[
         ['view_orders','Zobrazení zakázek'],
         ['edit_qty','Zadávání počtů kusů'],
@@ -8642,6 +8717,7 @@ function renderProfile() {
           <span style="font-size:13px">${can(action) ? '✅' : '🚫'}</span>
         </div>`).join('')}
     </div>
+    ` : ''}
 
     <div style="margin-top:8px">
       <button class="btn btn-danger" style="width:100%" onclick="doLogout()">🚪 Odhlásit se</button>
