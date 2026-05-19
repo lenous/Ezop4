@@ -1061,12 +1061,12 @@ function stationLoadColor(level) {
   return 'var(--green)';
 }
 
-function dashboardPlanningRiskHtml(orders) {
+function dashboardPlanningRiskHtml(orders, context = null) {
   if (!isManagerRole()) return '';
   const overdueOrders = orders.filter(isOrderOverdue)
     .sort((a, b) => dateOnlyTime(a.due) - dateOnlyTime(b.due) || priorityRank(a.priority) - priorityRank(b.priority));
   const blockedOrders = orders.filter(isOrderBlocked);
-  const loads = stationLoadSummaries();
+  const loads = context?.loads || stationLoadSummaries();
   const riskyLoads = loads.filter(load => load.level !== 'ok').slice(0, 4);
   const readinessRisks = readinessRiskCounts(orders);
   const readinessRiskTotal = Object.values(readinessRisks).reduce((sum, item) => sum + item.count, 0);
@@ -2809,42 +2809,113 @@ function refreshCurrentView() {
 }
 
 // ── ISSUES PAGE (visible to ALL users) ────────────────
+let issueFilter = 'open';
+
+function issueFilterLabel(filter) {
+  return {
+    open: 'Aktivní',
+    high: 'Vysoká priorita',
+    mine: 'Moje hlášení',
+    resolved: 'Vyřešené',
+    all: 'Vše',
+  }[filter || 'open'] || 'Aktivní';
+}
+
+function issueMatchesFilter(issue, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'resolved') return Boolean(issue.resolved);
+  if (filter === 'high') return !issue.resolved && issue.severity === 'high';
+  if (filter === 'mine') {
+    const login = normalizeLogin(currentUser?.login);
+    return issue.reportedByUserId === currentUser?.id ||
+      normalizeLogin(issue.reportedByLogin) === login ||
+      issue.reportedBy === currentUser?.name;
+  }
+  return !issue.resolved;
+}
+
+function setIssueFilter(filter) {
+  issueFilter = filter || 'open';
+  renderIssues();
+}
+
+function issueCommandHtml(issues, filtered) {
+  const open = issues.filter(i => !i.resolved);
+  const high = open.filter(i => i.severity === 'high');
+  const mine = issues.filter(i => issueMatchesFilter(i, 'mine'));
+  const resolved = issues.filter(i => i.resolved);
+  const primary = high[0] || open[0] || filtered[0] || issues[0];
+  const filters = [
+    ['open', 'Aktivní', open.length],
+    ['high', 'Vysoká', high.length],
+    ['mine', 'Moje', mine.length],
+    ['resolved', 'Vyřešené', resolved.length],
+    ['all', 'Vše', issues.length],
+  ];
+
+  return `<section class="issues-command">
+    <div class="issues-command-main">
+      <div class="app-shift-label"><span>⚠️</span><strong>Řízení problémů</strong></div>
+      <h2>${primary ? escapeHtml(primary.orderNumber || 'Problém') : 'Bez problémů'}</h2>
+      <p>${primary
+        ? `${escapeHtml(primary.stationName || 'Stanoviště')} · ${escapeHtml(primary.description || 'bez popisu')}`
+        : 'Aktuálně nejsou hlášené žádné problémy.'}</p>
+      <div class="issues-filter-pills">
+        ${filters.map(([id, label, count]) => `
+          <button class="issues-filter-pill ${issueFilter === id ? 'active' : ''}" onclick="setIssueFilter('${id}')">
+            <span>${count}</span><strong>${label}</strong>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="issues-command-side">
+      ${primary ? `
+        <button class="issues-focus-card" type="button" onclick="openIssueDetail('${primary.id}')">
+          <span>${primary.stationIcon || '⚠️'}</span>
+          <div>
+            <strong>${escapeHtml(primary.stationName || 'Stanoviště')}</strong>
+            <em>${escapeHtml(primary.orderName || primary.orderNumber || '')}</em>
+          </div>
+          <b>Detail</b>
+        </button>
+      ` : `<div class="issues-focus-card issues-focus-empty">Bez aktivního problému</div>`}
+      <div class="issues-command-stats">
+        <button type="button" onclick="setIssueFilter('open')"><span>${open.length}</span><em>aktivní</em></button>
+        <button type="button" onclick="setIssueFilter('high')"><span>${high.length}</span><em>vysoké</em></button>
+        <button type="button" onclick="setIssueFilter('resolved')"><span>${resolved.length}</span><em>vyřešené</em></button>
+      </div>
+    </div>
+  </section>`;
+}
+
 function renderIssues() {
   const issues = visibleIssues();
-  const open = issues.filter(i => !i.resolved);
-  const closed = issues.filter(i => i.resolved);
+  const filtered = issues.filter(issue => issueMatchesFilter(issue, issueFilter));
   const isManager = canResolveIssues(currentUser.role);
 
   document.getElementById('page-issues').innerHTML = `
-    <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">
-      ⚠️ Hlášené problémy
-    </div>
-
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-val" style="color:var(--red)">${open.length}</div>
-        <div class="stat-lbl">Aktivní</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val" style="color:var(--green)">${closed.length}</div>
-        <div class="stat-lbl">Vyřešené</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val" style="color:var(--amber)">${open.filter(i=>i.severity==='high').length}</div>
-        <div class="stat-lbl">Vysoká priorita</div>
+    <div class="app-list-toolbar">
+      <div>
+        <div class="app-page-title"><strong>⚠️ Problémy</strong></div>
+        <div class="app-page-subtitle">Hlášení z výroby, front a zakázek.</div>
       </div>
     </div>
 
-    <div class="section-title">Aktivní problémy (${open.length})</div>
-    ${open.length === 0
-      ? `<div class="card" style="text-align:center;color:var(--text2);padding:30px">
-          ✅ Žádné aktivní problémy</div>`
-      : open.map(i => issueCardHtml(i, isManager)).join('')}
+    ${issueCommandHtml(issues, filtered)}
 
-    ${closed.length > 0 ? `
-      <div class="section-title">Vyřešené (${closed.length})</div>
-      ${closed.slice(0,5).map(i => issueCardHtml(i, false)).join('')}
-    ` : ''}
+    <div class="card app-filter-card issues-filter-card">
+      <div>
+        <strong>${escapeHtml(issueFilterLabel(issueFilter))}</strong>
+        <span>${filtered.length} ${filtered.length===1?'problém':filtered.length<5?'problémy':'problémů'}</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="setIssueFilter('open')">Aktivní</button>
+    </div>
+
+    <div class="issues-list">
+      ${filtered.length === 0
+        ? `<div class="card app-empty" style="text-align:center;color:var(--text2);padding:30px">✅ Žádný problém pro tento filtr</div>`
+        : filtered.map(i => issueCardHtml(i, isManager && !i.resolved)).join('')}
+    </div>
   `;
 }
 
@@ -2855,28 +2926,29 @@ function issueCardHtml(i, canResolve) {
   const agoTxt = ago < 1 ? 'právě teď' : ago < 60 ? `před ${ago} min` : `před ${Math.round(ago/60)} h`;
   const recipient = issueRecipientLabel(i);
 
-  return `<div class="card" style="border-left:4px solid ${sevColor};${i.resolved?'opacity:.55':''};cursor:pointer" onclick="openIssueDetail('${i.id}')">
-    <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px">
-      <div style="font-size:24px">${i.stationIcon}</div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:700;color:var(--text)">${i.stationName}</div>
-        <div style="font-size:11px;color:var(--text2)">${i.orderName} · ${i.orderNumber}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">📨 ${escapeHtml(recipient)}</div>
+  return `<div class="card issue-card ${i.resolved ? 'resolved' : ''}" style="--issue-color:${sevColor}" onclick="openIssueDetail('${i.id}')">
+    <div class="issue-card-icon">${i.stationIcon || '⚠️'}</div>
+    <div class="issue-card-main">
+      <div class="issue-card-head">
+        <div>
+          <strong>${escapeHtml(i.stationName || 'Stanoviště')}</strong>
+          <span>${escapeHtml(i.orderName || '')} · ${escapeHtml(i.orderNumber || '')}</span>
+        </div>
+        <span class="badge" style="background:${sevColor}22;color:${sevColor}">${sevLabel(i.severity)}</span>
       </div>
-      <span class="badge" style="background:${sevColor}22;color:${sevColor}">${sevLabel(i.severity)}</span>
-    </div>
-    <div style="font-size:13px;color:var(--text);background:var(--card2);padding:10px;border-radius:8px;margin-bottom:8px">
-      "${i.description}"
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text2)">
-      <div>
-        👤 ${i.reportedBy} <span style="color:var(--text3)">·</span> ${agoTxt}
+      <div class="issue-card-message">${escapeHtml(i.description || '')}</div>
+      <div class="issue-card-meta">
+        <span>👤 ${escapeHtml(i.reportedBy || '')}</span>
+        <span>📨 ${escapeHtml(recipient)}</span>
+        <span>${agoTxt}</span>
       </div>
+    </div>
+    <div class="issue-card-actions">
       ${i.resolved
-        ? `<span style="color:var(--green)">✅ Vyřešil ${i.resolvedBy}</span>`
+        ? `<span class="issue-resolved">✅ Vyřešil ${escapeHtml(i.resolvedBy || '')}</span>`
         : canResolve
           ? `<button class="btn btn-teal btn-sm" onclick="event.stopPropagation();resolveIssue('${i.id}')">✓ Označit vyřešeno</button>`
-          : `<span style="color:var(--amber)">⏳ Čeká na vyřešení</span>`
+          : `<span class="issue-pending">⏳ Čeká na vyřešení</span>`
       }
     </div>
   </div>`;
@@ -3194,6 +3266,8 @@ function renderDashboard() {
   const issues = orders.filter(o => o.stations.some(s => s.status === 'issue')).length;
   const done   = orders.filter(o => o.stations.every(s => ['completed','skipped'].includes(s.status))).length;
   const urgent = orders.filter(o => o.priority === 'urgent').length;
+  const stats = { total, inProg, issues, done, urgent };
+  const context = dashboardContext(orders, stats);
 
   document.getElementById('page-dashboard').innerHTML = `
     <div class="app-page-hero">
@@ -3210,6 +3284,8 @@ function renderDashboard() {
     </div>
     <div class="divider"></div>
 
+    ${dashboardShiftCommandHtml(context)}
+
     ${announcementsBannerHtml()}
 
     ${shiftHandoverWidgetHtml()}
@@ -3218,28 +3294,178 @@ function renderDashboard() {
 
     ${dashboardOperatorWorkHtml()}
 
-    ${dashboardCockpitHtml(orders, { total, inProg, issues, done, urgent })}
+    ${dashboardCockpitHtml(context)}
     ${dashboardStoppedWorkHtml(orders)}
-    ${dashboardPlanningRiskHtml(orders)}
+    ${dashboardPlanningRiskHtml(orders, context)}
   `;
 }
 
-function dashboardCockpitHtml(orders, stats) {
-  const allQueueItems = workQueueItems('');
+function dashboardContext(orders, stats) {
+  const queueItems = workQueueItems('');
   const openIssues = visibleIssues().filter(i => !i.resolved);
+  const overdueOrders = orders.filter(isOrderOverdue);
+  const blockedOrders = orders.filter(isOrderBlocked);
+  const loads = stationLoadSummaries();
+  const bottleneck = loads[0];
+  return { orders, stats, queueItems, openIssues, overdueOrders, blockedOrders, loads, bottleneck };
+}
+
+function dashboardStationRows(context) {
+  const queueItems = context.queueItems || [];
+  return accessibleStations().map(st => {
+    const items = queueItems.filter(item => Number(item.station?.stId) === Number(st.id));
+    const blockedCount = items.filter(item => isOrderBlocked(item.order)).length;
+    const readyCount = items.filter(item => item.queueState.label === 'Připraveno').length;
+    const activeCount = items.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label)).length;
+    return { st, items, blockedCount, readyCount, activeCount };
+  }).filter(row => row.items.length || queueItems.length === 0).slice(0, 7);
+}
+
+function dashboardShiftCommandHtml(context) {
+  const { orders, stats, queueItems, openIssues, overdueOrders, blockedOrders, bottleneck } = context;
+  const pressure = overdueOrders.length + openIssues.length + blockedOrders.length + (bottleneck && bottleneck.level !== 'ok' ? 1 : 0);
+  const tone = pressure >= 4 ? 'risk' : pressure > 0 ? 'watch' : 'calm';
+  const statusLabel = tone === 'risk' ? 'Zásah dnes' : tone === 'watch' ? 'Sledovat' : 'Klidný provoz';
+  const action = dashboardPrimaryAction(orders, queueItems, openIssues, overdueOrders, bottleneck);
+
+  return `<section class="app-shift-command app-shift-command-${tone}">
+    <div class="app-shift-main">
+      <div class="app-shift-label">
+        <span>${tone === 'risk' ? '⚠️' : tone === 'watch' ? '🟡' : '🟢'}</span>
+        <strong>${statusLabel}</strong>
+      </div>
+      <h2>Směna pod kontrolou</h2>
+      <p>${escapeHtml(action.summary)}</p>
+      <div class="app-shift-actions">
+        <button class="btn btn-primary" onclick="${action.onclick}">${escapeHtml(action.button)}</button>
+        <button class="btn btn-ghost" onclick="navigateTo('queue')">Fronty</button>
+        <button class="btn btn-ghost" onclick="navigateTo('orders')">Zakázky</button>
+      </div>
+    </div>
+    <div class="app-shift-side">
+      <button class="app-shift-next" type="button" onclick="${action.onclick}">
+        <span>${action.icon}</span>
+        <div>
+          <strong>${escapeHtml(action.title)}</strong>
+          <em>${escapeHtml(action.detail)}</em>
+        </div>
+        <b>→</b>
+      </button>
+      <div class="app-shift-metrics">
+        <button type="button" onclick="showOrdersFiltered('overdue')">
+          <span>${overdueOrders.length}</span><em>po termínu</em>
+        </button>
+        <button type="button" onclick="navigateTo('issues')">
+          <span>${openIssues.length || stats.issues}</span><em>problémy</em>
+        </button>
+        <button type="button" onclick="navigateTo('queue')">
+          <span>${queueItems.length}</span><em>ve frontách</em>
+        </button>
+        <button type="button" onclick="${bottleneck ? `openQueueForStation('${bottleneck.station.id}')` : "navigateTo('queue')"}">
+          <span>${bottleneck ? bottleneck.count : 0}</span><em>${bottleneck ? escapeHtml(bottleneck.station.name) : 'bez zátěže'}</em>
+        </button>
+      </div>
+      ${dashboardQuickActionsHtml(context)}
+    </div>
+  </section>`;
+}
+
+function dashboardQuickActionsHtml(context) {
+  const { openIssues, overdueOrders, bottleneck } = context;
+  const issueCount = openIssues.length || context.stats?.issues || 0;
+  const items = [
+    { icon:'🔎', label:'Hledat', desc:'zakázku / osobu', action:'openGlobalSearch()' },
+    { icon:'📌', label:'Kanban', desc:'tok výroby', action:"navigateTo('kanban')" },
+    { icon:'⏰', label:'Skluz', desc:`${overdueOrders.length} po termínu`, action:"showOrdersFiltered('overdue')" },
+    { icon:'⚠️', label:'Problémy', desc:`${issueCount} otevřené`, action:"navigateTo('issues')" },
+    { icon:'📅', label:'Docházka', desc:'zápis dne', action:"workspaceTab='attendance';navigateTo('workspace')" },
+  ];
+  if (bottleneck) {
+    items.splice(3, 0, {
+      icon: bottleneck.station.icon || '🚦',
+      label:'Úzké hrdlo',
+      desc: bottleneck.station.name,
+      action:`openQueueForStation('${bottleneck.station.id}')`
+    });
+  }
+  if (can('create_order')) {
+    items.push({ icon:'+', label:'Nová zakázka', desc:'rychlé založení', action:'newOrderModal()' });
+  }
+
+  return `<div class="app-shift-quick" aria-label="Rychlé akce">
+    ${items.map(item => `
+      <button type="button" onclick="${item.action}">
+        <span>${item.icon}</span>
+        <strong>${escapeHtml(item.label)}</strong>
+        <em>${escapeHtml(item.desc)}</em>
+      </button>
+    `).join('')}
+  </div>`;
+}
+
+function dashboardPrimaryAction(orders, queueItems, openIssues, overdueOrders, bottleneck) {
+  if (currentUser?.role === 'operator' && queueItems.length) {
+    const item = queueItems[0];
+    return {
+      icon: item.stInfo?.icon || '🎯',
+      title: `${item.order.number} · ${item.stInfo?.name || 'Pracoviště'}`,
+      detail: `${item.queueState.label} · ${positiveQty(item.order.qty)} ks`,
+      button: 'Otevřít práci',
+      onclick: `openStation('${item.order.id}', '${item.station.stId}')`,
+      summary: 'První karta ukazuje nejbližší práci pro vaše přiřazené stanoviště.'
+    };
+  }
+  if (openIssues.length) {
+    const issue = openIssues[0];
+    return {
+      icon: issue.stationIcon || '⚠️',
+      title: `${issue.stationName || 'Problém'} · ${issue.orderName || 'Zakázka'}`,
+      detail: issue.description || 'Otevřený problém čeká na řešení.',
+      button: 'Řešit problémy',
+      onclick: "navigateTo('issues')",
+      summary: 'Nejdřív řešte otevřené problémy, aby se výroba zbytečně nezastavila.'
+    };
+  }
+  if (overdueOrders.length) {
+    const order = overdueOrders[0];
+    return {
+      icon: '⏰',
+      title: `${order.number} · po termínu`,
+      detail: `${order.name} · ${orderDaysLate(order)} dní`,
+      button: 'Zobrazit zpoždění',
+      onclick: "showOrdersFiltered('overdue')",
+      summary: 'Na první obrazovce jsou vytažené zakázky, které nejvíc tlačí na termín.'
+    };
+  }
+  if (bottleneck) {
+    return {
+      icon: bottleneck.station.icon || '🚦',
+      title: bottleneck.station.name,
+      detail: `${bottleneck.count} položek ve frontě`,
+      button: 'Otevřít úzké hrdlo',
+      onclick: `openQueueForStation('${bottleneck.station.id}')`,
+      summary: 'Sledujte nejzatíženější pracoviště a udržte tok výroby bez čekání.'
+    };
+  }
+  const firstOrder = orders.find(o => !orderIsClosed(o)) || orders[0];
+  return {
+    icon: '✅',
+    title: firstOrder ? `${firstOrder.number} · ${firstOrder.name}` : 'Bez aktivní zakázky',
+    detail: firstOrder ? 'Výroba je bez kritického upozornění.' : 'Nejsou načtené žádné zakázky.',
+    button: firstOrder ? 'Otevřít zakázky' : 'Zobrazit přehled',
+    onclick: firstOrder ? "navigateTo('orders')" : "navigateTo('dashboard')",
+    summary: 'Nejsou vidět kritické blokace. Pokračujte běžnou kontrolou front a zakázek.'
+  };
+}
+
+function dashboardCockpitHtml(context) {
+  const { orders, stats, queueItems: allQueueItems, openIssues } = context;
   const activeOrders = orders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status)));
   const primaryOrder = activeOrders[0] || orders.find(o => !orderIsClosed(o)) || orders[0];
   const overdue = orders.filter(isOrderOverdue).length;
   const blocked = orders.filter(isOrderBlocked).length;
   const punctuality = stats.total ? Math.max(0, Math.round((stats.total - overdue) / stats.total * 100)) : 100;
-  const performance = stats.total ? Math.round(stats.done / stats.total * 100) : 0;
-  const stationRows = accessibleStations().map(st => {
-    const items = workQueueItems(st.id);
-    const blockedCount = items.filter(item => isOrderBlocked(item.order)).length;
-    const readyCount = items.filter(item => item.queueState.label === 'Připraveno').length;
-    const activeCount = items.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label)).length;
-    return { st, items, blockedCount, readyCount, activeCount };
-  }).filter(row => row.items.length || allQueueItems.length === 0).slice(0, 7);
+  const stationRows = dashboardStationRows(context);
 
   return `<section class="app-cockpit">
     <div class="app-cockpit-left">
@@ -3379,17 +3605,21 @@ function dashboardOperatorWorkHtml() {
 // ── WORK QUEUES ───────────────────────────────────────
 let queueStationFilter = '';
 let queueSearch = '';
+let queueQuickFilter = '';
 
 function renderWorkQueue() {
   const allItems = workQueueItems(queueStationFilter);
   const q = queueSearch.trim().toLowerCase();
-  const list = q
+  const searchedItems = q
     ? allItems.filter(item => {
       const o = item.order;
       const st = item.stInfo;
       return `${o.number} ${o.name} ${o.customer || ''} ${st?.name || ''}`.toLowerCase().includes(q);
     })
     : allItems;
+  const list = queueQuickFilter
+    ? searchedItems.filter(item => queueQuickFilterMatches(item, queueQuickFilter))
+    : searchedItems;
   const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter);
 
   document.getElementById('page-queue').innerHTML = `
@@ -3401,11 +3631,13 @@ function renderWorkQueue() {
       <button class="btn btn-ghost btn-sm" onclick="quickOpenOrderModal()">📎 QR / kód</button>
     </div>
 
+    ${queueCommandHtml(list, allItems, manualPlanning)}
+
     <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
           <div class="input-label">Stanoviště</div>
-          <select class="input" id="queue-station" onchange="queueStationFilter=this.value;renderWorkQueue()">
+          <select class="input" id="queue-station" onchange="queueStationFilter=this.value;queueQuickFilter='';renderWorkQueue()">
             <option value="">Aktuální krok každé zakázky</option>
             ${accessibleStations().map(st => `<option value="${st.id}" ${String(st.id)===String(queueStationFilter)?'selected':''}>${st.icon} ${escapeHtml(st.name)}</option>`).join('')}
           </select>
@@ -3418,6 +3650,7 @@ function renderWorkQueue() {
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:8px">
         ${list.length} ${list.length===1?'položka':list.length<5?'položky':'položek'} ve frontě
+        ${queueQuickFilter ? ` · filtr: ${escapeHtml(queueQuickFilterLabel(queueQuickFilter))}` : ''}
         ${manualPlanning ? ` · ruční pořadí zapnuto pro vybrané stanoviště` : ''}
       </div>
     </div>
@@ -3433,16 +3666,94 @@ function renderWorkQueue() {
       </div>
     ` : ''}
 
-    <div class="stat-grid">
-      <div class="stat-card"><div class="stat-val" style="color:var(--red)">${allItems.filter(i=>isOrderBlocked(i.order)).length}</div><div class="stat-lbl">Blokace</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${allItems.filter(i=>i.order.priority==='urgent').length}</div><div class="stat-lbl">Urgentní</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${allItems.filter(i=>i.queueState.label==='Připraveno').length}</div><div class="stat-lbl">Připraveno</div></div>
-    </div>
-
     <div id="queue-list">
       ${list.length ? list.map((item, index) => queueCardHtml(item, index, list.length)).join('') : `<div class="card" style="text-align:center;color:var(--text2);padding:28px">Fronta je prázdná.</div>`}
     </div>
   `;
+}
+
+function queueCommandHtml(list, allItems, manualPlanning) {
+  const primary = list[0];
+  const stats = {
+    ready: allItems.filter(item => item.queueState.label === 'Připraveno').length,
+    active: allItems.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label)).length,
+    issue: allItems.filter(item => item.station.status === 'issue').length,
+    blocked: allItems.filter(item => isOrderBlocked(item.order)).length,
+    urgent: allItems.filter(item => item.order.priority === 'urgent').length,
+    overdue: allItems.filter(item => isOrderOverdue(item.order)).length,
+  };
+  const filters = [
+    ['ready', 'Připraveno', stats.ready],
+    ['active', 'Běží', stats.active],
+    ['issue', 'Problém', stats.issue],
+    ['urgent', 'Urgentní', stats.urgent],
+    ['overdue', 'Po termínu', stats.overdue],
+    ['blocked', 'Blokace', stats.blocked],
+  ];
+
+  return `<section class="queue-command">
+    <div class="queue-command-main">
+      <div class="app-shift-label"><span>🧭</span><strong>Rychlé řízení fronty</strong></div>
+      <h2>${primary ? escapeHtml(primary.order.number) : 'Fronta je prázdná'}</h2>
+      <p>${primary
+        ? `${escapeHtml(primary.order.name)} · ${escapeHtml(primary.stInfo?.name || 'Stanoviště')} · ${escapeHtml(primary.queueState.label)}`
+        : 'Vyberte stanoviště nebo změňte filtr pro další práci.'}</p>
+      <div class="queue-filter-pills">
+        <button class="queue-filter-pill ${queueQuickFilter === '' ? 'active' : ''}" onclick="setQueueQuickFilter('')">
+          <span>${allItems.length}</span><strong>Vše</strong>
+        </button>
+        ${filters.map(([id, label, count]) => `
+          <button class="queue-filter-pill ${queueQuickFilter === id ? 'active' : ''}" onclick="setQueueQuickFilter('${id}')">
+            <span>${count}</span><strong>${label}</strong>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="queue-command-side">
+      ${primary ? `
+        <button class="queue-action-card" type="button" onclick="openStation('${primary.order.id}', '${primary.station.stId}')">
+          <span>${primary.stInfo?.icon || '🔧'}</span>
+          <div>
+            <strong>${escapeHtml(primary.stInfo?.name || 'Stanoviště')}</strong>
+            <em>${escapeHtml(primary.order.customer || primary.order.name || '')}</em>
+          </div>
+          <b>Otevřít</b>
+        </button>
+      ` : `<div class="queue-action-card queue-action-empty">Bez položky k otevření</div>`}
+      <div class="queue-command-stats">
+        <button type="button" onclick="setQueueQuickFilter('blocked')"><span>${stats.blocked}</span><em>blokace</em></button>
+        <button type="button" onclick="setQueueQuickFilter('urgent')"><span>${stats.urgent}</span><em>urgentní</em></button>
+        <button type="button" onclick="setQueueQuickFilter('ready')"><span>${stats.ready}</span><em>připraveno</em></button>
+      </div>
+      ${manualPlanning ? `<div class="queue-command-note">Ruční pořadí je aktivní pro vybrané stanoviště.</div>` : ''}
+    </div>
+  </section>`;
+}
+
+function queueQuickFilterLabel(filter) {
+  return {
+    ready: 'Připraveno',
+    active: 'Běží',
+    issue: 'Problém',
+    urgent: 'Urgentní',
+    overdue: 'Po termínu',
+    blocked: 'Blokace',
+  }[filter] || 'Vše';
+}
+
+function queueQuickFilterMatches(item, filter) {
+  if (filter === 'ready') return item.queueState.label === 'Připraveno';
+  if (filter === 'active') return ['Rozpracováno','Problém'].includes(item.queueState.label);
+  if (filter === 'issue') return item.station.status === 'issue';
+  if (filter === 'urgent') return item.order.priority === 'urgent';
+  if (filter === 'overdue') return isOrderOverdue(item.order);
+  if (filter === 'blocked') return isOrderBlocked(item.order);
+  return true;
+}
+
+function setQueueQuickFilter(filter) {
+  queueQuickFilter = filter || '';
+  renderWorkQueue();
 }
 
 function queueCardHtml(item, position = 0, total = 0) {
@@ -3613,6 +3924,63 @@ function orderFilterLabel(filter) {
   }[filter] || null;
 }
 
+function ordersCommandHtml(list) {
+  const all = visibleOrders();
+  const stats = {
+    total: all.length,
+    active: all.filter(o => o.stations.some(s => ['in_progress','partial'].includes(s.status))).length,
+    urgent: all.filter(o => o.priority === 'urgent').length,
+    overdue: all.filter(isOrderOverdue).length,
+    blocked: all.filter(isOrderBlocked).length,
+  };
+  const primary = list.find(isOrderBlocked) || list.find(isOrderOverdue) || list.find(o => o.priority === 'urgent') || list[0] || all[0];
+  const activeIndex = primary ? activeStationIndex(primary) : -1;
+  const activeStation = activeIndex >= 0 ? primary.stations[activeIndex] : null;
+  const stInfo = activeStation ? STATIONS.find(st => Number(st.id) === Number(activeStation.stId)) : null;
+  const filters = [
+    ['', 'Vše', stats.total],
+    ['in_progress', 'Ve výrobě', stats.active],
+    ['urgent', 'Urgentní', stats.urgent],
+    ['overdue', 'Po termínu', stats.overdue],
+    ['blocked', 'Blokace', stats.blocked],
+  ];
+
+  return `<section class="orders-command">
+    <div class="orders-command-main">
+      <div class="app-shift-label"><span>📋</span><strong>Řízení zakázek</strong></div>
+      <h2>${primary ? escapeHtml(primary.number) : 'Bez zakázek'}</h2>
+      <p>${primary
+        ? `${escapeHtml(primary.name)} · ${escapeHtml(primary.customer || 'zákazník neuveden')}`
+        : 'Po založení zakázky se zde zobrazí nejdůležitější práce.'}</p>
+      <div class="orders-filter-pills">
+        ${filters.map(([id, label, count]) => `
+          <button class="orders-filter-pill ${String(orderFilter || '') === id ? 'active' : ''}" onclick="showOrdersFiltered(${id ? `'${id}'` : 'null'})">
+            <span>${count}</span><strong>${label}</strong>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    <div class="orders-command-side">
+      ${primary ? `
+        <button class="orders-focus-card" type="button" onclick="openOrder('${primary.id}')">
+          <span>${isOrderBlocked(primary) ? '⛔' : isOrderOverdue(primary) ? '⏰' : stInfo?.icon || '📋'}</span>
+          <div>
+            <strong>${escapeHtml(stInfo?.name || 'Detail zakázky')}</strong>
+            <em>${isOrderOverdue(primary) ? `${orderDaysLate(primary)} dní po termínu` : `${positiveQty(primary.qty)} ks · termín ${formatDate(primary.due)}`}</em>
+          </div>
+          <b>Otevřít</b>
+        </button>
+      ` : `<div class="orders-focus-card orders-focus-empty">Bez zakázky k otevření</div>`}
+      <div class="orders-command-stats">
+        <button type="button" onclick="showOrdersFiltered('overdue')"><span>${stats.overdue}</span><em>po termínu</em></button>
+        <button type="button" onclick="showOrdersFiltered('blocked')"><span>${stats.blocked}</span><em>blokace</em></button>
+        <button type="button" onclick="showOrdersFiltered('urgent')"><span>${stats.urgent}</span><em>urgentní</em></button>
+      </div>
+      ${can('create_order') ? `<button class="btn btn-primary btn-sm orders-new-btn" onclick="newOrderModal()">+ Nová zakázka</button>` : ''}
+    </div>
+  </section>`;
+}
+
 function renderOrders() {
   const list = filterOrders(orderSearch);
   const activeFilter = orderFilterLabel(orderFilter);
@@ -3621,6 +3989,8 @@ function renderOrders() {
       <div class="app-page-title"><strong>📋 Zakázky</strong></div>
       ${can('create_order') ? `<button class="btn btn-primary btn-sm" onclick="newOrderModal()">+ Nová zakázka</button>` : ''}
     </div>
+
+    ${ordersCommandHtml(list)}
 
     <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px">
@@ -3657,34 +4027,47 @@ function ordersListHtml(list) {
     const done = o.stations.filter(s=>s.status==='completed').length;
     const pct = Math.round(done/o.stations.length*100);
     const hasIssue = o.stations.some(s=>s.status==='issue');
-    return `<div class="card app-order-card" style="cursor:pointer;padding:14px;margin-bottom:8px" onclick="openOrder('${o.id}')">
-      <div style="display:flex;align-items:flex-start;gap:12px">
-        <div style="background:var(--card2);border:1px solid var(--gold);border-radius:8px;padding:8px 10px;text-align:center;min-width:84px">
-          <div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:1px">Zakázka</div>
-          <div style="font-size:18px;font-weight:800;color:var(--gold);font-family:'SF Mono',Menlo,monospace;letter-spacing:1px">${o.number}</div>
+    const activeIndex = activeStationIndex(o);
+    const station = activeIndex >= 0 ? o.stations[activeIndex] : null;
+    const stInfo = station ? STATIONS.find(st => Number(st.id) === Number(station.stId)) : null;
+    const meta = station ? stationStatusMeta(station.status) : null;
+    return `<div class="card app-order-card" onclick="openOrder('${o.id}')">
+      <div class="order-card-grid">
+        <div class="order-number-tile">
+          <span>Zakázka</span>
+          <strong>${o.number}</strong>
         </div>
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-            <span style="font-size:13px;font-weight:600;color:var(--teal2)">${o.customer}</span>
+        <div class="order-card-main">
+          <div class="order-card-top">
+            <div class="order-card-title">
+              <span>${escapeHtml(o.customer || 'Zákazník neuveden')}</span>
+              <strong>${escapeHtml(o.name)}</strong>
+            </div>
+            <div class="order-card-badges">
             <span class="badge badge-${o.priority}">${priorityLabel(o.priority)}</span>
             ${orderBlockedBadgeHtml(o)}
             ${orderReadinessBadgeHtml(o)}
-            <span style="margin-left:auto">${orderMoreButton(o.id)}</span>
+              ${orderMoreButton(o.id)}
+            </div>
           </div>
-          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">${o.name}</div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2)">
+          <div class="order-card-meta">
             <span>📦 ${o.qty} ks</span>
-            <span>·</span>
             <span>📅 ${formatDate(o.due)}</span>
+            ${stInfo ? `<span>${stInfo.icon} ${escapeHtml(stInfo.name)}</span>` : ''}
+            ${meta ? `<span class="order-card-stage ${meta.action}">${escapeHtml(meta.label)}</span>` : ''}
           </div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+          <div class="order-card-progress">
             <div class="progress-bar" style="flex:1">
               <div class="progress-fill" style="width:${pct}%"></div>
             </div>
-            <span style="font-size:10px;color:var(--text2);min-width:30px;text-align:right">${pct}%</span>
+            <span>${pct}%</span>
           </div>
-          ${isOrderBlocked(o) ? `<div style="font-size:10px;color:var(--red);margin-top:4px">⛔ Blokace: ${escapeHtml(orderBlockReason(o))}</div>` : ''}
-          ${hasIssue ? '<div style="font-size:10px;color:var(--red);margin-top:4px">⚠️ Problém na stanovišti</div>' : ''}
+          <div class="order-card-footer">
+            <span>${done}/${o.stations.length} stanovišť dokončeno</span>
+            ${isOrderOverdue(o) ? `<b class="danger">⏰ ${orderDaysLate(o)} dní po termínu</b>` : ''}
+            ${isOrderBlocked(o) ? `<b class="danger">⛔ ${escapeHtml(orderBlockReason(o))}</b>` : ''}
+            ${hasIssue ? '<b class="danger">⚠️ Problém na stanovišti</b>' : ''}
+          </div>
         </div>
       </div>
     </div>`;
@@ -4859,6 +5242,61 @@ function stationWorkSummaryHtml(order, station, stInfo) {
   </div>`;
 }
 
+function stationFastPanelHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const available = stationInputQty(order, station, index);
+  const processed = stationProcessedQty(station);
+  const remaining = Math.max(0, available - processed);
+  const noteCount = stationNotes(order.id, station.stId).length;
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const claimedByExactUser = Boolean(
+    (station.workerUserId && station.workerUserId === currentUser?.id) ||
+    (station.workerLogin && normalizeLogin(station.workerLogin) === normalizeLogin(currentUser?.login))
+  );
+  const blocked = isOrderBlocked(order);
+  const worker = stationWorkerLabel(station);
+  const claimLabel = !claimed ? 'Volné k převzetí' : claimedByExactUser ? 'Převzato vámi' : `Převzal ${worker}`;
+  return `<section class="station-fast-panel" style="--station-fast-color:${state.color}">
+    <div class="station-fast-main">
+      <div class="station-fast-kicker"><span>${state.icon}</span><strong>Rychlá práce</strong></div>
+      <h2>${escapeHtml(order.number)}</h2>
+      <p>${escapeHtml(order.name)} · ${stInfo?.icon ?? '🔧'} ${escapeHtml(stInfo?.name ?? 'Stanoviště')}</p>
+      <div class="station-fast-status">
+        <span class="station-fast-state">${escapeHtml(state.label)}</span>
+        <span>${escapeHtml(claimLabel)}</span>
+        ${blocked ? '<span class="danger">Blokace</span>' : ''}
+        <span>📝 ${noteCount}</span>
+      </div>
+    </div>
+    <div class="station-fast-side">
+      <div class="station-fast-metrics">
+        <button type="button" onclick="openNumpad('ok','OK',${station.qtyOk})">
+          <strong>${available}</strong><span>${index > 0 ? 'Přišlo' : 'Objednáno'}</span>
+        </button>
+        <button type="button" onclick="openNumpad('ok','OK',${station.qtyOk})">
+          <strong>${positiveQty(station.qtyOk)}</strong><span>OK</span>
+        </button>
+        <button type="button" onclick="openNumpad('rework','Oprava',${station.qtyRework})">
+          <strong>${positiveQty(station.qtyRework)}</strong><span>Oprava</span>
+        </button>
+        <button type="button" onclick="openNumpad('scrap','Zmetek',${station.qtyScrap})">
+          <strong>${positiveQty(station.qtyScrap)}</strong><span>Zmetek</span>
+        </button>
+        <button type="button" onclick="openNumpad('ok','OK',${station.qtyOk})">
+          <strong>${remaining}</strong><span>Zbývá</span>
+        </button>
+      </div>
+      <div class="station-fast-actions">
+        ${stationWorkActionButtons(order, station)}
+        <button class="btn btn-primary btn-sm" onclick="saveQty()">Uložit počty</button>
+        <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Problém</button>
+        <button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Zakázka</button>
+      </div>
+    </div>
+  </section>`;
+}
+
 function renderStationDetail(stInfo) {
   const s = selectedStation;
   const stationSupportCards = `
@@ -4901,6 +5339,8 @@ function renderStationDetail(stInfo) {
       </div>
       ${stationWorkSummaryHtml(selectedOrder, selectedStation, stInfo)}
     </div>
+
+    ${stationFastPanelHtml(selectedOrder, selectedStation, stInfo)}
 
     <div class="station-workspace-grid">
       <div class="station-workspace-main">
