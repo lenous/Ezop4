@@ -14,7 +14,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Role permission overrides: `src/legacy/runtime.js`, search `renderAdminRolePermissions`; defaults in `src/domain/defaultData.ts`
 - Security checklist: `src/legacy/runtime.js`, search `renderSecurityChecklist`; shown in Admin → Systém → Ezop4
 - Role menu visibility: `src/legacy/runtime.js`, search `renderRoleNavVisibility` and `navVisibleForCurrentUser`
-- User start page preference: `src/legacy/runtime.js`, search `START_PAGE_KEY`, `preferredStartPage`, and `updateStartPagePreference`; shown in Profile.
+- User start page preference: `src/legacy/runtime.js`, search `START_PAGE_KEY`, `preferredStartPage`, `updateStartPagePreference`, and `renderRoleStartPageSettings`; user override is in Profile, role defaults are in Admin → Nastavení.
 - Mobile bottom navigation: `src/legacy/runtime.js`, search `getBottomNavModel` and `openMobileMoreNav`; styles in `src/styles/components.css`
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
 - Notification center: `src/legacy/runtime.js`, search `buildNotifications`, `openNotificationsModal`, `snoozeNotification`, and `resolveIssueFromNotification`; styles in `src/styles/components.css`

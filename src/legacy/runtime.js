@@ -1534,12 +1534,32 @@ const PASSKEYS_KEY = 'ezop4-passkeys-v1';
 const START_PAGE_KEY = 'ezop4-start-page';
 const LOGIN_MAX_ATTEMPTS = 5;
 const LOGIN_LOCK_MS = 60 * 1000;
+const START_PAGE_LABELS = {
+  dashboard: 'Přehled',
+  orders: 'Zakázky',
+  queue: 'Fronty pracovišť',
+  kanban: 'Kanban',
+  issues: 'Problémy',
+  kpi: 'KPI',
+  admin: 'Správa',
+  workspace: 'Můj prostor',
+  profile: 'Profil',
+};
+const ROLE_START_PAGE_OPTIONS = {
+  admin: ['dashboard','orders','queue','kanban','issues','kpi','admin','workspace','profile'],
+  dispatcher: ['issues','queue','kanban','orders','dashboard','kpi','workspace','profile'],
+  management: ['issues','kpi','kanban','orders','dashboard','workspace','profile'],
+  tpv: ['orders','issues','queue','kanban','dashboard','kpi','workspace','profile'],
+  operator: ['orders','queue','issues','dashboard','profile'],
+};
 
 function startPageStorageKey(user = currentUser) {
   return `${START_PAGE_KEY}:${normalizeLogin(user?.login || user?.id || 'anonymous')}`;
 }
 
 function defaultStartPageForRole(role = currentUser?.role) {
+  const configured = APP_SETTINGS?.startPagesByRole?.[role];
+  if (configured) return configured;
   if (role === 'operator') return 'orders';
   if (role === 'dispatcher') return 'issues';
   if (role === 'management') return 'issues';
@@ -1548,19 +1568,9 @@ function defaultStartPageForRole(role = currentUser?.role) {
 }
 
 function startPageOptions() {
-  const labels = {
-    dashboard: 'Přehled',
-    orders: 'Zakázky',
-    queue: 'Fronty pracovišť',
-    issues: 'Problémy',
-    kpi: 'KPI',
-    admin: 'Správa',
-    workspace: 'Můj prostor',
-    profile: 'Profil',
-  };
   return getNavItems().map(item => ({
     id: item.id,
-    label: labels[item.id] || item.label.replace(/\s*\(\d+\)/, ''),
+    label: START_PAGE_LABELS[item.id] || item.label.replace(/\s*\(\d+\)/, ''),
   }));
 }
 
@@ -1586,6 +1596,59 @@ function updateStartPagePreference(page) {
   catch { /* Osobní nastavení je jen lokální volba v prohlížeči. */ }
   showToast('Úvodní stránka nastavena');
   renderProfile();
+}
+
+function roleStartPageOptions(role) {
+  const configured = APP_SETTINGS?.startPagesByRole?.[role];
+  const base = ROLE_START_PAGE_OPTIONS[role] || ['dashboard','orders','issues','profile'];
+  return configured && !base.includes(configured) ? [configured, ...base] : base;
+}
+
+function renderRoleStartPageSettings() {
+  const roles = ['operator', 'dispatcher', 'tpv', 'management', 'admin'];
+  return `<div class="card" style="border-left:4px solid var(--cyan)">
+    <div class="card-title">🏁 Úvodní stránka podle role</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+      Admin nastaví výchozí stránku po přihlášení. Uživatel si ji může ve svém Profilu přepsat jen pro svoje zařízení.
+    </div>
+    ${roles.map(role => {
+      const selected = defaultStartPageForRole(role);
+      return `<div class="settings-row">
+        <div>
+          <div class="settings-label">${escapeHtml(ROLE_LABELS[role] || role)}</div>
+          <div class="settings-desc">Výchozí stránka pro novou relaci této role</div>
+        </div>
+        <select class="input" style="width:190px" onchange="updateRoleStartPage('${role}', this.value)">
+          ${roleStartPageOptions(role).map(page => `
+            <option value="${escapeHtml(page)}" ${page === selected ? 'selected' : ''}>${escapeHtml(START_PAGE_LABELS[page] || page)}</option>
+          `).join('')}
+        </select>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function updateRoleStartPage(role, page) {
+  const allowed = roleStartPageOptions(role);
+  if (!allowed.includes(page)) {
+    showToast('Tuto stránku nelze pro roli nastavit.');
+    renderAdmin();
+    return;
+  }
+  if (!APP_SETTINGS.startPagesByRole) APP_SETTINGS.startPagesByRole = {};
+  const before = APP_SETTINGS.startPagesByRole[role] || defaultStartPageForRole(role);
+  APP_SETTINGS.startPagesByRole[role] = page;
+  writeAudit(
+    'app.role_start_page_changed',
+    'app_settings',
+    `start-page:${role}`,
+    `${ROLE_LABELS[role] || role}: ${START_PAGE_LABELS[before] || before} → ${START_PAGE_LABELS[page] || page}`,
+    { page: before },
+    { page }
+  );
+  saveState();
+  renderAdmin();
+  showToast('Výchozí stránka role uložena');
 }
 
 function loadLoginGuard() {
@@ -7750,6 +7813,7 @@ function renderAdminSettings() {
         `).join('')}
       </div>
     </div>
+    ${renderRoleStartPageSettings()}
     <div class="card">
       <div class="card-title">⚙️ Základní nastavení</div>
       ${generalSettings.map(rowHtml).join('')}

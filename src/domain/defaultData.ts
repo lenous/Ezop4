@@ -42,6 +42,13 @@ export const appSettings = {
   hiddenNavByRole: {
     operator: ['kpi', 'workspace'],
   },
+  startPagesByRole: {
+    admin: 'dashboard',
+    dispatcher: 'issues',
+    management: 'issues',
+    tpv: 'orders',
+    operator: 'orders',
+  },
   appDisplayMode: 'standard',
 };
 
