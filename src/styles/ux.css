@@ -47,7 +47,7 @@ html.ux-quiet #app .card::before { display: none; }
 html.ux-quiet .pcb-corner { display: none; }
 
 /* ──────────────────────────
-   Floating Action Bar (FAB)
+   Floating Action Button — speed-dial
    ────────────────────────── */
 .ux-fab {
   position: fixed;
@@ -62,6 +62,8 @@ html.ux-quiet .pcb-corner { display: none; }
 @media (min-width: 900px) {
   .ux-fab { bottom: 18px; right: 18px; }
 }
+
+/* Action buttons */
 .ux-fab-btn {
   width: 48px;
   height: 48px;
@@ -73,14 +75,14 @@ html.ux-quiet .pcb-corner { display: none; }
   cursor: pointer;
   box-shadow: 0 12px 28px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.06);
   display: flex; align-items: center; justify-content: center;
-  transition: transform .15s, border-color .2s, background .2s;
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1), opacity .15s, border-color .2s, background .2s;
 }
 .ux-fab-btn:hover {
   transform: translateY(-2px);
   border-color: rgba(125,214,210,.5);
   background: linear-gradient(180deg, rgba(54,176,174,.26), rgba(13,20,24,1));
 }
-.ux-fab-btn:active { transform: translateY(0); }
+.ux-fab-btn:active { transform: translateY(0) !important; }
 .ux-fab-btn[data-primary="1"] {
   background: linear-gradient(135deg, var(--gold2), var(--gold));
   color: #111;
@@ -100,6 +102,35 @@ html.ux-quiet .pcb-corner { display: none; }
   transition: opacity .15s;
 }
 .ux-fab-btn:hover .ux-fab-label { opacity: 1; }
+
+/* Mobile speed-dial: collapsed hides action buttons */
+.ux-fab.collapsed .ux-fab-btn {
+  opacity: 0;
+  transform: scale(0.6) translateY(10px);
+  pointer-events: none;
+}
+
+/* Toggle button */
+.ux-fab-toggle {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  border: 1px solid rgba(168,180,189,.22);
+  background: linear-gradient(135deg, rgba(226,184,32,.8), rgba(175,130,10,.9));
+  color: #111;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.12);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .18s, box-shadow .18s;
+}
+.ux-fab-toggle:hover { transform: scale(1.07); box-shadow: 0 12px 32px rgba(0,0,0,.5); }
+.ux-fab-toggle:active { transform: scale(0.96); }
+.ux-fab-toggle-icon {
+  display: inline-block;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+.ux-fab:not(.collapsed) .ux-fab-toggle-icon { transform: rotate(45deg); }
 
 /* ──────────────────────────
    Panely (overlay vpravo)
@@ -581,6 +612,68 @@ html.ux-banner-active .topbar { top: 36px; }
 .ux-rate button.active {
   border-color: var(--gold);
   background: rgba(226,184,32,.12);
+}
+
+/* ──────────────────────────
+   Global redesign polish
+   ────────────────────────── */
+
+/* Card top shimmer — slightly brighter */
+#app .card::before {
+  background: linear-gradient(90deg, transparent, rgba(54,176,174,.65), rgba(226,184,32,.52), transparent);
+  opacity: .6;
+}
+
+/* Button hover lift — tighter */
+#app .btn:hover,
+.modal-overlay .btn:hover { transform: translateY(-1px); }
+#app .btn:active,
+.modal-overlay .btn:active { transform: translateY(0) scale(.99); filter: brightness(.97); }
+
+/* Ghost button — teal tint on hover */
+#app .btn-ghost:hover,
+.modal-overlay .btn-ghost:hover {
+  border-color: rgba(125,214,210,.40);
+  background: rgba(125,214,210,.08);
+  color: var(--text);
+}
+
+/* Teal button glow */
+#app .btn-teal,
+.modal-overlay .btn-teal {
+  box-shadow: 0 8px 22px rgba(54,176,174,.20), inset 0 1px 0 rgba(255,255,255,.15);
+}
+
+/* Page content area — subtle top separator */
+#app .page.active::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125,214,210,.12), transparent);
+  margin-bottom: 20px;
+}
+
+/* Cockpit cards more polished */
+#app .app-cockpit-left,
+#app .app-cockpit-main {
+  border-radius: 10px;
+}
+
+/* Table header row slightly darker */
+#app .tbl th {
+  background: rgba(255,255,255,.022);
+  border-bottom-color: rgba(168,180,189,.16);
+}
+
+/* Row hover — more visible */
+#app .tbl tr:hover td { background: rgba(125,214,210,.055); }
+
+/* Input focus ring more elegant */
+#app .input:focus,
+.modal-overlay .input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(226,184,32,.10);
+  background: rgba(4,9,12,.95);
 }
 
 /* ──────────────────────────

@@ -870,10 +870,10 @@
     mask-image: linear-gradient(180deg, rgba(0,0,0,.82), transparent 78%);
   }
   #app .topbar {
-    background: rgba(7,12,15,.88); border-bottom: 1px solid rgba(125,214,210,.18);
-    display: flex; align-items: center; padding: 0 22px; height: 58px; gap: 12px; position: sticky; top: 0; z-index: 100; min-width: 0;
-    backdrop-filter: blur(18px);
-    box-shadow: 0 14px 34px rgba(0,0,0,.26);
+    background: rgba(6,9,12,.92); border-bottom: 1px solid rgba(125,214,210,.14);
+    display: flex; align-items: center; padding: 0 20px; height: 60px; gap: 10px; position: sticky; top: 0; z-index: 100; min-width: 0;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 1px 0 rgba(125,214,210,.06), 0 16px 40px rgba(0,0,0,.34);
   }
   #app .topbar-logo {
     font-size: 21px; font-weight: 900; color: var(--text); letter-spacing: .2px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -898,23 +898,30 @@
   }
   #app .logout-btn:hover { border-color: rgba(226,184,32,.5); color: var(--gold); background: rgba(226,184,32,.08); transform: translateY(-1px); }
 
-  /* ── NAV TABS ── */
+  /* ── NAV TABS — pill style ── */
   #app .navtabs {
-    background: rgba(8,13,16,.84); border-bottom: 1px solid rgba(125,214,210,.12);
-    display: flex; overflow-x: auto; gap: 4px; padding: 0 max(18px, calc((100vw - 1320px) / 2));
-    backdrop-filter: blur(14px);
+    background: rgba(7,11,14,.90); border-bottom: 1px solid rgba(125,214,210,.10);
+    display: flex; overflow-x: auto; gap: 3px;
+    padding: 8px max(14px, calc((100vw - 1320px) / 2));
+    align-items: center;
+    backdrop-filter: blur(16px);
     scrollbar-width: thin;
-    scrollbar-color: rgba(125,214,210,.26) transparent;
+    scrollbar-color: rgba(125,214,210,.20) transparent;
   }
   #app .navtab {
-    padding: 14px 16px 13px; font-size: 11px; font-weight: 800; color: var(--text2);
-    border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
-    text-transform: uppercase; letter-spacing: .45px; transition: color .2s, background .2s, border-color .2s;
-    border-radius: 8px 8px 0 0;
+    padding: 7px 14px; font-size: 11px; font-weight: 800; color: var(--text2);
+    border: 0; border-bottom: 0; cursor: pointer; white-space: nowrap;
+    text-transform: uppercase; letter-spacing: .45px;
+    transition: color .18s, background .18s, box-shadow .18s;
+    border-radius: 999px;
   }
-  #app .navtab:hover { color: var(--text); background: rgba(255,255,255,.035); }
-  #app .navtab.active { color: var(--gold); border-bottom-color: var(--gold); background: linear-gradient(180deg, rgba(226,184,32,.13), rgba(226,184,32,.02)); }
-  #app .navtab .tab-icon { margin-right: 7px; opacity: .95; }
+  #app .navtab:hover { color: var(--text); background: rgba(255,255,255,.06); }
+  #app .navtab.active {
+    color: #111;
+    background: linear-gradient(135deg, var(--gold2), var(--gold));
+    box-shadow: 0 3px 14px rgba(226,184,32,.28);
+  }
+  #app .navtab .tab-icon { margin-right: 6px; opacity: 1; }
 
   /* ── CONTENT ── */
   #app .page { display: none; padding: 28px 22px 34px; max-width: 1280px; margin: 0 auto; width: 100%; min-width: 0; position: relative; z-index: 1; }
