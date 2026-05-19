@@ -3215,7 +3215,22 @@ function renderDashboard() {
     ${dashboardOperatorWorkHtml()}
 
     ${dashboardCleanOverviewHtml(orders, { total, inProg, issues, done, urgent })}
+
+    ${dashboardSecondaryOverviewHtml()}
   `;
+}
+
+function dashboardSecondaryOverviewHtml() {
+  const widgets = [
+    shiftHandoverWidgetHtml(),
+    dashboardWorkspaceWidgetHtml(),
+  ].filter(Boolean);
+  if (!widgets.length) return '';
+  return advancedPanelHtml(
+    'Další přehled',
+    `<div class="dashboard-secondary-grid">${widgets.join('')}</div>`,
+    { subtitle: 'předání směny a osobní prostor' }
+  );
 }
 
 function dashboardCleanOverviewHtml(orders, stats) {

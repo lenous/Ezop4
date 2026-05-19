@@ -398,6 +398,7 @@ function buildPanelHtml(): string {
 function injectChartsIntoDashboard() {
   const page = document.getElementById('page-dashboard');
   if (!page) return;
+  if (page.querySelector('.dashboard-clean')) return;
   if (!shouldShowCharts()) return;
   if (page.querySelector('.ux-kpi-panel')) return;
 

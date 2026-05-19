@@ -925,6 +925,15 @@
     margin-bottom: 16px;
   }
 
+  #app .dashboard-secondary-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  #app .dashboard-secondary-grid > * {
+    margin-bottom: 0 !important;
+  }
+
   #app .dashboard-focus-card,
   #app .dashboard-summary-card,
   #app .dashboard-mini-row {

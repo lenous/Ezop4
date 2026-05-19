@@ -357,6 +357,7 @@ function patchRenderDashboardEstimate() {
     setTimeout(() => {
       const page = document.getElementById('page-dashboard');
       if (!page || page.querySelector('.ux-est-dash-tile')) return;
+      if (page.querySelector('.dashboard-clean')) return;
       const danger = dangerOrderCount();
       if (danger === 0) return;
       const tile = document.createElement('div');

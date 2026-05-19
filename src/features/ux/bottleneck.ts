@@ -160,6 +160,7 @@ function buildCardHtml(): string {
 function injectCard() {
   const page = document.getElementById('page-dashboard');
   if (!page) return;
+  if (page.querySelector('.dashboard-clean')) return;
   if (!shouldShow()) return;
   if (page.querySelector('.ux-bn-card')) return;
 

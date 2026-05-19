@@ -18,7 +18,8 @@ Use this map before opening large files. It keeps future changes focused and che
 - Mobile back gesture and top reset: `src/legacy/runtime.js`, search `mobileBackStep` and `scrollAppToTop`
 - Notification center: `src/legacy/runtime.js`, search `buildNotifications`, `openNotificationsModal`, `snoozeNotification`, and `resolveIssueFromNotification`; styles in `src/styles/components.css`
 - Issue detail workflow: `src/legacy/runtime.js`, search `renderIssues`, `issueCardHtml`, `openIssueDetail`, and `resolveIssueFromDetail`; styles use `issue-detail-*`
-- Dashboard clean overview: `src/legacy/runtime.js`, search `dashboardCleanOverviewHtml`, `dashboardStopMiniHtml`, and `orderStopItems`; styles use `dashboard-*`
+- Dashboard clean overview: `src/legacy/runtime.js`, search `dashboardCleanOverviewHtml`, `dashboardSecondaryOverviewHtml`, `dashboardStopMiniHtml`, and `orderStopItems`; styles use `dashboard-*`
+- Dashboard UX add-ons: `src/features/ux/bottleneck.ts`, `kpiCharts.ts`, and `predictive.ts`; they must not inject large panels when `.dashboard-clean` is present.
 - Work queue cards and click-through: `src/legacy/runtime.js`, search `renderWorkQueue`, `queueCardHtml`, and `queueCardOpen`
 - Secondary order actions menu: `src/legacy/runtime.js`, search `openOrderActionsModal` and `orderMoreButton`; styles in `src/styles/components.css` under `action-menu`
 - Direct messenger: `src/legacy/runtime.js`, search `openMessengerModal` and `sendDirectMessage`; topbar button in `src/ui/shell.ts`; role gate is `use_messenger`
