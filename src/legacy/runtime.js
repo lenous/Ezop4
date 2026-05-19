@@ -2615,7 +2615,7 @@ async function initApp() {
   const target = params.get('go');
   const orderCode = params.get('order') || params.get('code') || params.get('qr');
   const stationCode = params.get('station');
-  const validTargets = ['dashboard','orders','queue','issues','workspace','profile','kpi','admin'];
+  const validTargets = ['dashboard','kanban','orders','queue','issues','workspace','profile','kpi','admin'];
   if (orderCode && openOrderByCode(orderCode, { station: stationCode, silent: true })) {
     // Deeplink otevřel zakázku nebo stanoviště.
   } else {
@@ -2777,6 +2777,7 @@ function navigateTo(page, options = {}) {
 
   const renderers = {
     dashboard: renderDashboard,
+    kanban:    () => window.__ezopRenderKanban?.(),
     queue:     renderWorkQueue,
     orders:    renderOrders,
     issues:    renderIssues,
