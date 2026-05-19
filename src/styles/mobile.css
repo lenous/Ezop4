@@ -253,6 +253,17 @@
     #app .app-list-toolbar { padding: 4px 0 10px; align-items: flex-start; }
     #app .app-page-title { font-size: 18px; line-height: 1.2; }
     #app .app-page-subtitle { font-size: 11px; line-height: 1.35; }
+    #app .dashboard-clean { gap: 10px; }
+    #app .dashboard-focus-card { grid-template-columns: 1fr; padding: 13px; gap: 5px; }
+    #app .dashboard-focus-card strong { font-size: 17px; white-space: normal; }
+    #app .dashboard-focus-card small { white-space: normal; }
+    #app .dashboard-focus-card em { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 4px; }
+    #app .dashboard-summary-grid { grid-template-columns: 1fr; gap: 8px; }
+    #app .dashboard-summary-card { min-height: 78px; padding: 11px 12px; }
+    #app .dashboard-summary-card strong { font-size: 27px; }
+    #app .dashboard-mini-list { padding: 11px; }
+    #app .dashboard-mini-row { grid-template-columns: 30px minmax(0, 1fr); }
+    #app .dashboard-mini-row em { grid-column: 2; grid-row: auto; white-space: normal; }
     #app .app-cockpit { grid-template-columns: 1fr; gap: 10px; }
     #app .app-cockpit-left,
     #app .app-cockpit-main { padding: 12px; }

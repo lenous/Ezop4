@@ -3212,16 +3212,86 @@ function renderDashboard() {
 
     ${announcementsBannerHtml()}
 
-    ${shiftHandoverWidgetHtml()}
-
-    ${dashboardWorkspaceWidgetHtml()}
-
     ${dashboardOperatorWorkHtml()}
 
-    ${dashboardCockpitHtml(orders, { total, inProg, issues, done, urgent })}
-    ${dashboardStoppedWorkHtml(orders)}
-    ${dashboardPlanningRiskHtml(orders)}
+    ${dashboardCleanOverviewHtml(orders, { total, inProg, issues, done, urgent })}
   `;
+}
+
+function dashboardCleanOverviewHtml(orders, stats) {
+  const stopItems = orderStopItems(orders);
+  const focus = stopItems[0] || null;
+  const allQueueItems = workQueueItems('');
+  const openIssues = visibleIssues().filter(i => !i.resolved);
+  const blocked = orders.filter(isOrderBlocked).length;
+  const overdue = orders.filter(isOrderOverdue).length;
+  const active = orders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status))).length;
+  const focusAction = focus
+    ? (focus.station ? `openStation('${focus.order.id}','${focus.station.stId}')` : `openOrder('${focus.order.id}')`)
+    : "navigateTo('queue')";
+  const focusTitle = focus ? `${focus.order.number} · ${focus.label}` : 'Výroba běží bez viditelné blokace';
+  const focusText = focus ? focus.reason : 'Přehled je čistý. Další práci najdete ve frontě pracovišť.';
+  const focusMeta = focus?.stInfo ? `${focus.stInfo.icon} ${focus.stInfo.name}` : 'Otevřít frontu';
+
+  return `<section class="dashboard-clean">
+    <button class="dashboard-focus-card ${focus ? focus.tone : 'success'}" type="button" onclick="${focusAction}">
+      <span>${focus ? 'Teď řešit' : 'Aktuální stav'}</span>
+      <strong>${escapeHtml(focusTitle)}</strong>
+      <small>${escapeHtml(focusText)}</small>
+      <em>${escapeHtml(focusMeta)}</em>
+    </button>
+
+    <div class="dashboard-summary-grid">
+      <button class="dashboard-summary-card" type="button" onclick="navigateTo('queue')">
+        <span>Fronta</span>
+        <strong>${allQueueItems.length}</strong>
+        <em>položek k práci</em>
+      </button>
+      <button class="dashboard-summary-card" type="button" onclick="showOrdersFiltered(null)">
+        <span>Zakázky</span>
+        <strong>${stats.total}</strong>
+        <em>${active} aktivní · ${stats.done} hotovo</em>
+      </button>
+      <button class="dashboard-summary-card ${openIssues.length || blocked ? 'danger' : ''}" type="button" onclick="navigateTo('issues')">
+        <span>Problémy</span>
+        <strong>${openIssues.length}</strong>
+        <em>${blocked} blokace · ${overdue} po termínu</em>
+      </button>
+    </div>
+
+    ${dashboardStopMiniHtml(stopItems)}
+  </section>`;
+}
+
+function dashboardStopMiniHtml(items) {
+  const top = items.slice(0, 3);
+  if (!top.length) {
+    return `<div class="dashboard-mini-list dashboard-mini-list-calm">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">Co brzdí výrobu</div>
+          <div class="app-muted">Žádná otevřená blokace, problém ani prošlý termín.</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  return `<div class="dashboard-mini-list">
+    <div class="app-panel-head">
+      <div>
+        <div class="card-title">Co brzdí výrobu</div>
+        <div class="app-muted">Jen nejdůležitější položky. Detail je ve frontách a problémech.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showOrdersFiltered('blocked')">Detail</button>
+    </div>
+    ${top.map(item => `
+      <button class="dashboard-mini-row ${item.tone}" type="button" onclick="${item.station ? `openStation('${item.order.id}','${item.station.stId}')` : `openOrder('${item.order.id}')`}">
+        <span>${item.icon}</span>
+        <b>${escapeHtml(item.order.number)} · ${escapeHtml(item.label)}</b>
+        <small>${escapeHtml(item.reason)}</small>
+        <em>${item.stInfo ? `${item.stInfo.icon} ${escapeHtml(item.stInfo.name)}` : escapeHtml(item.order.name)}</em>
+      </button>
+    `).join('')}
+  </div>`;
 }
 
 function dashboardCockpitHtml(orders, stats) {
