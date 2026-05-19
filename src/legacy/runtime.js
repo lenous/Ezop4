@@ -6486,19 +6486,72 @@ function renderKpiHtml() {
   const totalRework = kpiOrders.reduce((a,o) => a + o.stations.reduce((b,s) => b+s.qtyRework,0),0);
   const totalQty = kpiOrders.reduce((a,o) => a+o.qty,0);
   const yield_ = totalQty > 0 ? Math.round(totalOk/(totalQty)*100) : 0;
+  const activeOrders = kpiOrders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status)));
+  const overdueOrders = kpiOrders.filter(isOrderOverdue);
+  const blockedOrders = kpiOrders.filter(isOrderBlocked);
+  const issueOrders = kpiOrders.filter(o => o.stations.some(s => s.status === 'issue'));
+  const finishedOrders = kpiOrders.filter(orderIsClosed);
+  const completion = kpiOrders.length ? Math.round(finishedOrders.length / kpiOrders.length * 100) : 0;
+  const reworkRate = totalQty > 0 ? Math.round(totalRework / totalQty * 100) : 0;
+  const scrapRate = totalQty > 0 ? Math.round(totalScrap / totalQty * 100) : 0;
+  const focusOrder = blockedOrders[0] || overdueOrders[0] || issueOrders[0] || activeOrders[0] || kpiOrders[0];
 
   const stationStats = STATIONS.map(st => {
     const allSt = kpiOrders.flatMap(o => o.stations.filter(s=>s.stId===st.id));
     const stOk = allSt.reduce((a,s)=>a+s.qtyOk,0);
     const stAll = allSt.reduce((a,s)=>a+s.qtyOk+s.qtyRework+s.qtyScrap,0);
     return { ...st, ok:stOk, total:stAll, pct:stAll>0?Math.round(stOk/stAll*100):null };
-  }).filter(s => s.total > 0);
+  }).filter(s => s.total > 0).sort((a,b) => (a.pct ?? 0) - (b.pct ?? 0));
 
   return `
-    <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">📊 KPI – Výkonnost výroby</div>
-    <div class="card">
-      <div class="card-title">🔎 Filtr KPI</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+    <div class="app-list-toolbar">
+      <div>
+        <div class="app-page-title"><strong>📊 KPI</strong></div>
+        <div class="app-page-subtitle">Výkon, kvalita a rizika výroby podle aktuálního filtru.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="clearKpiFilters()">Vymazat filtr</button>
+    </div>
+
+    <section class="kpi-command">
+      <div class="kpi-command-main">
+        <div class="app-shift-label"><span>📊</span><strong>Výrobní výkon</strong></div>
+        <h2>${yield_}%</h2>
+        <p>${kpiOrders.length ? `${totalOk} OK ks z ${totalQty} plánovaných kusů · ${kpiOrders.length} zakázek ve výběru` : 'Vybraný filtr nemá žádná data.'}</p>
+        <div class="kpi-command-metrics">
+          <button type="button" onclick="showOrdersFiltered(null)"><span>${kpiOrders.length}</span><strong>Zakázky</strong></button>
+          <button type="button" onclick="showOrdersFiltered('in_progress')"><span>${activeOrders.length}</span><strong>Ve výrobě</strong></button>
+          <button type="button" onclick="showOrdersFiltered('overdue')"><span>${overdueOrders.length}</span><strong>Po termínu</strong></button>
+          <button type="button" onclick="navigateTo('issues')"><span>${issueOrders.length}</span><strong>Problémy</strong></button>
+        </div>
+      </div>
+      <div class="kpi-command-side">
+        ${focusOrder ? `
+          <button class="kpi-focus-card" type="button" onclick="openOrder('${focusOrder.id}')">
+            <span>${isOrderBlocked(focusOrder) ? '⛔' : isOrderOverdue(focusOrder) ? '⏰' : '📋'}</span>
+            <div>
+              <strong>${escapeHtml(focusOrder.number)} · ${escapeHtml(focusOrder.name)}</strong>
+              <em>${isOrderOverdue(focusOrder) ? `${orderDaysLate(focusOrder)} dní po termínu` : `${positiveQty(focusOrder.qty)} ks · ${escapeHtml(focusOrder.customer || '')}`}</em>
+            </div>
+            <b>Otevřít</b>
+          </button>
+        ` : `<div class="kpi-focus-card kpi-focus-empty">Bez zakázky ve výběru</div>`}
+        <div class="kpi-quality-grid">
+          <div><span>${completion}%</span><em>dokončení</em></div>
+          <div><span>${reworkRate}%</span><em>opravy</em></div>
+          <div><span>${scrapRate}%</span><em>zmetky</em></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="card app-filter-card kpi-filter-panel">
+      <div class="kpi-filter-head">
+        <div>
+          <strong>Filtr KPI</strong>
+          <span>Zobrazeno ${kpiOrders.length} z ${ORDERS.length} zakázek</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="clearKpiFilters()">Reset</button>
+      </div>
+      <div class="kpi-filter-grid">
         <div>
           <div class="input-label">Zákazník</div>
           <select class="input" onchange="setKpiFilter('customer', this.value)">
@@ -6515,41 +6568,37 @@ function renderKpiHtml() {
           <input class="input" value="${escapeHtml(kpiFilters.number)}" placeholder="např. 261100" oninput="setKpiFilter('number', this.value)">
         </div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <div style="font-size:12px;color:var(--text2)">Zobrazeno ${kpiOrders.length} z ${ORDERS.length} zakázek</div>
-        <button class="btn btn-ghost btn-sm" onclick="clearKpiFilters()">Vymazat filtr</button>
-      </div>
     </div>
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-val" style="color:var(--green)">${yield_}%</div>
-        <div class="stat-lbl">Výtěžnost</div>
+
+    <div class="kpi-metric-grid">
+      <div class="kpi-metric-card success"><span>Výtěžnost</span><strong>${yield_}%</strong><em>${totalOk} OK ks</em></div>
+      <div class="kpi-metric-card"><span>Plán</span><strong>${totalQty}</strong><em>kusů celkem</em></div>
+      <div class="kpi-metric-card warning"><span>Opravy</span><strong>${totalRework}</strong><em>${reworkRate}% z plánu</em></div>
+      <div class="kpi-metric-card danger"><span>Zmetky</span><strong>${totalScrap}</strong><em>${scrapRate}% z plánu</em></div>
+    </div>
+
+    <div class="kpi-layout">
+      <div class="card kpi-panel">
+        <div class="card-title">📈 Výtěžnost podle stanovišť</div>
+        ${stationStats.length ? stationStats.map(s => `
+          <div class="kpi-bar-row">
+            <div class="kpi-bar-lbl">${s.icon} ${escapeHtml(s.name)}</div>
+            <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${s.pct}%"></div></div>
+            <div class="kpi-bar-val">${s.pct}%</div>
+          </div>`).join('') : `<div class="app-empty">Pro vybraný filtr nejsou data stanovišť.</div>`}
       </div>
-      <div class="stat-card">
-        <div class="stat-val">${totalOk}</div>
-        <div class="stat-lbl">OK kusů</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val" style="color:var(--amber)">${totalRework}</div>
-        <div class="stat-lbl">Oprav</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-val" style="color:var(--red)">${totalScrap}</div>
-        <div class="stat-lbl">Zmetků</div>
+
+      <div class="card kpi-panel">
+        <div class="card-title">🚦 Rizika výběru</div>
+        <div class="kpi-risk-list">
+          <button type="button" onclick="showOrdersFiltered('overdue')"><span>${overdueOrders.length}</span><strong>Po termínu</strong><em>zakázky mimo plán</em></button>
+          <button type="button" onclick="showOrdersFiltered('blocked')"><span>${blockedOrders.length}</span><strong>Blokace</strong><em>zastavená výroba</em></button>
+          <button type="button" onclick="navigateTo('issues')"><span>${issueOrders.length}</span><strong>Problémy</strong><em>aktivní hlášení</em></button>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">📈 Výtěžnost podle stanovišť</div>
-      ${stationStats.length ? stationStats.map(s => `
-        <div class="kpi-bar-row">
-          <div class="kpi-bar-lbl">${s.icon} ${s.name.split(' ')[0]}</div>
-          <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${s.pct}%"></div></div>
-          <div class="kpi-bar-val">${s.pct}%</div>
-        </div>`).join('') : `<div style="font-size:12px;color:var(--text2)">Pro vybraný filtr nejsou data stanovišť.</div>`}
-    </div>
-
-    <div class="card">
+    <div class="card kpi-table-card">
       <div class="card-title">📋 Přehled zakázek</div>
       <table class="tbl">
         <thead><tr><th>Zakázka</th><th>Plán</th><th>OK</th><th>Oprava</th><th>Zmetek</th></tr></thead>

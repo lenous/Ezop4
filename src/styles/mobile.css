@@ -296,6 +296,20 @@
     #app .app-cockpit { grid-template-columns: 1fr; gap: 10px; }
     #app .app-cockpit-left,
     #app .app-cockpit-main { padding: 12px; }
+    #app .kpi-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    #app .kpi-command-main h2 { font-size: 34px; }
+    #app .kpi-command-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .kpi-quality-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #app .kpi-focus-card { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 10px; }
+    #app .kpi-focus-card > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .kpi-filter-head { align-items: flex-start; }
+    #app .kpi-filter-grid { grid-template-columns: 1fr; }
+    #app .kpi-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .kpi-metric-card { padding: 11px; }
+    #app .kpi-metric-card strong { font-size: 24px; }
+    #app .kpi-layout { grid-template-columns: 1fr; gap: 10px; }
+    #app .kpi-bar-row { grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; }
+    #app .kpi-bar-lbl { grid-column: 1 / -1; }
     #app .app-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     #app .app-kpi-tile { min-height: 78px; padding: 10px; }
     #app .app-kpi-tile strong { font-size: 23px; }
