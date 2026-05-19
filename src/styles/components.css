@@ -2599,6 +2599,302 @@
     text-align: center;
   }
 
+  #app .workspace-shell {
+    display: grid;
+    gap: 12px;
+    padding: 4px 0 18px;
+  }
+
+  #app .workspace-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+  }
+
+  #app .workspace-head h2 {
+    color: var(--gold);
+    font-size: 28px;
+    line-height: 1.05;
+    margin: 7px 0 4px;
+  }
+
+  #app .workspace-head p {
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  #app .workspace-command {
+    display: grid;
+    grid-template-columns: minmax(300px, .85fr) minmax(0, 1.15fr);
+    gap: 12px;
+  }
+
+  #app .workspace-today-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid rgba(125,214,210,.24);
+    border-left-width: 4px;
+    border-radius: 8px;
+    background:
+      radial-gradient(circle at 0% 0%, rgba(226,184,32,.14), transparent 38%),
+      linear-gradient(135deg, rgba(255,255,255,.052), rgba(255,255,255,.012)),
+      rgba(12,18,22,.94);
+    box-shadow: 0 18px 42px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+
+  #app .workspace-today-card > span {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(0,0,0,.18);
+    font-size: 22px;
+  }
+
+  #app .workspace-today-card strong,
+  #app .workspace-today-card em {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #app .workspace-today-card strong {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  #app .workspace-today-card em {
+    color: var(--text2);
+    font-size: 12px;
+    font-style: normal;
+    margin-top: 3px;
+  }
+
+  #app .workspace-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #app .workspace-stat-grid div {
+    min-width: 0;
+    padding: 13px 12px;
+    border: 1px solid rgba(168,180,189,.14);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+  }
+
+  #app .workspace-stat-grid span,
+  #app .workspace-stat-grid strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #app .workspace-stat-grid span {
+    color: var(--teal2);
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  #app .workspace-stat-grid strong {
+    color: var(--text2);
+    font-size: 10px;
+    font-weight: 900;
+    margin-top: 7px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  #app .workspace-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #app .workspace-tab {
+    appearance: none;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(168,180,189,.14);
+    border-radius: 8px;
+    background: rgba(255,255,255,.025);
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .35px;
+    transition: transform .15s, border-color .2s, background .2s, color .2s;
+  }
+
+  #app .workspace-tab:hover {
+    transform: translateY(-1px);
+    border-color: rgba(125,214,210,.38);
+    color: var(--text);
+  }
+
+  #app .workspace-tab.active {
+    border-color: rgba(226,184,32,.52);
+    background: linear-gradient(180deg, rgba(226,184,32,.18), rgba(226,184,32,.08));
+    color: var(--gold);
+    box-shadow: inset 0 -2px 0 rgba(226,184,32,.75);
+  }
+
+  #app .workspace-content {
+    min-width: 0;
+  }
+
+  #app .workspace-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  #app .workspace-list-head strong,
+  #app .workspace-list-head span {
+    display: block;
+  }
+
+  #app .workspace-list-head strong {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  #app .workspace-list-head span {
+    color: var(--text2);
+    font-size: 12px;
+    line-height: 1.35;
+    margin-top: 2px;
+  }
+
+  #app .workspace-empty,
+  #app .workspace-note,
+  #app .workspace-board {
+    border: 1px solid rgba(168,180,189,.14);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.014)), rgba(10,17,21,.92);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+  }
+
+  #app .workspace-empty {
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    min-height: 190px;
+    padding: 26px 16px;
+    text-align: center;
+    color: var(--text2);
+  }
+
+  #app .workspace-empty div {
+    font-size: 34px;
+  }
+
+  #app .workspace-empty strong {
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  #app .workspace-empty span {
+    max-width: 360px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  #app .workspace-note,
+  #app .workspace-board {
+    padding: 13px;
+    margin-bottom: 10px;
+  }
+
+  #app .workspace-note-head,
+  #app .workspace-board-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  #app .workspace-note-head > span {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .55px;
+    text-transform: uppercase;
+  }
+
+  #app .workspace-delete {
+    color: var(--red);
+    font-size: 11px;
+    padding: 3px 7px;
+  }
+
+  #app .workspace-note p,
+  #app .workspace-board p {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.45;
+    margin: 8px 0;
+    white-space: pre-wrap;
+  }
+
+  #app .workspace-note em,
+  #app .workspace-board-head em {
+    color: var(--text3);
+    display: block;
+    font-size: 11px;
+    font-style: normal;
+    margin-top: 3px;
+  }
+
+  #app .workspace-board-head strong {
+    color: var(--text);
+    display: block;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  #app .workspace-board-counts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  #app .workspace-board-counts span {
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid rgba(168,180,189,.12);
+    border-radius: 8px;
+    background: rgba(255,255,255,.025);
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  #app .workspace-board-counts b {
+    float: right;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+
   #app .workspace-banner {
     display: grid;
     grid-template-columns: minmax(220px, 1fr) minmax(260px, .8fr) auto;
@@ -2684,9 +2980,9 @@
   }
 
   #app .attendance-hero {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, .55fr) auto;
     align-items: center;
-    justify-content: space-between;
     gap: 14px;
     padding: 18px;
     margin-bottom: 12px;
@@ -2706,6 +3002,51 @@
   #app .attendance-hero p {
     color: var(--text2);
     font-size: 12px;
+  }
+
+  #app .attendance-current {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(125,214,210,.22);
+    border-left-width: 4px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.025);
+  }
+
+  #app .attendance-current > span {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(0,0,0,.16);
+    font-size: 19px;
+  }
+
+  #app .attendance-current strong,
+  #app .attendance-current em {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #app .attendance-current strong {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  #app .attendance-current em {
+    color: var(--text2);
+    font-size: 11px;
+    font-style: normal;
+    margin-top: 2px;
   }
 
   #app .attendance-actions {
@@ -2747,6 +3088,43 @@
     color: var(--gold);
     font-size: 18px;
     margin-top: 5px;
+  }
+
+  #app .attendance-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, .36fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  #app .attendance-main,
+  #app .attendance-side {
+    min-width: 0;
+  }
+
+  #app .attendance-side {
+    position: sticky;
+    top: 92px;
+  }
+
+  #app .attendance-legend {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin: 10px 0 14px;
+  }
+
+  #app .attendance-legend span {
+    min-width: 0;
+    padding: 7px 8px;
+    border: 1px solid rgba(168,180,189,.12);
+    border-radius: 8px;
+    background: rgba(255,255,255,.025);
+    font-size: 11px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   #app .attendance-calendar {

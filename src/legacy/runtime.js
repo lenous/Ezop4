@@ -8244,24 +8244,54 @@ function myWorkspace() {
 }
 
 function renderWorkspace() {
+  const ws = myWorkspace();
+  const today = todayDateStr();
+  const todayRec = todayAttendance();
+  const todayMeta = attendanceTypeMeta(todayRec?.type);
+  const todayMins = attendanceMinutes(todayRec);
+  const monthEntries = ws.attendance.filter(a => a.date.slice(0, 7) === today.slice(0, 7));
+  const monthMinutes = monthEntries
+    .filter(a => !a.type || a.type === 'work')
+    .reduce((sum, a) => sum + (attendanceMinutes(a) || 0), 0);
   const tabs = [
     { id: 'notes',      label: '📝 Poznámky'  },
     { id: 'boards',     label: '🔢 Moje kusy' },
     { id: 'attendance', label: '🕐 Docházka'  },
   ];
   document.getElementById('page-workspace').innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px;gap:8px;flex-wrap:wrap">
-      <div style="font-size:16px;font-weight:800;color:var(--gold)">📒 Můj prostor</div>
-      <button class="btn btn-ghost btn-sm" onclick="exportMyWorkspaceCsv()">📥 Export CSV</button>
+    <div class="workspace-shell">
+      <div class="workspace-head">
+        <div>
+          <div class="app-shift-label"><span>📒</span><strong>Osobní provoz</strong></div>
+          <h2>Můj prostor</h2>
+          <p>Poznámky, vlastní počty kusů a docházkový kalendář na jednom místě.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="exportMyWorkspaceCsv()">📥 Export CSV</button>
+      </div>
+      <div class="workspace-command">
+        <div class="workspace-today-card" style="border-color:${todayMeta.color};">
+          <span style="color:${todayMeta.color}">${todayRec ? todayMeta.icon : '📅'}</span>
+          <div>
+            <strong>${todayRec ? todayMeta.label : 'Dnes nezapsáno'}</strong>
+            <em>${todayRec ? `${attendanceRangeLabel(todayRec)}${todayMins !== null ? ` · ${Math.floor(todayMins / 60)}h ${todayMins % 60}m` : ''}` : 'Zapiš práci, lékaře, volno nebo školení.'}</em>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('${today}')">${todayRec ? 'Upravit den' : 'Zapsat den'}</button>
+        </div>
+        <div class="workspace-stat-grid">
+          <div><span>${ws.notes.length}</span><strong>Poznámky</strong></div>
+          <div><span>${ws.myBoards.length}</span><strong>Moje kusy</strong></div>
+          <div><span>${monthEntries.length}</span><strong>Dny v měsíci</strong></div>
+          <div><span>${Math.floor(monthMinutes / 60)}h</span><strong>Odpracováno</strong></div>
+        </div>
+      </div>
+      <div class="workspace-tabs">
+        ${tabs.map(t => `
+          <button class="workspace-tab ${workspaceTab === t.id ? 'active' : ''}"
+            onclick="switchWorkspaceTab('${t.id}')">${t.label}</button>
+        `).join('')}
+      </div>
+      <div id="workspace-content" class="workspace-content"></div>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px">
-      ${tabs.map(t => `
-        <button class="btn ${workspaceTab === t.id ? 'btn-primary' : 'btn-ghost'} btn-sm"
-          style="flex:1;justify-content:center;font-size:12px"
-          onclick="switchWorkspaceTab('${t.id}')">${t.label}</button>
-      `).join('')}
-    </div>
-    <div id="workspace-content"></div>
   `;
   renderWorkspaceContent();
 }
@@ -8322,25 +8352,30 @@ function renderWorkspaceNotes() {
   const notes = [...myWorkspace().notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const catColors = { general: 'var(--blue,#60a5fa)', product: 'var(--gold)', other: 'var(--text2)' };
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div class="workspace-list-head">
+      <div>
+        <strong>Poznámky směny</strong>
+        <span>Rychlé osobní zápisy k výrobě, výrobku nebo předání.</span>
+      </div>
       <button class="btn btn-primary btn-sm" onclick="openAddNoteModal()">＋ Nová poznámka</button>
     </div>
     ${notes.length === 0 ? `
-      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
-        <div style="font-size:32px;margin-bottom:8px">📝</div>
-        <div>Zatím žádné poznámky. Přidej svou první!</div>
+      <div class="workspace-empty">
+        <div>📝</div>
+        <strong>Zatím žádné poznámky</strong>
+        <span>Přidej krátký zápis k výrobku, stroji nebo další směně.</span>
       </div>` : notes.map(n => `
-      <div class="card" style="margin-bottom:10px;position:relative">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-          <span style="font-size:11px;font-weight:700;color:${catColors[n.category] || 'var(--text2)'};text-transform:uppercase;letter-spacing:.5px">
+      <article class="workspace-note">
+        <div class="workspace-note-head">
+          <span style="color:${catColors[n.category] || 'var(--text2)'}">
             ${NOTE_CATEGORIES[n.category] || n.category}
           </span>
-          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px;color:var(--red)"
+          <button class="btn btn-ghost btn-sm workspace-delete"
             onclick="deleteWorkspaceNote('${escapeHtml(n.id)}')">🗑️</button>
         </div>
-        <div style="font-size:14px;color:var(--text);white-space:pre-wrap;margin:6px 0 8px">${escapeHtml(n.text)}</div>
-        <div style="font-size:11px;color:var(--text3)">${formatDateTime(n.createdAt)}</div>
-      </div>`).join('')}
+        <p>${escapeHtml(n.text)}</p>
+        <em>${formatDateTime(n.createdAt)}</em>
+      </article>`).join('')}
   `;
 }
 
@@ -8387,30 +8422,35 @@ function deleteWorkspaceNote(id) {
 function renderWorkspaceBoards() {
   const boards = [...myWorkspace().myBoards].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
   return `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+    <div class="workspace-list-head">
+      <div>
+        <strong>Moje kusy</strong>
+        <span>Vlastní rychlý záznam OK, oprav a zmetků bez zásahu do workflow zakázky.</span>
+      </div>
       <button class="btn btn-primary btn-sm" onclick="openAddBoardsModal()">＋ Přidat záznam</button>
     </div>
     ${boards.length === 0 ? `
-      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
-        <div style="font-size:32px;margin-bottom:8px">🔢</div>
-        <div>Zatím žádné záznamy o kusech.</div>
+      <div class="workspace-empty">
+        <div>🔢</div>
+        <strong>Zatím žádné záznamy</strong>
+        <span>Přidej osobní počet kusů pro rychlé předání nebo kontrolu směny.</span>
       </div>` : boards.map(b => `
-      <div class="card" style="margin-bottom:10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <article class="workspace-board">
+        <div class="workspace-board-head">
           <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${escapeHtml(b.orderNumber)} · ${escapeHtml(b.orderName)}</div>
-            <div style="font-size:11px;color:var(--text3)">${formatDateTime(b.recordedAt)}</div>
+            <strong>${escapeHtml(b.orderNumber)} · ${escapeHtml(b.orderName)}</strong>
+            <em>${formatDateTime(b.recordedAt)}</em>
           </div>
-          <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px;color:var(--red)"
+          <button class="btn btn-ghost btn-sm workspace-delete"
             onclick="deleteWorkspaceBoard('${escapeHtml(b.id)}')">🗑️</button>
         </div>
-        <div style="display:flex;gap:14px;font-size:12px;margin-bottom:${b.note ? 6 : 0}px">
-          <span style="color:var(--green)">✅ OK: <b>${b.qtyOk}</b></span>
-          <span style="color:var(--amber)">🔧 Oprava: <b>${b.qtyRework}</b></span>
-          <span style="color:var(--red)">❌ Zmetek: <b>${b.qtyScrap}</b></span>
+        <div class="workspace-board-counts">
+          <span style="color:var(--green)">✅ OK <b>${b.qtyOk}</b></span>
+          <span style="color:var(--amber)">🔧 Oprava <b>${b.qtyRework}</b></span>
+          <span style="color:var(--red)">❌ Zmetek <b>${b.qtyScrap}</b></span>
         </div>
-        ${b.note ? `<div style="font-size:12px;color:var(--text2);white-space:pre-wrap">${escapeHtml(b.note)}</div>` : ''}
-      </div>`).join('')}
+        ${b.note ? `<p>${escapeHtml(b.note)}</p>` : ''}
+      </article>`).join('')}
   `;
 }
 
@@ -8534,6 +8574,8 @@ function renderWorkspaceAttendance() {
     .reduce((sum, a) => sum + (attendanceMinutes(a) || 0), 0);
   const doctorCount = monthEntries.filter(a => a.type === 'doctor').length;
   const workDays = monthEntries.filter(a => !a.type || a.type === 'work').length;
+  const todayMeta = attendanceTypeMeta(todayRec?.type);
+  const todayMins = attendanceMinutes(todayRec);
   const cells = [];
   for (let i = 0; i < firstOffset; i++) cells.push('<div class="attendance-day muted"></div>');
   for (let day = 1; day <= daysInMonth; day++) {
@@ -8556,6 +8598,13 @@ function renderWorkspaceAttendance() {
         <h3>${monthLabel(workspaceAttendanceMonth)}</h3>
         <p>Zapiš příchod, odchod, lékaře nebo jinou absenci přímo do dne v kalendáři.</p>
       </div>
+      <div class="attendance-current" style="border-color:${todayMeta.color};">
+        <span style="color:${todayMeta.color}">${todayRec ? todayMeta.icon : '📅'}</span>
+        <div>
+          <strong>${todayRec ? todayMeta.label : 'Dnes nezapsáno'}</strong>
+          <em>${todayRec ? `${attendanceRangeLabel(todayRec)}${todayMins !== null ? ` · ${Math.floor(todayMins / 60)}h ${todayMins % 60}m` : ''}` : 'Klikni na Dnes zapsat a doplň záznam.'}</em>
+        </div>
+      </div>
       <div class="attendance-actions">
         <button class="btn btn-ghost btn-sm" onclick="changeAttendanceMonth(-1)">←</button>
         <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('${today}')">Dnes zapsat</button>
@@ -8568,21 +8617,29 @@ function renderWorkspaceAttendance() {
       <div><span>Lékař</span><strong>${doctorCount}</strong></div>
       <div><span>Dnes</span><strong>${todayRec ? attendanceTypeMeta(todayRec.type).label : 'nezapsáno'}</strong></div>
     </div>
-    <div class="attendance-calendar">
-      ${['Po','Út','St','Čt','Pá','So','Ne'].map(d => `<div class="attendance-weekday">${d}</div>`).join('')}
-      ${cells.join('')}
+    <div class="attendance-layout">
+      <div class="attendance-main">
+        <div class="attendance-calendar">
+          ${['Po','Út','St','Čt','Pá','So','Ne'].map(d => `<div class="attendance-weekday">${d}</div>`).join('')}
+          ${cells.join('')}
+        </div>
+      </div>
+      <aside class="attendance-side card">
+        <div class="card-title">Typy záznamů</div>
+        <div class="attendance-legend">
+          ${Object.values(ATTENDANCE_TYPES).map(meta => `<span style="color:${meta.color}">${meta.icon} ${meta.label}</span>`).join('')}
+        </div>
+        <div class="card-title">Záznamy v měsíci</div>
+        ${monthEntries.length ? monthEntries.map(a => {
+          const meta = attendanceTypeMeta(a.type);
+          const mins = attendanceMinutes(a);
+          return `<div class="attendance-row" onclick="openAttendanceEntryModal('${a.date}')">
+            <span style="color:${meta.color}">${meta.icon}</span>
+            <div><strong>${formatDate(a.date)} · ${meta.label}</strong><em>${attendanceRangeLabel(a)}${mins !== null ? ` · ${Math.floor(mins/60)}h ${mins%60}m` : ''}${a.note ? ` · ${escapeHtml(a.note)}` : ''}</em></div>
+          </div>`;
+        }).join('') : `<div class="app-empty">V tomto měsíci zatím není žádný záznam.</div>`}
+      </aside>
     </div>
-    ${monthEntries.length ? `<div class="card">
-      <div class="card-title">Záznamy v měsíci</div>
-      ${monthEntries.map(a => {
-        const meta = attendanceTypeMeta(a.type);
-        const mins = attendanceMinutes(a);
-        return `<div class="attendance-row" onclick="openAttendanceEntryModal('${a.date}')">
-          <span style="color:${meta.color}">${meta.icon}</span>
-          <div><strong>${formatDate(a.date)} · ${meta.label}</strong><em>${attendanceRangeLabel(a)}${mins !== null ? ` · ${Math.floor(mins/60)}h ${mins%60}m` : ''}${a.note ? ` · ${escapeHtml(a.note)}` : ''}</em></div>
-        </div>`;
-      }).join('')}
-    </div>` : ''}
   `;
 }
 

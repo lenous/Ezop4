@@ -321,12 +321,27 @@
     #app .order-timeline-item { grid-template-columns: 30px minmax(0, 1fr); padding: 9px; }
     #app .order-timeline-dot,
     #app .app-stop-icon { width: 30px; height: 30px; }
+    #app .workspace-head { grid-template-columns: 1fr; align-items: start; }
+    #app .workspace-head h2 { font-size: 24px; }
+    #app .workspace-command { grid-template-columns: 1fr; }
+    #app .workspace-today-card { grid-template-columns: 36px minmax(0, 1fr); }
+    #app .workspace-today-card > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .workspace-today-card .btn { grid-column: 1 / -1; justify-content: center; width: 100%; }
+    #app .workspace-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .workspace-tabs { grid-template-columns: 1fr; gap: 6px; }
+    #app .workspace-list-head { align-items: stretch; flex-direction: column; }
+    #app .workspace-list-head .btn { justify-content: center; width: 100%; }
+    #app .workspace-board-counts { grid-template-columns: 1fr; gap: 6px; }
     #app .workspace-banner { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
     #app .workspace-banner-status { width: 100%; }
     #app .workspace-banner-actions { justify-content: stretch; display: grid; grid-template-columns: 1fr 1fr auto; }
-    #app .attendance-hero { align-items: flex-start; flex-direction: column; padding: 14px; }
+    #app .attendance-hero { grid-template-columns: 1fr; align-items: flex-start; padding: 14px; }
+    #app .attendance-current { width: 100%; }
     #app .attendance-actions { width: 100%; display: grid; grid-template-columns: auto 1fr auto; }
     #app .attendance-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .attendance-layout { grid-template-columns: 1fr; gap: 10px; }
+    #app .attendance-side { position: static; }
+    #app .attendance-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #app .attendance-calendar { gap: 5px; }
     #app .attendance-day { min-height: 62px; padding: 7px 5px; }
     #app .attendance-day b { font-size: 15px; }
