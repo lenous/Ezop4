@@ -6400,7 +6400,7 @@ function renderAdminTeamAttendance() {
     let lastDate  = null;
     att.forEach(a => {
       if (a.checkIn && a.checkOut) {
-        totalMin += Math.max(0, Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000));
+        totalMin += attendanceMinutes(a) || 0;
       } else if (a.checkIn && !a.checkOut) {
         openShift = a;
       }
@@ -6463,8 +6463,9 @@ function openUserAttendanceDetail(userId) {
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;color:var(--text)">${formatDate(a.date)}</div>
           <div style="font-size:11px;color:var(--text2)">
-            ${a.checkIn ? formatTime(a.checkIn) : '–'} → ${a.checkOut ? formatTime(a.checkOut) : '⏳ otevřeno'}
+            ${attendanceTypeMeta(a.type).icon} ${attendanceTypeMeta(a.type).label} · ${a.checkIn ? formatTime(a.checkIn) : '–'} → ${a.checkOut ? formatTime(a.checkOut) : '⏳ otevřeno'}
             ${mins !== null ? ` · <b>${Math.floor(mins/60)}h ${mins%60}m</b>` : ''}
+            ${a.note ? ` · ${escapeHtml(a.note)}` : ''}
           </div>
         </div>
         <button class="btn btn-ghost btn-sm" style="padding:2px 8px"
@@ -6487,6 +6488,12 @@ function adminEditAttendance(userId, recordId) {
   const outT = rec.checkOut ? new Date(rec.checkOut).toTimeString().slice(0, 5) : '';
   openModal('✏️ Upravit docházku', `
     <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Den: <b>${formatDate(rec.date)}</b></div>
+    <div class="input-group">
+      <div class="input-label">Typ záznamu</div>
+      <select class="input" id="att-type">
+        ${Object.entries(ATTENDANCE_TYPES).map(([value, meta]) => `<option value="${value}" ${value === (rec.type || 'work') ? 'selected' : ''}>${meta.icon} ${meta.label}</option>`).join('')}
+      </select>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div class="input-group">
         <div class="input-label">Příchod</div>
@@ -6496,6 +6503,10 @@ function adminEditAttendance(userId, recordId) {
         <div class="input-label">Odchod</div>
         <input class="input" id="att-out" type="time" value="${outT}">
       </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Poznámka</div>
+      <input class="input" id="att-note" value="${escapeHtml(rec.note || '')}">
     </div>
   `, [
     { label: '✕ Zrušit',  cls: 'btn-ghost',   action: 'closeModal()' },
@@ -6509,9 +6520,11 @@ function saveAttendanceEdit(userId, recordId) {
   if (!rec) return;
   const inV  = document.getElementById('att-in')?.value;
   const outV = document.getElementById('att-out')?.value;
+  rec.type = document.getElementById('att-type')?.value || 'work';
   if (inV)  rec.checkIn  = new Date(rec.date + 'T' + inV  + ':00').toISOString();
   if (outV) rec.checkOut = new Date(rec.date + 'T' + outV + ':00').toISOString();
   else if (outV === '') rec.checkOut = null;
+  rec.note = document.getElementById('att-note')?.value?.trim() || '';
   saveState();
   closeModal();
   showToast('✅ Záznam upraven');
@@ -6533,7 +6546,7 @@ function exportTeamAttendanceCsv() {
   const monthStart = new Date();
   monthStart.setDate(1);
   const monthStr = monthStart.toISOString().slice(0, 7);
-  const rows = [['Uživatel', 'Login', 'Role', 'Datum', 'Příchod', 'Odchod', 'Minuty']];
+  const rows = [['Uživatel', 'Login', 'Role', 'Datum', 'Typ', 'Příchod', 'Odchod', 'Minuty', 'Poznámka']];
   (USERS || []).forEach(u => {
     const ws = USER_WORKSPACE[u.id] || {};
     (ws.attendance || []).filter(a => a.date >= monthStr + '-01').forEach(a => {
@@ -6542,9 +6555,11 @@ function exportTeamAttendanceCsv() {
         : '';
       rows.push([
         u.name, u.login, ROLE_LABELS[u.role] || u.role, a.date,
+        attendanceTypeMeta(a.type).label,
         a.checkIn ? formatTime(a.checkIn) : '',
         a.checkOut ? formatTime(a.checkOut) : '',
         mins,
+        a.note || '',
       ]);
     });
   });
@@ -7714,6 +7729,16 @@ function adminOrderRowKeyOpen(event, orderId) {
 
 // ── MŮJ PROSTOR ──────────────────────────────────────
 let workspaceTab = 'notes';
+let workspaceAttendanceMonth = todayDateStr().slice(0, 7);
+
+const ATTENDANCE_TYPES = {
+  work:     { label: 'Práce',    icon: '🟢', color: 'var(--green)' },
+  doctor:   { label: 'Lékař',    icon: '🏥', color: 'var(--blue)' },
+  vacation: { label: 'Dovolená', icon: '🌤️', color: 'var(--gold)' },
+  absence:  { label: 'Volno',    icon: '⭕', color: 'var(--amber)' },
+  training: { label: 'Školení',  icon: '🎓', color: 'var(--purple)' },
+  other:    { label: 'Jiné',     icon: '📝', color: 'var(--text2)' },
+};
 
 function myWorkspace() {
   const uid = currentUser?.id;
@@ -7770,11 +7795,17 @@ function exportMyWorkspaceCsv() {
     return;
   }
   if (workspaceTab === 'attendance') {
-    const rows = [['Datum', 'Příchod', 'Odchod', 'Minuty']];
+    const rows = [['Datum', 'Typ', 'Příchod', 'Odchod', 'Minuty', 'Poznámka']];
     [...ws.attendance].sort((a, b) => b.date.localeCompare(a.date)).forEach(a => {
-      const mins = a.checkIn && a.checkOut
-        ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000) : '';
-      rows.push([a.date, a.checkIn ? formatTime(a.checkIn) : '', a.checkOut ? formatTime(a.checkOut) : '', mins]);
+      const mins = attendanceMinutes(a);
+      rows.push([
+        a.date,
+        attendanceTypeMeta(a.type).label,
+        a.checkIn ? formatTime(a.checkIn) : '',
+        a.checkOut ? formatTime(a.checkOut) : '',
+        mins !== null ? mins : '',
+        a.note || '',
+      ]);
     });
     downloadCsv(`moje-dochazka-${stamp}.csv`, rows);
     return;
@@ -7965,77 +7996,180 @@ function todayAttendance() {
   return myWorkspace().attendance.find(a => a.date === today) || null;
 }
 
+function attendanceTypeMeta(type) {
+  return ATTENDANCE_TYPES[type] || ATTENDANCE_TYPES.work;
+}
+
+function attendanceMinutes(record) {
+  if (!record?.checkIn || !record?.checkOut) return null;
+  return Math.max(0, Math.round((new Date(record.checkOut) - new Date(record.checkIn)) / 60000));
+}
+
+function attendanceTimeValue(iso) {
+  if (!iso) return '';
+  return new Date(iso).toTimeString().slice(0, 5);
+}
+
+function attendanceDateTimeIso(date, time) {
+  if (!date || !time) return null;
+  return new Date(date + 'T' + time + ':00').toISOString();
+}
+
+function attendanceRecordForDate(date) {
+  return myWorkspace().attendance.find(a => a.date === date) || null;
+}
+
+function attendanceRangeLabel(record) {
+  if (!record?.checkIn && !record?.checkOut) return 'bez času';
+  return `${record.checkIn ? formatTime(record.checkIn) : '—'} → ${record.checkOut ? formatTime(record.checkOut) : '—'}`;
+}
+
+function monthLabel(monthStr) {
+  return new Date(monthStr + '-01T12:00:00').toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+}
+
 function renderWorkspaceAttendance() {
-  const today   = todayDateStr();
+  const ws = myWorkspace();
+  const today = todayDateStr();
   const todayRec = todayAttendance();
-  const past    = [...myWorkspace().attendance]
-    .filter(a => a.date !== today)
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 30);
-
-  const checkedIn  = todayRec && todayRec.checkIn && !todayRec.checkOut;
-  const checkedOut = todayRec && todayRec.checkOut;
-
-  let todayBlock;
-  if (!todayRec || !todayRec.checkIn) {
-    todayBlock = `
-      <div style="text-align:center">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Dnes jsi se ještě nepřihlásil/a</div>
-        <button class="btn btn-primary" style="width:100%;font-size:15px;padding:14px"
-          onclick="workspaceCheckIn()">🟢 Příchod – zaznamenat</button>
-      </div>`;
-  } else if (checkedIn) {
-    todayBlock = `
-      <div style="text-align:center">
-        <div style="font-size:13px;color:var(--green);font-weight:700;margin-bottom:4px">✅ Dnes přihlášen/a</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Příchod: <b>${formatTime(todayRec.checkIn)}</b></div>
-        <button class="btn btn-danger" style="width:100%;font-size:15px;padding:14px"
-          onclick="workspaceCheckOut()">🔴 Odchod – zaznamenat</button>
-      </div>`;
-  } else {
-    const mins = Math.round((new Date(todayRec.checkOut) - new Date(todayRec.checkIn)) / 60000);
-    todayBlock = `
-      <div style="text-align:center">
-        <div style="font-size:13px;color:var(--text2);font-weight:700;margin-bottom:4px">Dnešní směna ukončena</div>
-        <div style="font-size:12px;color:var(--text2)">
-          Příchod: <b>${formatTime(todayRec.checkIn)}</b> · Odchod: <b>${formatTime(todayRec.checkOut)}</b>
-          · Odpracováno: <b>${Math.floor(mins/60)}h ${mins%60}m</b>
-        </div>
-      </div>`;
+  const monthStart = new Date(workspaceAttendanceMonth + '-01T12:00:00');
+  const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  const firstOffset = (monthStart.getDay() + 6) % 7;
+  const entries = new Map(ws.attendance.map(a => [a.date, a]));
+  const monthEntries = [...ws.attendance]
+    .filter(a => a.date.slice(0, 7) === workspaceAttendanceMonth)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const totalMinutes = monthEntries
+    .filter(a => !a.type || a.type === 'work')
+    .reduce((sum, a) => sum + (attendanceMinutes(a) || 0), 0);
+  const doctorCount = monthEntries.filter(a => a.type === 'doctor').length;
+  const workDays = monthEntries.filter(a => !a.type || a.type === 'work').length;
+  const cells = [];
+  for (let i = 0; i < firstOffset; i++) cells.push('<div class="attendance-day muted"></div>');
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = `${workspaceAttendanceMonth}-${String(day).padStart(2, '0')}`;
+    const rec = entries.get(date);
+    const meta = attendanceTypeMeta(rec?.type);
+    const isToday = date === today;
+    cells.push(`
+      <button class="attendance-day ${rec ? 'has-entry' : ''} ${isToday ? 'today' : ''}" type="button"
+        onclick="openAttendanceEntryModal('${date}')">
+        <span>${day}</span>
+        ${rec ? `<b style="color:${meta.color}">${meta.icon}</b><em>${rec.type === 'work' || !rec.type ? attendanceRangeLabel(rec) : meta.label}</em>` : '<em>+</em>'}
+      </button>`);
   }
 
-  const historyRows = past.map(a => {
-    const mins = a.checkIn && a.checkOut
-      ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000)
-      : null;
-    return `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:13px;color:var(--text)">${formatDate(a.date)}</span>
-        <span style="font-size:12px;color:var(--text2)">
-          ${a.checkIn ? formatTime(a.checkIn) : '–'} → ${a.checkOut ? formatTime(a.checkOut) : '⏳'}
-          ${mins !== null ? `<b style="color:var(--text);margin-left:6px">${Math.floor(mins/60)}h ${mins%60}m</b>` : ''}
-        </span>
-      </div>`;
-  }).join('');
-
   return `
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-title">📅 Dnes – ${formatDate(today)}</div>
-      ${todayBlock}
+    <div class="attendance-hero">
+      <div>
+        <div class="card-title">Docházkový kalendář</div>
+        <h3>${monthLabel(workspaceAttendanceMonth)}</h3>
+        <p>Zapiš příchod, odchod, lékaře nebo jinou absenci přímo do dne v kalendáři.</p>
+      </div>
+      <div class="attendance-actions">
+        <button class="btn btn-ghost btn-sm" onclick="changeAttendanceMonth(-1)">←</button>
+        <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('${today}')">Dnes zapsat</button>
+        <button class="btn btn-ghost btn-sm" onclick="changeAttendanceMonth(1)">→</button>
+      </div>
     </div>
-    ${past.length > 0 ? `
-    <div class="card">
-      <div class="card-title">📋 Posledních 30 dní</div>
-      ${historyRows}
+    <div class="attendance-summary">
+      <div><span>Odpracováno</span><strong>${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m</strong></div>
+      <div><span>Pracovní dny</span><strong>${workDays}</strong></div>
+      <div><span>Lékař</span><strong>${doctorCount}</strong></div>
+      <div><span>Dnes</span><strong>${todayRec ? attendanceTypeMeta(todayRec.type).label : 'nezapsáno'}</strong></div>
+    </div>
+    <div class="attendance-calendar">
+      ${['Po','Út','St','Čt','Pá','So','Ne'].map(d => `<div class="attendance-weekday">${d}</div>`).join('')}
+      ${cells.join('')}
+    </div>
+    ${monthEntries.length ? `<div class="card">
+      <div class="card-title">Záznamy v měsíci</div>
+      ${monthEntries.map(a => {
+        const meta = attendanceTypeMeta(a.type);
+        const mins = attendanceMinutes(a);
+        return `<div class="attendance-row" onclick="openAttendanceEntryModal('${a.date}')">
+          <span style="color:${meta.color}">${meta.icon}</span>
+          <div><strong>${formatDate(a.date)} · ${meta.label}</strong><em>${attendanceRangeLabel(a)}${mins !== null ? ` · ${Math.floor(mins/60)}h ${mins%60}m` : ''}${a.note ? ` · ${escapeHtml(a.note)}` : ''}</em></div>
+        </div>`;
+      }).join('')}
     </div>` : ''}
   `;
+}
+
+function changeAttendanceMonth(delta) {
+  const d = new Date(workspaceAttendanceMonth + '-01T12:00:00');
+  d.setMonth(d.getMonth() + delta);
+  workspaceAttendanceMonth = d.toISOString().slice(0, 7);
+  renderWorkspaceContent();
+}
+
+function openAttendanceEntryModal(date = todayDateStr()) {
+  const rec = attendanceRecordForDate(date);
+  const type = rec?.type || 'work';
+  const checkIn = attendanceTimeValue(rec?.checkIn) || (date === todayDateStr() ? new Date().toTimeString().slice(0, 5) : '');
+  const checkOut = attendanceTimeValue(rec?.checkOut);
+  openModal(`📅 Docházka · ${formatDate(date)}`, `
+    <div class="input-group">
+      <div class="input-label">Typ záznamu</div>
+      <select class="input" id="att-type">
+        ${Object.entries(ATTENDANCE_TYPES).map(([value, meta]) => `<option value="${value}" ${value === type ? 'selected' : ''}>${meta.icon} ${meta.label}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="input-group">
+        <div class="input-label">Příchod / od</div>
+        <input class="input" id="att-in" type="time" value="${checkIn}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Odchod / do</div>
+        <input class="input" id="att-out" type="time" value="${checkOut}">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Poznámka</div>
+      <input class="input" id="att-note" value="${escapeHtml(rec?.note || '')}" placeholder="např. lékař 9:00–11:00, práce z domu...">
+    </div>
+  `, [
+    ...(rec ? [{ label: '🗑️ Smazat', cls: 'btn-danger', action: `deleteAttendanceEntry('${rec.id}')` }] : []),
+    { label: '✕ Zrušit', cls: 'btn-ghost', action: 'closeModal()' },
+    { label: '✔ Uložit', cls: 'btn-primary', action: `saveAttendanceEntry('${date}', '${rec?.id || ''}')` },
+  ]);
+}
+
+function saveAttendanceEntry(date, recordId = '') {
+  const ws = myWorkspace();
+  let rec = recordId ? ws.attendance.find(a => a.id === recordId) : null;
+  if (!rec) {
+    rec = { id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), date, checkIn: null, checkOut: null };
+    ws.attendance.push(rec);
+  }
+  rec.date = date;
+  rec.type = document.getElementById('att-type')?.value || 'work';
+  const inV = document.getElementById('att-in')?.value || '';
+  const outV = document.getElementById('att-out')?.value || '';
+  rec.checkIn = attendanceDateTimeIso(date, inV);
+  rec.checkOut = attendanceDateTimeIso(date, outV);
+  rec.note = document.getElementById('att-note')?.value?.trim() || '';
+  saveState();
+  closeModal();
+  showToast('✅ Docházka uložena');
+  refreshAfterWorkspaceMutation();
+}
+
+function deleteAttendanceEntry(recordId) {
+  const ws = myWorkspace();
+  ws.attendance = ws.attendance.filter(a => a.id !== recordId);
+  saveState();
+  closeModal();
+  showToast('🗑️ Záznam docházky smazán');
+  refreshAfterWorkspaceMutation();
 }
 
 function workspaceCheckIn() {
   const ws    = myWorkspace();
   const today = todayDateStr();
   if (ws.attendance.find(a => a.date === today)) return;
-  ws.attendance.push({ id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), date: today, checkIn: new Date().toISOString(), checkOut: null });
+  ws.attendance.push({ id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), date: today, type: 'work', checkIn: new Date().toISOString(), checkOut: null, note: '' });
   saveState();
   showToast('🟢 Příchod zaznamenán');
   refreshAfterWorkspaceMutation();
@@ -8045,6 +8179,7 @@ function workspaceCheckOut(options = {}) {
   const ws  = myWorkspace();
   const rec = ws.attendance.find(a => a.date === todayDateStr());
   if (!rec || rec.checkOut) return;
+  rec.type = rec.type || 'work';
   rec.checkOut = new Date().toISOString();
   saveState();
   showToast('🔴 Odchod zaznamenán');
@@ -8297,7 +8432,14 @@ function refreshAttendanceIndicator() {
   const el = document.getElementById('tbar-attendance');
   if (!el || !currentUser) return;
   const rec = todayAttendance();
-  if (rec?.checkIn && !rec.checkOut) {
+  const meta = attendanceTypeMeta(rec?.type);
+  if (rec && rec.type && rec.type !== 'work') {
+    el.style.display = '';
+    el.textContent = `${meta.icon} ${meta.label}`;
+    el.style.background = 'rgba(125,214,210,.12)';
+    el.style.color = meta.color;
+    el.title = `${meta.label} · klikni pro Můj prostor`;
+  } else if (rec?.checkIn && !rec.checkOut) {
     el.style.display = '';
     el.textContent = '🟢 ' + formatTime(rec.checkIn);
     el.style.background = 'rgba(34,197,94,.18)';
@@ -8319,51 +8461,34 @@ function dashboardWorkspaceWidgetHtml() {
   if (!currentUser) return '';
   const ws       = myWorkspace();
   const todayRec = todayAttendance();
-  const checkedIn  = todayRec && todayRec.checkIn && !todayRec.checkOut;
-  const checkedOut = todayRec && todayRec.checkOut;
-
-  let statusBlock;
-  if (!todayRec || !todayRec.checkIn) {
-    statusBlock = `
-      <button class="btn btn-primary btn-sm" onclick="workspaceCheckIn()"
-        style="padding:6px 14px">🟢 Příchod</button>`;
-  } else if (checkedIn) {
-    statusBlock = `
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="font-size:12px;color:var(--green);font-weight:700">
-          🟢 Příchod ${formatTime(todayRec.checkIn)}
-        </span>
-        <button class="btn btn-danger btn-sm" onclick="workspaceCheckOut()"
-          style="padding:6px 14px">🔴 Odchod</button>
-      </div>`;
-  } else {
-    const mins = Math.round((new Date(todayRec.checkOut) - new Date(todayRec.checkIn)) / 60000);
-    statusBlock = `
-      <span style="font-size:12px;color:var(--text2)">
-        ✅ Hotovo · ${Math.floor(mins/60)}h ${mins%60}m
-      </span>`;
-  }
-
+  const todayMeta = attendanceTypeMeta(todayRec?.type);
+  const todayMins = attendanceMinutes(todayRec);
   const noteCount  = ws.notes.length;
   const boardCount = ws.myBoards.length;
+  const monthCount = ws.attendance.filter(a => a.date.slice(0, 7) === todayDateStr().slice(0, 7)).length;
 
   return `
-    <div class="card" style="border-left:3px solid var(--gold);margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0">
-          <span style="font-size:22px">📒</span>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">Můj prostor</div>
-            <div style="font-size:11px;color:var(--text3)">
-              📝 ${noteCount} ${noteCount === 1 ? 'poznámka' : 'pozn.'} · 🔢 ${boardCount} ${boardCount === 1 ? 'záznam' : 'zázn.'}
-            </div>
+    <div class="workspace-banner">
+      <div class="workspace-banner-main">
+        <span class="workspace-banner-icon">📒</span>
+        <div>
+          <div class="workspace-banner-title">Můj prostor</div>
+          <div class="workspace-banner-sub">
+            📝 ${noteCount} pozn. · 🔢 ${boardCount} zázn. · 📅 ${monthCount} dní v kalendáři
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          ${statusBlock}
-          <button class="btn btn-ghost btn-sm" onclick="navigateTo('workspace')"
-            style="padding:6px 10px">→</button>
+      </div>
+      <div class="workspace-banner-status" style="border-color:${todayMeta.color};">
+        <span style="color:${todayMeta.color}">${todayRec ? todayMeta.icon : '📅'}</span>
+        <div>
+          <strong>${todayRec ? todayMeta.label : 'Dnes nezapsáno'}</strong>
+          <em>${todayRec ? `${attendanceRangeLabel(todayRec)}${todayMins !== null ? ` · ${Math.floor(todayMins/60)}h ${todayMins%60}m` : ''}` : 'Zapiš práci, lékaře nebo volno'}</em>
         </div>
+      </div>
+      <div class="workspace-banner-actions">
+        <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('${todayDateStr()}')">📅 Zapsat den</button>
+        <button class="btn btn-ghost btn-sm" onclick="workspaceTab='attendance';navigateTo('workspace')">Kalendář</button>
+        <button class="btn btn-ghost btn-sm" onclick="navigateTo('workspace')">→</button>
       </div>
     </div>`;
 }

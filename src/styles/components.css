@@ -1313,3 +1313,256 @@
     padding: 16px 8px;
     text-align: center;
   }
+
+  #app .workspace-banner {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(260px, .8fr) auto;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    border: 1px solid rgba(168,180,189,.17);
+    border-left: 3px solid var(--gold);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.052), rgba(255,255,255,.014)),
+      rgba(12,18,22,.94);
+    box-shadow: 0 18px 42px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.035);
+  }
+
+  #app .workspace-banner-main,
+  #app .workspace-banner-status,
+  #app .workspace-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  #app .workspace-banner-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(226,184,32,.12);
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  #app .workspace-banner-title {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  #app .workspace-banner-sub {
+    color: var(--text2);
+    font-size: 11px;
+    margin-top: 3px;
+  }
+
+  #app .workspace-banner-status {
+    border: 1px solid rgba(125,214,210,.24);
+    border-radius: 8px;
+    padding: 9px 11px;
+    background: rgba(255,255,255,.025);
+  }
+
+  #app .workspace-banner-status > span {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  #app .workspace-banner-status strong,
+  #app .workspace-banner-status em {
+    display: block;
+    min-width: 0;
+  }
+
+  #app .workspace-banner-status strong {
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 900;
+  }
+
+  #app .workspace-banner-status em {
+    color: var(--text2);
+    font-size: 11px;
+    font-style: normal;
+    margin-top: 2px;
+  }
+
+  #app .workspace-banner-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  #app .attendance-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(168,180,189,.17);
+    border-left: 3px solid var(--cyan);
+    border-radius: 8px;
+    background: linear-gradient(180deg, rgba(125,214,210,.07), rgba(255,255,255,.012)), rgba(10,18,22,.92);
+  }
+
+  #app .attendance-hero h3 {
+    color: var(--text);
+    font-size: 22px;
+    line-height: 1.1;
+    margin: 4px 0;
+  }
+
+  #app .attendance-hero p {
+    color: var(--text2);
+    font-size: 12px;
+  }
+
+  #app .attendance-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  #app .attendance-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  #app .attendance-summary div {
+    border: 1px solid rgba(168,180,189,.14);
+    border-radius: 8px;
+    background: rgba(255,255,255,.028);
+    padding: 12px;
+  }
+
+  #app .attendance-summary span,
+  #app .attendance-summary strong {
+    display: block;
+  }
+
+  #app .attendance-summary span {
+    color: var(--text2);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .55px;
+    font-weight: 800;
+  }
+
+  #app .attendance-summary strong {
+    color: var(--gold);
+    font-size: 18px;
+    margin-top: 5px;
+  }
+
+  #app .attendance-calendar {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  #app .attendance-weekday {
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 900;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+
+  #app .attendance-day {
+    appearance: none;
+    min-height: 86px;
+    border: 1px solid rgba(168,180,189,.12);
+    border-radius: 8px;
+    background: rgba(255,255,255,.025);
+    color: var(--text);
+    padding: 9px;
+    text-align: left;
+    cursor: pointer;
+    display: grid;
+    align-content: start;
+    gap: 4px;
+    transition: transform .15s, border-color .2s, background .2s;
+  }
+
+  #app .attendance-day:hover {
+    transform: translateY(-1px);
+    border-color: rgba(125,214,210,.36);
+    background: rgba(125,214,210,.06);
+  }
+
+  #app .attendance-day.muted {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  #app .attendance-day.today {
+    border-color: rgba(226,184,32,.55);
+  }
+
+  #app .attendance-day.has-entry {
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  }
+
+  #app .attendance-day span {
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  #app .attendance-day b {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  #app .attendance-day em {
+    color: var(--text2);
+    font-size: 10px;
+    font-style: normal;
+    overflow-wrap: anywhere;
+  }
+
+  #app .attendance-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(168,180,189,.11);
+    cursor: pointer;
+  }
+
+  #app .attendance-row:last-child {
+    border-bottom: 0;
+  }
+
+  #app .attendance-row > span {
+    font-size: 20px;
+  }
+
+  #app .attendance-row strong,
+  #app .attendance-row em {
+    display: block;
+  }
+
+  #app .attendance-row strong {
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  #app .attendance-row em {
+    color: var(--text2);
+    font-size: 11px;
+    font-style: normal;
+    margin-top: 2px;
+  }
