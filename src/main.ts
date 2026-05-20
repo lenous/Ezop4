@@ -58,7 +58,8 @@ bridgeScript.textContent = `
     stations: function() { return typeof STATIONS !== 'undefined' ? STATIONS : []; },
     orders: function() { return typeof ORDERS !== 'undefined' ? ORDERS : []; },
     issues: function() { return typeof ISSUES !== 'undefined' ? ISSUES : []; },
-    users: function() { return typeof USERS !== 'undefined' ? USERS : []; }
+    users: function() { return typeof USERS !== 'undefined' ? USERS : []; },
+    openOrder: function(orderId) { return typeof openOrder !== 'undefined' ? openOrder(orderId) : null; }
   };
 `;
 document.body.appendChild(bridgeScript);

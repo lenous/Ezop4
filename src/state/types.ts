@@ -30,6 +30,9 @@ export interface AppSettings {
   shiftHours: number;
   compactAdvancedUi?: boolean;
   operatorSimpleMode?: boolean;
+  operatorDashboardFocusOnly?: boolean;
+  operatorShowProductionOverview?: boolean;
+  operatorHideOrderContext?: boolean;
   featureProductMemory?: boolean;
   featureAiSummary?: boolean;
   featureReadiness?: boolean;

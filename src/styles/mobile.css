@@ -243,6 +243,18 @@
     .issue-detail-head { grid-template-columns: 40px minmax(0, 1fr); }
     .issue-detail-head .badge { grid-column: 1 / -1; justify-self: start; }
     .issue-detail-grid { grid-template-columns: 1fr; }
+    #app .issues-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    #app .issues-command-main h2 { font-size: 20px; }
+    #app .issues-filter-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .issues-focus-card { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 10px; }
+    #app .issues-focus-card > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .issues-filter-card { align-items: flex-start; }
+    #app .issue-card { grid-template-columns: 42px minmax(0, 1fr); align-items: start; gap: 10px; }
+    #app .issue-card-icon { width: 38px; height: 38px; font-size: 20px; }
+    #app .issue-card-actions { grid-column: 2; justify-content: stretch; min-width: 0; }
+    #app .issue-card-actions .btn { width: 100%; justify-content: center; }
+    #app .issue-card-head { display: grid; gap: 6px; }
+    #app .issue-card-head .badge { justify-self: start; }
     #app .profile-passkey { grid-template-columns: 1fr; }
     #app .profile-passkey .btn { width: 100%; }
     #app .role-badge { max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0; padding: 3px 7px; }
@@ -264,9 +276,61 @@
     #app .dashboard-mini-list { padding: 11px; }
     #app .dashboard-mini-row { grid-template-columns: 30px minmax(0, 1fr); }
     #app .dashboard-mini-row em { grid-column: 2; grid-row: auto; white-space: normal; }
+    #app .dashboard-overview { gap: 10px; }
+    #app .dashboard-grid,
+    #app .dashboard-grid-simple { grid-template-columns: 1fr; gap: 10px; }
+    #app .dashboard-side-col { position: static; }
+    #app .dashboard-main-col,
+    #app .dashboard-side-col { gap: 10px; }
+    #app .dashboard-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .dashboard-rail-tile { grid-template-columns: 32px minmax(0, 1fr); padding: 10px; }
+    #app .dashboard-rail-tile > span { width: 32px; height: 32px; font-size: 16px; }
+    #app .dashboard-rail-tile strong { font-size: 18px; }
+    #app .app-shift-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    #app .app-shift-main h2 { font-size: 19px; }
+    #app .app-shift-main p { font-size: 12px; }
+    #app .app-shift-actions { display: grid; grid-template-columns: 1fr; }
+    #app .app-shift-actions .btn { width: 100%; }
+    #app .app-shift-next { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 10px; }
+    #app .app-shift-next > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .app-shift-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .app-shift-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .app-shift-quick button { padding: 8px; }
+    #app .queue-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    #app .queue-command-main h2 { font-size: 20px; }
+    #app .queue-filter-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .queue-action-card { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 10px; }
+    #app .queue-action-card > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .orders-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    #app .orders-command-main h2 { font-size: 20px; }
+    #app .orders-filter-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .orders-focus-card { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 10px; }
+    #app .orders-focus-card > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .order-card-grid { grid-template-columns: 1fr; }
+    #app .order-number-tile { border-right: 0; border-bottom: 1px solid rgba(226,184,32,.22); padding: 11px 12px; }
+    #app .order-number-tile strong { font-size: 18px; }
+    #app .order-card-main { padding: 12px; }
+    #app .order-card-top { display: grid; gap: 8px; }
+    #app .order-card-badges { justify-content: flex-start; }
+    #app .order-card-title strong { white-space: normal; }
+    #app .order-card-meta, #app .order-card-footer { gap: 7px; }
     #app .app-cockpit { grid-template-columns: 1fr; gap: 10px; }
     #app .app-cockpit-left,
     #app .app-cockpit-main { padding: 12px; }
+    #app .kpi-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    #app .kpi-command-main h2 { font-size: 34px; }
+    #app .kpi-command-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .kpi-quality-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #app .kpi-focus-card { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 10px; }
+    #app .kpi-focus-card > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .kpi-filter-head { align-items: flex-start; }
+    #app .kpi-filter-grid { grid-template-columns: 1fr; }
+    #app .kpi-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .kpi-metric-card { padding: 11px; }
+    #app .kpi-metric-card strong { font-size: 24px; }
+    #app .kpi-layout { grid-template-columns: 1fr; gap: 10px; }
+    #app .kpi-bar-row { grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; }
+    #app .kpi-bar-lbl { grid-column: 1 / -1; }
     #app .app-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     #app .app-kpi-tile { min-height: 78px; padding: 10px; }
     #app .app-kpi-tile strong { font-size: 23px; }
@@ -278,12 +342,28 @@
     #app .order-timeline-item { grid-template-columns: 30px minmax(0, 1fr); padding: 9px; }
     #app .order-timeline-dot,
     #app .app-stop-icon { width: 30px; height: 30px; }
+    #app .workspace-head { grid-template-columns: 1fr; align-items: start; }
+    #app .workspace-head h2 { font-size: 24px; }
+    #app .workspace-command { grid-template-columns: 1fr; }
+    #app .workspace-today-card { grid-template-columns: 36px minmax(0, 1fr); }
+    #app .workspace-today-card > span { width: 36px; height: 36px; font-size: 19px; }
+    #app .workspace-today-card .btn { grid-column: 1 / -1; justify-content: center; width: 100%; }
+    #app .workspace-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .workspace-tabs { grid-template-columns: 1fr; gap: 6px; }
+    #app .workspace-list-head { align-items: stretch; flex-direction: column; }
+    #app .workspace-list-head .btn { justify-content: center; width: 100%; }
+    #app .workspace-board-counts { grid-template-columns: 1fr; gap: 6px; }
     #app .workspace-banner { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
     #app .workspace-banner-status { width: 100%; }
-    #app .workspace-banner-actions { justify-content: stretch; display: grid; grid-template-columns: 1fr 1fr auto; }
-    #app .attendance-hero { align-items: flex-start; flex-direction: column; padding: 14px; }
+    #app .workspace-banner-actions { justify-content: stretch; display: grid; grid-template-columns: 1fr; }
+    #app .workspace-banner-actions .btn { justify-content: center; width: 100%; }
+    #app .attendance-hero { grid-template-columns: 1fr; align-items: flex-start; padding: 14px; }
+    #app .attendance-current { width: 100%; }
     #app .attendance-actions { width: 100%; display: grid; grid-template-columns: auto 1fr auto; }
     #app .attendance-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .attendance-layout { grid-template-columns: 1fr; gap: 10px; }
+    #app .attendance-side { position: static; }
+    #app .attendance-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #app .attendance-calendar { gap: 5px; }
     #app .attendance-day { min-height: 62px; padding: 7px 5px; }
     #app .attendance-day b { font-size: 15px; }
@@ -313,6 +393,17 @@
     #app .station-summary-route { flex-direction: row; flex-wrap: wrap; padding: 9px; }
     #app .station-next-btn { min-height: 52px; }
     #app .station-next-btn strong { font-size: 12px; }
+    #app .station-fast-panel { grid-template-columns: 1fr; gap: 10px; padding: 11px; margin-bottom: 10px; border-radius: 8px; }
+    #app .station-fast-main h2 { font-size: clamp(23px, 8vw, 32px); }
+    #app .station-fast-main p { font-size: 12px; }
+    #app .station-fast-status { gap: 6px; }
+    #app .station-fast-status span { min-height: 26px; padding: 5px 8px; font-size: 10px; }
+    #app .station-fast-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    #app .station-fast-metrics button { min-height: 62px; padding: 9px 7px; }
+    #app .station-fast-metrics strong { font-size: 22px; }
+    #app .station-fast-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
+    #app .station-fast-actions .btn { width: 100%; min-width: 0; justify-content: center; }
+    #app .station-fast-actions > span { grid-column: 1 / -1; }
     #app .station-workspace-grid { grid-template-columns: 1fr; gap: 10px; }
     #app .station-workspace-side { gap: 8px; }
     .modal-overlay { padding: 10px; align-items: flex-end; }

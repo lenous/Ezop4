@@ -35,10 +35,11 @@ function bridgeStations(): any[]  { return W.__ezopBridge?.stations?.() || []; }
 function bridgeIssues(): any[]    { return W.__ezopBridge?.issues?.() || []; }
 function bridgeUser(): any        { return W.__ezopBridge?.user?.() || null; }
 
-type FilterId = 'all' | 'urgent' | 'today' | 'week' | 'blocked' | 'issue' | 'mine';
+type FilterId = 'all' | 'urgent' | 'late' | 'today' | 'week' | 'blocked' | 'issue' | 'mine';
 const FILTERS: { id: FilterId; label: string; icon: string }[] = [
   { id: 'all',     label: 'Vše',         icon: '◯' },
   { id: 'urgent',  label: 'Urgentní',    icon: '⚡' },
+  { id: 'late',    label: 'Po termínu',  icon: '⏰' },
   { id: 'today',   label: 'Dnes',        icon: '📅' },
   { id: 'week',    label: 'Tento týden', icon: '🗓' },
   { id: 'blocked', label: 'Blokované',   icon: '⛔' },
@@ -52,6 +53,7 @@ function matchesFilter(order: any, id: FilterId, user: any): boolean {
   switch (id) {
     case 'all': return true;
     case 'urgent': return order.priority === 'urgent' || order.priority === 'high';
+    case 'late': return isLateOrder(order);
     case 'today': {
       if (!order.due) return false;
       const d = new Date(order.due);
@@ -155,6 +157,18 @@ function dueLabel(order: any): string {
   return `<span class="ux-kb-due ${cls}">📅 ${text}</span>`;
 }
 
+function daysLate(order: any): number {
+  if (!order?.due) return 0;
+  const due = new Date(order.due);
+  if (isNaN(due.getTime())) return 0;
+  const now = new Date();
+  return Math.max(0, Math.round((now.getTime() - due.getTime()) / 86400000));
+}
+
+function isLateOrder(order: any): boolean {
+  return daysLate(order) > 0;
+}
+
 function orderCardHtml(order: any): string {
   const pct = orderProgressPct(order);
   const openIssues = openIssueCountFor(order.id);
@@ -236,15 +250,60 @@ export function renderKanbanPage() {
       <span>${f.icon}</span>${f.label}<em>${filterCount(f.id)}</em>
     </button>`;
   }).join('');
+  const lateOrders = visibleToUser.filter(isLateOrder);
+  const issueOrders = visibleToUser.filter(o => (o.stations || []).some((s: any) => s.status === 'issue'));
+  const urgentOrders = visibleToUser.filter(o => o.priority === 'urgent' || o.priority === 'high');
+  const activeOrders = visibleToUser.filter(o => !['done', 'waiting'].includes(classifyOrder(o)));
+  const bottleneck = cols
+    .map(c => ({ ...c, count: buckets[c.id].length }))
+    .sort((a, b) => b.count - a.count)[0];
+  const focusOrder = visible.find((o: any) => o.blocked)
+    || visible.find((o: any) => (o.stations || []).some((s: any) => s.status === 'issue'))
+    || visible.find(isLateOrder)
+    || visible.find((o: any) => o.priority === 'urgent' || o.priority === 'high')
+    || visible[0];
+  const focusStation = focusOrder ? activeStationLabel(focusOrder) : '';
 
   root.innerHTML = `
     <div class="ux-kb-header">
       <div>
-        <div class="card-title" style="margin:0">📌 Kanban — průchod zakázek</div>
-        <div class="app-muted" style="font-size:12px;margin-top:2px">${visible.length} z ${visibleToUser.length} zakázek · klikni na kartu pro detail</div>
+        <div class="app-page-title"><strong>📌 Kanban</strong></div>
+        <div class="app-page-subtitle">${visible.length} z ${visibleToUser.length} zakázek · tok výroby podle aktivního kroku</div>
       </div>
       <button class="btn btn-ghost btn-sm" id="ux-kb-refresh">🔄 Obnovit</button>
     </div>
+
+    <section class="ux-kb-command">
+      <div class="ux-kb-command-main">
+        <div class="app-shift-label"><span>📌</span><strong>Tok výroby</strong></div>
+        <h2>${bottleneck ? `${bottleneck.icon} ${escapeText(bottleneck.label)}` : 'Bez toku'}</h2>
+        <p>${bottleneck ? `${bottleneck.count} položek v nejsilnějším sloupci · ${visible.length} zobrazených zakázek` : 'Pro aktuální filtr nejsou dostupné zakázky.'}</p>
+        <div class="ux-kb-command-metrics">
+          <button type="button" data-kb-filter="all"><span>${visibleToUser.length}</span><strong>Vše</strong></button>
+          <button type="button" data-kb-filter="urgent"><span>${urgentOrders.length}</span><strong>Urgentní</strong></button>
+          <button type="button" data-kb-filter="issue"><span>${issueOrders.length}</span><strong>Problémy</strong></button>
+          <button type="button" data-kb-filter="late"><span>${lateOrders.length}</span><strong>Po termínu</strong></button>
+        </div>
+      </div>
+      <div class="ux-kb-command-side">
+        ${focusOrder ? `
+          <button class="ux-kb-focus-card" type="button" id="ux-kb-focus-open">
+            <span>${focusOrder.blocked ? '⛔' : openIssueCountFor(focusOrder.id) ? '⚠️' : isLateOrder(focusOrder) ? '⏰' : '📋'}</span>
+            <div>
+              <strong>${escapeText(focusOrder.number || '')} · ${escapeText(focusOrder.name || '')}</strong>
+              <em>${escapeText(focusStation)}${isLateOrder(focusOrder) ? ` · ${daysLate(focusOrder)} dní po termínu` : ''}</em>
+            </div>
+            <b>Otevřít</b>
+          </button>
+        ` : `<div class="ux-kb-focus-card ux-kb-focus-empty">Bez zakázky k otevření</div>`}
+        <div class="ux-kb-quality">
+          <div><span>${activeOrders.length}</span><em>v toku</em></div>
+          <div><span>${bottleneck?.count || 0}</span><em>úzké místo</em></div>
+          <div><span>${issueOrders.length}</span><em>problémy</em></div>
+        </div>
+      </div>
+    </section>
+
     <div class="ux-quick-filters" id="ux-kb-filters">${filterChips}</div>
     <div class="ux-kanban">
       ${cols.map(c => `
@@ -265,12 +324,15 @@ export function renderKanbanPage() {
   root.querySelectorAll<HTMLElement>('.ux-kb-card').forEach(card => {
     card.addEventListener('click', () => {
       const id = card.dataset.orderId;
-      if (id && typeof W.openOrder === 'function') W.openOrder(id);
+      if (id) W.__ezopBridge?.openOrder?.(id);
     });
   });
 
   // Refresh
   document.getElementById('ux-kb-refresh')?.addEventListener('click', () => renderKanbanPage());
+  document.getElementById('ux-kb-focus-open')?.addEventListener('click', () => {
+    if (focusOrder?.id) W.__ezopBridge?.openOrder?.(focusOrder.id);
+  });
 
   // Filter chips
   root.querySelectorAll<HTMLButtonElement>('[data-kb-filter]').forEach(btn => {
@@ -314,5 +376,6 @@ function patchNavigation() {
 }
 
 export function installKanbanPatch() {
+  W.__ezopRenderKanban = renderKanbanPage;
   patchNavigation();
 }
