@@ -1009,7 +1009,7 @@
 
     #app .page {
       width: calc(100% - var(--app-sidebar-w));
-      max-width: min(1480px, calc(100vw - var(--app-sidebar-w)));
+      max-width: none;
       margin-left: var(--app-sidebar-w);
       margin-right: auto;
       padding: 22px clamp(14px, 2vw, 26px) 36px;
@@ -1017,7 +1017,7 @@
     }
 
     #app #page-dashboard {
-      max-width: min(1440px, calc(100vw - var(--app-sidebar-w)));
+      max-width: none;
     }
   }
 

@@ -1190,7 +1190,10 @@ function stationWorkActionButtons(order, station) {
   }
   const buttons = [];
   if (!claimed) {
-    buttons.push(`<button class="btn btn-teal btn-sm" onclick="claimStationWork('${order.id}', '${station.stId}')">Převzít</button>`);
+    buttons.push(`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Převzít práci</button>`);
+    if (isManagerRole()) {
+      buttons.push(`<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`);
+    }
   } else {
     buttons.push(`<button class="btn btn-ghost btn-sm" onclick="claimStationWork('${order.id}', '${station.stId}')">Obnovit práci</button>`);
     buttons.push(`<button class="btn btn-ghost btn-sm" onclick="pauseStationWork('${order.id}', '${station.stId}')">Pozastavit</button>`);
@@ -5406,19 +5409,19 @@ function stationWorkPanelHtml(order, station) {
   const stInfo = STATIONS.find(x => x.id === station?.stId);
   const status = claimed
     ? `${stationWorkBadgeHtml(station)}`
-    : `<span class="badge" style="background:rgba(148,163,184,.14);color:var(--text2)">Bez převzetí</span>`;
+    : `<span class="badge" style="background:rgba(148,163,184,.14);color:var(--text2)">Volné</span>`;
   const detail = claimed
     ? `<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px">
         Převzal: <b style="color:var(--text)">${escapeHtml(stationWorkerLabel(station))}</b>
         ${station.workStartedAt ? ` · start ${formatDateTime(station.workStartedAt)}` : ''}
         ${station.workPausedAt ? `<br>⏸ Pozastaveno: ${formatDateTime(station.workPausedAt)}${station.workPauseReason ? ` · ${escapeHtml(station.workPauseReason)}` : ''}` : ''}
       </div>`
-    : `<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px">Než operátor zapisuje počty nebo stav, musí si práci převzít. Mistr/TPV/vedení/admin mohou zasáhnout kdykoliv.</div>`;
+    : `<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px">Zápis počtů a změna stavu se odemkne po potvrzení hlavním tlačítkem. Mistr/TPV/vedení/admin mohou zasáhnout kdykoliv.</div>`;
 
   return `<div class="card" style="border-left:4px solid ${claimedByOther ? 'var(--amber)' : canOperate ? 'var(--teal)' : 'var(--red)'}">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
       <div>
-        <div class="card-title" style="margin-bottom:6px">👤 Převzetí práce · ${stInfo?.icon || '🔧'} ${escapeHtml(stInfo?.name || 'Stanoviště')}</div>
+        <div class="card-title" style="margin-bottom:6px">👤 Přístup operátora · ${stInfo?.icon || '🔧'} ${escapeHtml(stInfo?.name || 'Stanoviště')}</div>
         ${status}
         ${detail}
       </div>
@@ -5455,7 +5458,7 @@ function stationTaskState(order, station) {
     return { color:'var(--amber)', icon:'👤', label:'Práci má jiný operátor', action:`Převzal ${stationWorkerLabel(station)}. Počkejte nebo požádejte mistra o uvolnění.` };
   }
   if (!claimedByCurrent && !isManagerRole()) {
-    return { color:'var(--teal)', icon:'▶', label:'Převzít práci', action:'Nejdřív klikněte na Převzít. Potom půjde zapisovat počty a měnit stav.' };
+    return { color:'var(--teal)', icon:'▶', label:'Práce připravena', action:'Potvrďte zahájení v bloku aktuální zakázky. Potom půjde zapisovat kusy a měnit stav.' };
   }
   if (index > 0 && available <= 0) {
     return { color:'var(--amber)', icon:'⏳', label:'Čeká na předchozí krok', action:'Na toto stanoviště zatím nepřišly kusy z předchozí operace.' };
@@ -5552,9 +5555,6 @@ function operatorStationTaskPanelHtml(order, station, stInfo) {
 function stationWorkSummaryHtml(order, station, stInfo) {
   const index = stationIndexInOrder(order, station);
   const state = stationTaskState(order, station);
-  const available = stationInputQty(order, station, index);
-  const processed = stationProcessedQty(station);
-  const remaining = Math.max(0, available - processed);
   const nextStation = (order.stations || [])[index + 1];
   const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
   const hideRoute = operatorHideOrderContext();
@@ -5565,11 +5565,6 @@ function stationWorkSummaryHtml(order, station, stInfo) {
         <strong>${escapeHtml(state.label)}</strong>
         <span>${escapeHtml(state.action)}</span>
       </div>
-    </div>
-    <div class="station-summary-stats">
-      <div><b>${available}</b><span>${index > 0 ? 'Přišlo' : 'Objednáno'}</span></div>
-      <div><b>${processed}</b><span>Zpracováno</span></div>
-      <div><b>${remaining}</b><span>Zbývá</span></div>
     </div>
     <div class="station-summary-route">
       ${hideRoute
@@ -5586,11 +5581,7 @@ function stationWorkSummaryHtml(order, station, stInfo) {
 }
 
 function stationFastPanelHtml(order, station, stInfo) {
-  const index = stationIndexInOrder(order, station);
   const state = stationTaskState(order, station);
-  const available = stationInputQty(order, station, index);
-  const processed = stationProcessedQty(station);
-  const remaining = Math.max(0, available - processed);
   const noteCount = stationNotes(order.id, station.stId).length;
   const claimed = Boolean(station.workerUserId || station.workerLogin);
   const claimedByExactUser = Boolean(
@@ -5599,14 +5590,15 @@ function stationFastPanelHtml(order, station, stInfo) {
   );
   const blocked = isOrderBlocked(order);
   const worker = stationWorkerLabel(station);
-  const claimLabel = !claimed ? 'Volné k převzetí' : claimedByExactUser ? 'Převzato vámi' : `Převzal ${worker}`;
+  const claimLabel = !claimed ? 'Volné' : claimedByExactUser ? 'Převzato vámi' : `Převzal ${worker}`;
   const hideContext = operatorHideOrderContext();
   return `<section class="station-fast-panel" style="--station-fast-color:${state.color}">
     <div class="station-fast-main">
-      <div class="station-fast-kicker"><span>${state.icon}</span><strong>Rychlá práce</strong></div>
+      <div class="station-fast-kicker"><span>${state.icon}</span><strong>Aktuální zakázka</strong></div>
       <h2>${escapeHtml(order.number)}</h2>
-      <p>${escapeHtml(order.name)} · ${stInfo?.icon ?? '🔧'} ${escapeHtml(stInfo?.name ?? 'Stanoviště')}</p>
+      <p>${escapeHtml(order.name)}</p>
       <div class="station-fast-status">
+        <span>${stInfo?.icon ?? '🔧'} ${escapeHtml(stInfo?.name ?? 'Stanoviště')}</span>
         <span class="station-fast-state">${escapeHtml(state.label)}</span>
         <span>${escapeHtml(claimLabel)}</span>
         ${blocked ? '<span class="danger">Blokace</span>' : ''}
@@ -5614,28 +5606,83 @@ function stationFastPanelHtml(order, station, stInfo) {
       </div>
     </div>
     <div class="station-fast-side">
-      <div class="station-fast-metrics">
-        <button type="button" onclick="openNumpad('ok','OK',${station.qtyOk})">
-          <strong>${available}</strong><span>${index > 0 ? 'Přišlo' : 'Objednáno'}</span>
-        </button>
-        <button type="button" onclick="openNumpad('ok','OK',${station.qtyOk})">
-          <strong>${positiveQty(station.qtyOk)}</strong><span>OK</span>
-        </button>
-        <button type="button" onclick="openNumpad('rework','Oprava',${station.qtyRework})">
-          <strong>${positiveQty(station.qtyRework)}</strong><span>Oprava</span>
-        </button>
-        <button type="button" onclick="openNumpad('scrap','Zmetek',${station.qtyScrap})">
-          <strong>${positiveQty(station.qtyScrap)}</strong><span>Zmetek</span>
-        </button>
-        <button type="button" onclick="openNumpad('ok','OK',${station.qtyOk})">
-          <strong>${remaining}</strong><span>Zbývá</span>
-        </button>
-      </div>
       <div class="station-fast-actions">
         ${stationWorkActionButtons(order, station)}
-        <button class="btn btn-primary btn-sm" onclick="saveQty()">Uložit počty</button>
         <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Problém</button>
         ${hideContext ? '' : `<button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Zakázka</button>`}
+      </div>
+    </div>
+  </section>`;
+}
+
+function stationContextFactHtml(label, value, tone = '') {
+  return `<div class="station-context-fact ${tone}">
+    <span>${escapeHtml(label)}</span>
+    <strong>${escapeHtml(value || '—')}</strong>
+  </div>`;
+}
+
+function stationContextPanelHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const meta = stationStatusMeta(station.status);
+  const nextStation = (order.stations || [])[index + 1];
+  const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  const hideContext = operatorHideOrderContext();
+  const pt = PROD_TYPES[order.productionType] || PROD_TYPES.new;
+  const techLabel = order.technology === 'olovo' ? 'OLOVO' : 'BEZOLOVO';
+  const noteCount = stationNotes(order.id, station.stId).length;
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const worker = claimed ? stationWorkerLabel(station) : 'Volné';
+  const blocked = isOrderBlocked(order);
+
+  return `<section class="station-context-panel" style="--station-context-color:${state.color}">
+    <div class="station-context-head">
+      <div class="station-context-title">
+        <div class="station-context-icon">${stInfo?.icon ?? '🔧'}</div>
+        <div>
+          <span>${escapeHtml(stInfo?.name ?? 'Stanoviště')}</span>
+          <strong>${escapeHtml(order.number)} · ${escapeHtml(order.name)}</strong>
+          <em>${escapeHtml(order.customer || 'Zákazník neuveden')}</em>
+        </div>
+      </div>
+      ${hideContext ? '' : `<div class="station-context-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Otevřít zakázku</button>
+      </div>`}
+    </div>
+
+    <div class="station-context-body">
+      <div class="station-context-task">
+        <span class="station-context-state-icon">${state.icon}</span>
+        <div>
+          <span>Co řešit teď</span>
+          <strong>${escapeHtml(state.label)}</strong>
+          <p>${escapeHtml(state.action)}</p>
+        </div>
+      </div>
+
+      <div class="station-context-facts">
+        ${stationContextFactHtml('Stav', meta.label, meta.action)}
+        ${stationContextFactHtml('Přístup', worker, claimed ? 'ok' : '')}
+        ${stationContextFactHtml('Termín', formatDate(order.due || ''))}
+        ${stationContextFactHtml('Priorita', priorityLabel(order.priority))}
+        ${stationContextFactHtml('Technologie', techLabel)}
+        ${stationContextFactHtml('Typ výroby', pt.label)}
+        ${order.stencilNumber ? stationContextFactHtml('Planžeta', order.stencilNumber) : ''}
+        ${stationContextFactHtml('Poznámky', `${noteCount} k tomuto kroku`, noteCount ? 'info' : '')}
+      </div>
+
+      <div class="station-context-route">
+        ${blocked ? `<div class="station-context-warning">⛔ ${escapeHtml(orderBlockReason(order) || 'Zakázka je blokovaná')}</div>` : ''}
+        ${hideContext
+          ? `<span class="station-route-final">🎯 Operátor vidí jen své stanoviště</span>`
+          : nextInfo
+          ? `<button class="station-next-btn" onclick="openStation('${escapeHtml(order.id)}','${nextStation.stId}')">
+              <span>Další stanoviště</span>
+              <strong>${nextInfo.icon} ${escapeHtml(nextInfo.name)}</strong>
+              <b>Otevřít →</b>
+            </button>`
+          : `<span class="station-route-final">🏁 Poslední stanoviště</span>`}
       </div>
     </div>
   </section>`;
@@ -5664,7 +5711,6 @@ function renderStationDetail(stInfo) {
       ${productPhotoCardHtml(selectedOrder, true)}
     `, { subtitle: 'opakovaná výroba' })
     : '';
-  const stationAccessHtml = advancedPanelHtml('Převzetí práce', stationWorkPanelHtml(selectedOrder, selectedStation), { subtitle: 'přístup' });
 
   const pg = document.getElementById('page-station');
   pg.innerHTML = `
@@ -5674,23 +5720,12 @@ function renderStationDetail(stInfo) {
       <span style="font-size:12px;color:var(--text2)">${hideContext ? 'Zpět na moji frontu' : 'Zpět na zakázku'}</span>
     </div>
 
-    <div class="station-hero">
-      <div class="station-header">
-        <div class="station-badge">${stInfo?.icon ?? '🔧'}</div>
-        <div class="station-title-block">
-          <div class="station-title">${stInfo?.name ?? 'Stanoviště'}</div>
-          <div class="station-subtitle">${selectedOrder.number} · ${selectedOrder.name}</div>
-        </div>
-      </div>
-      ${stationWorkSummaryHtml(selectedOrder, selectedStation, stInfo)}
-    </div>
-
-    ${stationFastPanelHtml(selectedOrder, selectedStation, stInfo)}
+    ${stationContextPanelHtml(selectedOrder, selectedStation, stInfo)}
 
     <div class="station-workspace-grid">
       <div class="station-workspace-main">
         <div class="card station-primary-card station-qty-card">
-          <div class="card-title">📦 Počty kusů</div>
+          <div class="card-title">📦 Zapsat kusy</div>
           <div class="qty-grid" id="qty-grid">
             ${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
             ${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
@@ -5704,14 +5739,24 @@ function renderStationDetail(stInfo) {
         </div>
 
         <div class="card station-primary-card station-status-card">
-          <div class="card-title">🔄 Změnit stav</div>
+          <div class="card-title">🔄 Stav práce</div>
+          <div class="station-work-actions">
+            <div class="station-work-actions-head">
+              <strong>Pracovní akce</strong>
+              <span>Převzetí, pauza, dokončení a problém</span>
+            </div>
+            <div class="station-work-actions-buttons">
+              ${stationWorkActionButtons(selectedOrder, selectedStation)}
+              <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Nahlásit problém</button>
+            </div>
+          </div>
+          <div class="station-status-divider"></div>
+          <div class="station-status-label">Průběžný stav</div>
           <div class="action-grid">
             ${stationStatusButton('waiting', '🧰 Příprava')}
             ${stationStatusButton('in_progress', '▶ Rozpracováno')}
             ${stationStatusButton('partial', '◐ Částečně hotovo')}
-            ${stationStatusButton('completed', '✅ Hotovo')}
           </div>
-          <button class="action-btn issue" style="margin-top:8px;width:100%;justify-content:center" onclick="reportIssueModal()">⚠️ Nahlásit problém</button>
         </div>
 
         ${stationNotesHtml}
@@ -5719,7 +5764,6 @@ function renderStationDetail(stInfo) {
 
       <div class="station-workspace-side">
         ${stationProgramPhotoHtml}
-        ${stationAccessHtml}
         ${stationSupportHtml}
       </div>
     </div>
@@ -5742,7 +5786,7 @@ function qtyFieldHtml(field, label, val, colorClass) {
   return `<div class="qty-field" onclick="openNumpad('${field}','${label}',${val})" id="qtf-${field}">
     <div class="qty-field-label" style="color:var(--text2)">${label}</div>
     <div class="qty-field-val ${colorClass}" id="qtv-${field}">${val}</div>
-    <div style="font-size:9px;color:var(--text3);margin-top:3px">${disabled ? 'nejdřív převzít' : 'klikni pro zadání'}</div>
+    <div style="font-size:9px;color:var(--text3);margin-top:3px">${disabled ? 'nejdřív potvrdit' : 'klikni pro zadání'}</div>
   </div>`;
 }
 

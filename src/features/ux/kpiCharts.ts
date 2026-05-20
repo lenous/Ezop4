@@ -403,14 +403,13 @@ function injectChartsIntoKpiPage() {
   if (page.querySelector('.ux-kpi-panel')) return;
 
   const html = buildPanelHtml();
-  const sidePanel = page.querySelector('.kpi-layout .kpi-panel:nth-child(2)');
+  const layout = page.querySelector('.kpi-layout');
   const wrap = document.createElement('div');
   wrap.innerHTML = html.trim();
   const panel = wrap.firstElementChild as HTMLElement | null;
   if (!panel) return;
-  panel.classList.add('ux-kpi-panel-side');
-  if (sidePanel) {
-    sidePanel.appendChild(panel);
+  if (layout) {
+    layout.insertAdjacentElement('afterend', panel);
   } else {
     page.appendChild(panel);
   }
