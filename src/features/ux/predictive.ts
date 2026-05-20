@@ -375,10 +375,13 @@ function patchRenderDashboardEstimate() {
       tile.addEventListener('click', () => {
         if (typeof W.navigateTo === 'function') W.navigateTo('kanban');
       });
-      // Vlož za hero
-      const hero = page.querySelector('.app-page-hero');
-      if (hero) hero.insertAdjacentElement('afterend', tile);
-      else page.prepend(tile);
+      const dashboardMain = page.querySelector('.dashboard-main-col');
+      if (dashboardMain) dashboardMain.appendChild(tile);
+      else {
+        const hero = page.querySelector('.app-page-hero');
+        if (hero) hero.insertAdjacentElement('afterend', tile);
+        else page.prepend(tile);
+      }
     }, 10);
     return result;
   };

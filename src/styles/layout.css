@@ -929,6 +929,81 @@
   #app #page-station,
   #app #page-profile { max-width: 980px; }
 
+  @media (min-width: 761px) {
+    #app {
+      padding-left: 72px;
+    }
+
+    #app .topbar {
+      height: 56px;
+      padding: 0 18px;
+      background: rgba(7,10,12,.94);
+      border-bottom-color: rgba(168,180,189,.11);
+      box-shadow: 0 1px 0 rgba(255,255,255,.03), 0 16px 42px rgba(0,0,0,.28);
+    }
+
+    #app .topbar-logo {
+      font-size: 19px;
+    }
+
+    #app .navtabs {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 72px;
+      z-index: 130;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 8px;
+      overflow: hidden auto;
+      border-right: 1px solid rgba(125,214,210,.12);
+      border-bottom: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.01)),
+        rgba(6,9,11,.96);
+      box-shadow: 18px 0 44px rgba(0,0,0,.22);
+    }
+
+    #app .navtab {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 0;
+      color: var(--text3);
+      background: transparent;
+    }
+
+    #app .navtab:hover {
+      color: var(--text);
+      background: rgba(125,214,210,.08);
+    }
+
+    #app .navtab.active {
+      color: var(--gold);
+      background: rgba(226,184,32,.10);
+      box-shadow: inset 3px 0 0 var(--gold), 0 10px 24px rgba(0,0,0,.22);
+    }
+
+    #app .navtab .tab-icon {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    #app .page {
+      max-width: 1260px;
+      padding-top: 22px;
+    }
+
+    #app #page-dashboard {
+      max-width: 1240px;
+    }
+  }
+
 /* ── NEW LANDING PAGE (lp-*) ── */
 .lp-root {
   min-height: 100vh;

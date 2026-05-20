@@ -1519,6 +1519,11 @@ html.ux-banner-active .topbar { top: 36px; }
   flex-direction: column;
   gap: 12px;
 }
+.ux-kpi-panel-side {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
 .ux-kpi-head {
   display: flex;
   align-items: flex-start;
@@ -1564,6 +1569,21 @@ html.ux-banner-active .topbar { top: 36px; }
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
+}
+.ux-kpi-panel-side .ux-kpi-grid {
+  grid-template-columns: 1fr;
+}
+.ux-kpi-panel-side .ux-kpi-badges {
+  width: 100%;
+}
+.ux-kpi-panel-side .ux-kpi-card {
+  padding: 12px;
+}
+.ux-kpi-panel-side .ux-kpi-svg {
+  max-height: 170px;
+}
+.ux-kpi-panel-side .ux-kpi-donut-wrap {
+  align-items: flex-start;
 }
 .ux-kpi-card {
   display: flex;

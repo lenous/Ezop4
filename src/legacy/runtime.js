@@ -3283,38 +3283,25 @@ function renderDashboard() {
   const context = dashboardContext(orders, stats);
 
   document.getElementById('page-dashboard').innerHTML = `
-    <div class="app-page-hero">
-      <div>
-      <div class="app-page-title">
-        Dobrý den, <strong>${escapeHtml(currentUser.name.split(' ')[0])}</strong>! 👋
-      </div>
-      <div class="app-page-subtitle">
-        ${new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long'})}
-        &nbsp;·&nbsp; ${escapeHtml(APP_SETTINGS.companyName || '')}
-        ${currentUser.role === 'operator' ? `&nbsp;·&nbsp; ${escapeHtml(stationAccessLabel())}` : ''}
-      </div>
-      </div>
-    </div>
-    <div class="divider"></div>
-
     <div class="dashboard-overview">
-      ${dashboardShiftCommandHtml(context)}
-      ${operatorShowProductionOverview() ? dashboardOverviewRailHtml(context) : ''}
-      ${announcementsBannerHtml()}
-      ${shiftHandoverWidgetHtml()}
+      <div class="dashboard-compact-head">
+        <div>
+          <strong>Přehled</strong>
+          <span>${new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long'})} · ${escapeHtml(APP_SETTINGS.companyName || '')}${currentUser.role === 'operator' ? ` · ${escapeHtml(stationAccessLabel())}` : ''}</span>
+        </div>
+        <div class="dashboard-head-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openGlobalSearch()">Hledat</button>
+          <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Fronty</button>
+        </div>
+      </div>
 
       <div class="dashboard-grid ${operatorShowProductionOverview() ? '' : 'dashboard-grid-simple'}">
         <div class="dashboard-main-col">
           ${dashboardOperatorWorkHtml()}
           ${operatorShowProductionOverview() ? dashboardCockpitHtml(context) : ''}
+          ${announcementsBannerHtml()}
+          ${shiftHandoverWidgetHtml()}
         </div>
-        <aside class="dashboard-side-col">
-          ${dashboardWorkspaceWidgetHtml()}
-          ${operatorShowProductionOverview() ? `
-            ${dashboardStoppedWorkHtml(orders)}
-            ${dashboardPlanningRiskHtml(orders, context)}
-          ` : ''}
-        </aside>
       </div>
     </div>
   `;
@@ -3435,21 +3422,17 @@ function dashboardShiftCommandHtml(context) {
         </div>
         <b>→</b>
       </button>
-      <div class="app-shift-metrics">
+      <div class="app-shift-metrics app-shift-metrics-simple">
         <button type="button" onclick="showOrdersFiltered('overdue')">
           <span>${overdueOrders.length}</span><em>po termínu</em>
         </button>
         <button type="button" onclick="navigateTo('issues')">
           <span>${openIssues.length || stats.issues}</span><em>problémy</em>
         </button>
-        <button type="button" onclick="navigateTo('queue')">
-          <span>${queueItems.length}</span><em>ve frontách</em>
-        </button>
         <button type="button" onclick="${bottleneck ? `openQueueForStation('${bottleneck.station.id}')` : "navigateTo('queue')"}">
           <span>${bottleneck ? bottleneck.count : 0}</span><em>${bottleneck ? escapeHtml(bottleneck.station.name) : 'bez zátěže'}</em>
         </button>
       </div>
-      ${dashboardQuickActionsHtml(context)}
     </div>
   </section>`;
 }
@@ -3619,39 +3602,31 @@ function dashboardCockpitHtml(context) {
   const { orders, stats, queueItems: allQueueItems, openIssues } = context;
   const activeOrders = orders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status)));
   const primaryOrder = activeOrders[0] || orders.find(o => !orderIsClosed(o)) || orders[0];
-  const overdue = orders.filter(isOrderOverdue).length;
-  const blocked = orders.filter(isOrderBlocked).length;
-  const punctuality = stats.total ? Math.max(0, Math.round((stats.total - overdue) / stats.total * 100)) : 100;
-  const stationRows = dashboardStationRows(context);
+  const stationRows = dashboardStationRows(context).slice(0, 4);
 
-  return `<section class="app-cockpit">
-    <div class="app-cockpit-left">
+  return `<section class="app-cockpit app-cockpit-simple">
+    <div class="app-cockpit-main app-cockpit-priority">
       <div class="app-panel-head">
         <div>
-          <div class="card-title">Fronty pracovišť</div>
-          <div class="app-muted">${allQueueItems.length} položek čeká na další krok</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Detail</button>
-      </div>
-      <div class="app-station-list">
-        ${stationRows.map(row => `
-          <button class="app-station-row" type="button" onclick="openQueueForStation('${row.st.id}')">
-            <span class="app-station-name">${row.st.icon} ${escapeHtml(row.st.name)}</span>
-            <strong>${row.items.length}</strong>
-            <em>${row.blockedCount ? `${row.blockedCount} blok.` : row.readyCount ? `${row.readyCount} připr.` : row.activeCount ? `${row.activeCount} aktiv.` : 'bez fronty'}</em>
-          </button>
-        `).join('') || `<div class="app-empty">Žádná fronta teď nečeká.</div>`}
-      </div>
-    </div>
-
-    <div class="app-cockpit-main">
-      <div class="app-panel-head">
-        <div>
-          <div class="card-title">Dnešní přehled</div>
+          <div class="card-title">Co řešit teď</div>
           <div class="app-muted">${new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'})} · online provoz</div>
         </div>
       </div>
-      <div class="app-kpi-grid">
+
+      ${primaryOrder ? dashboardCurrentOrderHtml(primaryOrder) : `<div class="app-current-work app-empty">Žádná zakázka není aktivní.</div>`}
+      ${dashboardRecentIssuesHtml(openIssues)}
+    </div>
+
+    <div class="app-cockpit-left app-cockpit-summary">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">Dnešní čísla</div>
+          <div class="app-muted">${allQueueItems.length} položek ve frontách</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Fronty</button>
+      </div>
+
+      <div class="app-kpi-grid app-kpi-grid-simple">
         <button class="app-kpi-tile" type="button" onclick="showOrdersFiltered(null)">
           <span>Zakázky</span><strong>${stats.total}</strong><em>celkem</em>
         </button>
@@ -3664,16 +3639,17 @@ function dashboardCockpitHtml(context) {
         <button class="app-kpi-tile" type="button" onclick="showOrdersFiltered('urgent')">
           <span>Urgentní</span><strong class="amber">${stats.urgent}</strong><em>zakázky</em>
         </button>
-        <button class="app-kpi-tile" type="button" onclick="showOrdersFiltered('overdue')">
-          <span>Včasnost</span><strong>${punctuality}%</strong><em>${overdue} po termínu</em>
-        </button>
-        <button class="app-kpi-tile" type="button" onclick="showOrdersFiltered('blocked')">
-          <span>Blokace</span><strong class="${blocked ? 'red' : 'green'}">${blocked}</strong><em>aktivní</em>
-        </button>
       </div>
 
-      ${primaryOrder ? dashboardCurrentOrderHtml(primaryOrder) : `<div class="app-current-work app-empty">Žádná zakázka není aktivní.</div>`}
-      ${dashboardRecentIssuesHtml(openIssues)}
+      <div class="app-station-list">
+        ${stationRows.map(row => `
+          <button class="app-station-row" type="button" onclick="openQueueForStation('${row.st.id}')">
+            <span class="app-station-name">${row.st.icon} ${escapeHtml(row.st.name)}</span>
+            <strong>${row.items.length}</strong>
+            <em>${row.blockedCount ? `${row.blockedCount} blok.` : row.readyCount ? `${row.readyCount} připr.` : row.activeCount ? `${row.activeCount} aktiv.` : 'bez fronty'}</em>
+          </button>
+        `).join('') || `<div class="app-empty">Žádná fronta teď nečeká.</div>`}
+      </div>
     </div>
   </section>`;
 }

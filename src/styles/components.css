@@ -1783,18 +1783,55 @@
 
   #app .dashboard-overview {
     display: grid;
-    gap: 14px;
+    gap: 12px;
+  }
+
+  #app .dashboard-compact-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+  }
+
+  #app .dashboard-compact-head strong,
+  #app .dashboard-compact-head span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #app .dashboard-compact-head strong {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 950;
+  }
+
+  #app .dashboard-compact-head span {
+    color: var(--text3);
+    font-size: 11px;
+    margin-top: 3px;
+  }
+
+  #app .dashboard-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   #app .dashboard-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
     align-items: start;
   }
 
   #app .dashboard-grid-simple {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, .48fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   #app .dashboard-main-col,
@@ -1806,7 +1843,7 @@
 
   #app .dashboard-side-col {
     position: sticky;
-    top: 88px;
+    top: 76px;
   }
 
   #app .dashboard-rail {
@@ -1899,6 +1936,10 @@
     gap: 12px;
   }
 
+  #app .app-cockpit-simple {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, .36fr);
+  }
+
   #app .app-cockpit-left,
   #app .app-cockpit-main {
     position: relative;
@@ -1908,7 +1949,7 @@
     background:
       linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)),
       rgba(11,18,22,.94);
-    box-shadow: 0 20px 52px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
+    box-shadow: 0 16px 40px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.035);
   }
 
   #app .app-cockpit-left {
@@ -1918,6 +1959,14 @@
 
   #app .app-cockpit-main {
     padding: 16px;
+  }
+
+  #app .app-cockpit-priority {
+    border-left: 3px solid var(--gold);
+  }
+
+  #app .app-cockpit-summary {
+    border-left-color: var(--cyan);
   }
 
   #app .app-panel-head {
@@ -1941,9 +1990,9 @@
 
   #app .app-shift-command {
     display: grid;
-    grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+    grid-template-columns: minmax(0, 1fr) minmax(320px, .42fr);
     gap: 14px;
-    margin: 0 0 14px;
+    margin: 0;
     padding: 16px;
     border: 1px solid rgba(168,180,189,.18);
     border-radius: 8px;
@@ -1962,7 +2011,7 @@
   #app .app-shift-main h2 {
     margin: 8px 0 6px;
     color: var(--text);
-    font-size: 24px;
+    font-size: 22px;
     line-height: 1.08;
     letter-spacing: 0;
   }
@@ -2005,7 +2054,7 @@
     border-radius: 8px;
     background: linear-gradient(135deg, rgba(226,184,32,.12), rgba(125,214,210,.05));
     color: var(--text);
-    padding: 12px;
+    padding: 11px;
     display: grid;
     grid-template-columns: 42px minmax(0, 1fr) auto;
     gap: 10px;
@@ -2064,6 +2113,10 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  #app .app-shift-metrics-simple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   #app .app-shift-metrics button {
@@ -2419,6 +2472,23 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 9px;
     margin-bottom: 12px;
+  }
+
+  #app .app-kpi-grid-simple {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  #app .app-cockpit-summary .app-kpi-grid-simple {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #app .app-cockpit-summary .app-kpi-tile {
+    min-height: 76px;
+    padding: 10px;
+  }
+
+  #app .app-cockpit-summary .app-kpi-tile strong {
+    font-size: 22px;
   }
 
   #app .app-kpi-tile {
@@ -3008,7 +3078,7 @@
 
   #app .workspace-banner {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(260px, .8fr) auto;
+    grid-template-columns: minmax(220px, 1fr) minmax(240px, .7fr) auto;
     align-items: center;
     gap: 14px;
     margin-bottom: 12px;
@@ -3112,7 +3182,7 @@
     align-items: center;
     gap: 14px;
     padding: 18px;
-    margin-bottom: 12px;
+    margin-bottom: 0;
     border: 1px solid rgba(168,180,189,.17);
     border-left: 3px solid var(--cyan);
     border-radius: 8px;

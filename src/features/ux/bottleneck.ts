@@ -134,8 +134,8 @@ function buildCardHtml(): string {
   return `<section class="card ux-bn-card tone-${tone}">
     <div class="ux-bn-head">
       <div>
-        <div class="card-title">🚦 Úzké hrdlo výroby</div>
-        <div class="app-muted">Nejvíc vytížená stanice právě teď</div>
+        <div class="card-title">🚦 Přetížená část výroby</div>
+        <div class="app-muted">Místo, kde se teď hromadí nejvíc práce</div>
       </div>
     </div>
     <div class="ux-bn-top">
@@ -171,15 +171,19 @@ function injectCard() {
   const card = wrap.firstElementChild as HTMLElement | null;
   if (!card) return;
 
-  // Insert above KPI panel if it exists, else above cockpit, else after hero.
-  const anchor = page.querySelector('.ux-kpi-panel')
-    || page.querySelector('.app-cockpit')
-    || page.querySelector('.app-page-hero')
-    || page.firstElementChild;
-  if (anchor && anchor.parentElement) {
-    anchor.parentElement.insertBefore(card, anchor);
+  const dashboardMain = page.querySelector('.dashboard-main-col');
+  if (dashboardMain) {
+    dashboardMain.appendChild(card);
   } else {
-    page.appendChild(card);
+    const anchor = page.querySelector('.ux-kpi-panel')
+      || page.querySelector('.app-cockpit')
+      || page.querySelector('.app-page-hero')
+      || page.firstElementChild;
+    if (!anchor || !anchor.parentElement) {
+      page.appendChild(card);
+    } else {
+      anchor.parentElement.insertBefore(card, anchor);
+    }
   }
 
   card.addEventListener('click', () => {

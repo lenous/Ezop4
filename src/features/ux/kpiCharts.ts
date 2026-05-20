@@ -1,5 +1,5 @@
 /**
- * KPI grafy na dashboardu — čisté SVG bez závislostí.
+ * KPI grafy na stránce KPI — čisté SVG bez závislostí.
  *
  *  - Sloupcový graf průchodnosti stanic (ks/hod, posledních 14 dnů)
  *  - Trendová křivka zmetků + oprav za posledních 7 dnů
@@ -395,39 +395,38 @@ function buildPanelHtml(): string {
   `;
 }
 
-function injectChartsIntoDashboard() {
-  const page = document.getElementById('page-dashboard');
+function injectChartsIntoKpiPage() {
+  const page = document.getElementById('page-kpi');
   if (!page) return;
   if (!shouldShowCharts()) return;
   if (page.querySelector('.ux-kpi-panel')) return;
 
   const html = buildPanelHtml();
-  const anchor = page.querySelector('.app-cockpit')
-    || page.querySelector('.app-page-hero')
-    || page.firstElementChild;
+  const sidePanel = page.querySelector('.kpi-layout .kpi-panel:nth-child(2)');
   const wrap = document.createElement('div');
   wrap.innerHTML = html.trim();
   const panel = wrap.firstElementChild as HTMLElement | null;
   if (!panel) return;
-  if (anchor && anchor.parentElement) {
-    anchor.insertAdjacentElement('afterend', panel);
+  panel.classList.add('ux-kpi-panel-side');
+  if (sidePanel) {
+    sidePanel.appendChild(panel);
   } else {
     page.appendChild(panel);
   }
 }
 
-function patchRenderDashboardKpi() {
-  if (W.__uxPatchedDashboardKpi) return;
-  if (typeof W.renderDashboard !== 'function') return;
-  const original = W.renderDashboard;
-  W.renderDashboard = function (...args: any[]) {
+function patchRenderKpiCharts() {
+  if (W.__uxPatchedKpiCharts) return;
+  if (typeof W.renderKpi !== 'function') return;
+  const original = W.renderKpi;
+  W.renderKpi = function (...args: any[]) {
     const result = original.apply(this, args);
-    setTimeout(injectChartsIntoDashboard, 20);
+    setTimeout(injectChartsIntoKpiPage, 20);
     return result;
   };
-  W.__uxPatchedDashboardKpi = true;
+  W.__uxPatchedKpiCharts = true;
 }
 
 export function installKpiCharts() {
-  patchRenderDashboardKpi();
+  patchRenderKpiCharts();
 }

@@ -1173,65 +1173,6 @@ function renderFab() {
     _fabOutsideClick = null;
   }
   document.getElementById('ux-fab')?.remove();
-  const user = getCurrentUser();
-  if (!user) return;
-
-  const role = user.role || 'operator';
-  const fab = document.createElement('div');
-  fab.className = 'ux-fab collapsed'; // starts collapsed on mobile
-  fab.id = 'ux-fab';
-
-  const primaryAction = role === 'management' || role === 'admin'
-    ? { id: 'briefing', icon: '📊', label: 'Briefing' }
-    : { id: 'myday', icon: '☀', label: 'Můj den' };
-
-  const buttons: { id: string; icon: string; label: string; primary?: boolean }[] = [
-    { ...primaryAction, primary: true },
-    { id: 'recap', icon: '🔁', label: 'Předat směnu' },
-  ];
-  if (role === 'admin') buttons.push({ id: 'impersonate', icon: '👁', label: 'Vyzkoušet jako…' });
-  buttons.push({ id: 'feedback', icon: '💬', label: 'Zpětná vazba' });
-  buttons.push({ id: 'help', icon: '❔', label: 'Nápověda (F1)' });
-  buttons.push({ id: 'settings', icon: '✦', label: 'Vzhled' });
-
-  fab.innerHTML = buttons.map(b => `
-    <button class="ux-fab-btn" data-fab="${b.id}" ${b.primary ? 'data-primary="1"' : ''} title="${b.label}" aria-label="${b.label}">
-      <span>${b.icon}</span>
-      <span class="ux-fab-label">${b.label}</span>
-    </button>
-  `).join('') + `
-    <button class="ux-fab-toggle" aria-label="Otevřít akce" title="Akce">
-      <span class="ux-fab-toggle-icon">✦</span>
-    </button>
-  `;
-
-  document.body.appendChild(fab);
-
-  fab.querySelector('.ux-fab-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    fab.classList.toggle('collapsed');
-  });
-
-  _fabOutsideClick = (e: MouseEvent) => {
-    if (!fab.contains(e.target as Node)) fab.classList.add('collapsed');
-  };
-  document.addEventListener('click', _fabOutsideClick);
-
-  fab.addEventListener('click', (e) => {
-    const target = (e.target as HTMLElement).closest<HTMLButtonElement>('.ux-fab-btn');
-    if (!target) return;
-    fab.classList.add('collapsed');
-    const id = target.dataset.fab;
-    switch (id) {
-      case 'myday': openMyDayPanel(); break;
-      case 'briefing': openBriefingPanel(); break;
-      case 'recap': openShiftRecapPanel(); break;
-      case 'impersonate': openImpersonatePanel(); break;
-      case 'feedback': openFeedbackPanel(); break;
-      case 'help': openHelpOverlay(); break;
-      case 'settings': openSettingsPanel(); break;
-    }
-  });
 }
 
 /* ════════════════════════════════
