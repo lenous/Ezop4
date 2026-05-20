@@ -931,7 +931,7 @@
 
   @media (min-width: 761px) {
     #app {
-      padding-left: 72px;
+      padding-left: 172px;
     }
 
     #app .topbar {
@@ -949,13 +949,13 @@
     #app .navtabs {
       position: fixed;
       inset: 0 auto 0 0;
-      width: 72px;
+      width: 172px;
       z-index: 130;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 18px 8px;
+      align-items: stretch;
+      gap: 6px;
+      padding: 16px 10px;
       overflow: hidden auto;
       border-right: 1px solid rgba(125,214,210,.12);
       border-bottom: 0;
@@ -966,15 +966,21 @@
     }
 
     #app .navtab {
-      width: 42px;
+      width: 100%;
       height: 42px;
-      display: grid;
-      place-items: center;
-      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 9px;
+      padding: 0 12px;
       border-radius: 8px;
-      font-size: 0;
+      font-size: 11px;
+      line-height: 1.15;
+      text-align: left;
       color: var(--text3);
       background: transparent;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #app .navtab:hover {
@@ -990,6 +996,9 @@
 
     #app .navtab .tab-icon {
       margin: 0;
+      width: 20px;
+      min-width: 20px;
+      text-align: center;
       font-size: 17px;
       line-height: 1;
     }
