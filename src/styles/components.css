@@ -1781,11 +1781,122 @@
     font-weight: 900;
   }
 
+  #app .dashboard-overview {
+    display: grid;
+    gap: 14px;
+  }
+
+  #app .dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+    gap: 14px;
+    align-items: start;
+  }
+
+  #app .dashboard-grid-simple {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, .48fr);
+  }
+
+  #app .dashboard-main-col,
+  #app .dashboard-side-col {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  #app .dashboard-side-col {
+    position: sticky;
+    top: 88px;
+  }
+
+  #app .dashboard-rail {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #app .dashboard-rail-tile {
+    appearance: none;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid rgba(168,180,189,.14);
+    border-left: 3px solid rgba(168,180,189,.28);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.046), rgba(255,255,255,.014)),
+      rgba(10,17,21,.92);
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: transform .15s, border-color .2s, background .2s;
+  }
+
+  #app .dashboard-rail-tile:hover {
+    transform: translateY(-1px);
+    border-color: rgba(226,184,32,.34);
+    background:
+      linear-gradient(180deg, rgba(226,184,32,.07), rgba(125,214,210,.025)),
+      rgba(10,17,21,.94);
+  }
+
+  #app .dashboard-rail-tile > span {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(0,0,0,.18);
+    color: var(--cyan);
+    font-size: 18px;
+  }
+
+  #app .dashboard-rail-tile.primary { border-left-color: var(--gold); }
+  #app .dashboard-rail-tile.ok { border-left-color: var(--green); }
+  #app .dashboard-rail-tile.watch { border-left-color: var(--gold); }
+  #app .dashboard-rail-tile.danger { border-left-color: var(--red); }
+
+  #app .dashboard-rail-tile em,
+  #app .dashboard-rail-tile strong,
+  #app .dashboard-rail-tile small {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-style: normal;
+  }
+
+  #app .dashboard-rail-tile em {
+    color: var(--text2);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .55px;
+    text-transform: uppercase;
+  }
+
+  #app .dashboard-rail-tile strong {
+    color: var(--text);
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 21px;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-top: 3px;
+  }
+
+  #app .dashboard-rail-tile small {
+    color: var(--text3);
+    font-size: 10px;
+    margin-top: 3px;
+  }
+
   #app .app-cockpit {
     display: grid;
     grid-template-columns: minmax(280px, .9fr) minmax(0, 1.45fr);
     gap: 12px;
-    margin-bottom: 16px;
   }
 
   #app .app-cockpit-left,
@@ -2977,6 +3088,22 @@
   #app .workspace-banner-actions {
     justify-content: flex-end;
     flex-wrap: wrap;
+  }
+
+  #app .workspace-banner-clickable {
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .15s;
+  }
+
+  #app .workspace-banner-clickable:hover {
+    background: rgba(226,184,32,.055);
+    transform: translateY(-1px);
+  }
+
+  #app .workspace-banner-clickable:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
   }
 
   #app .attendance-hero {

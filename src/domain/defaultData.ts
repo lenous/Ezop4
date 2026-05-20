@@ -28,6 +28,9 @@ export const appSettings = {
   shiftHours: 8,
   compactAdvancedUi: true,
   operatorSimpleMode: true,
+  operatorDashboardFocusOnly: true,
+  operatorShowProductionOverview: false,
+  operatorHideOrderContext: true,
   featureProductMemory: true,
   featureAiSummary: true,
   featureReadiness: true,
@@ -40,7 +43,7 @@ export const appSettings = {
   messengerMaxLength: 500,
   rolePermissionOverrides: {},
   hiddenNavByRole: {
-    operator: ['kpi', 'workspace'],
+    operator: ['kpi'],
   },
   appDisplayMode: 'standard',
 };

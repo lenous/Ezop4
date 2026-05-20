@@ -367,6 +367,18 @@ function operatorSimpleMode() {
   return currentUser?.role === 'operator' && APP_SETTINGS?.operatorSimpleMode !== false;
 }
 
+function operatorDashboardFocusOnly() {
+  return currentUser?.role === 'operator' && APP_SETTINGS?.operatorDashboardFocusOnly !== false;
+}
+
+function operatorShowProductionOverview() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowProductionOverview === true;
+}
+
+function operatorHideOrderContext() {
+  return currentUser?.role === 'operator' && APP_SETTINGS?.operatorHideOrderContext !== false;
+}
+
 function advancedPanelHtml(title, body, options = {}) {
   const content = String(body || '').trim();
   if (!content) return '';
@@ -3285,19 +3297,26 @@ function renderDashboard() {
     </div>
     <div class="divider"></div>
 
-    ${dashboardShiftCommandHtml(context)}
+    <div class="dashboard-overview">
+      ${dashboardShiftCommandHtml(context)}
+      ${operatorShowProductionOverview() ? dashboardOverviewRailHtml(context) : ''}
+      ${announcementsBannerHtml()}
+      ${shiftHandoverWidgetHtml()}
 
-    ${announcementsBannerHtml()}
-
-    ${shiftHandoverWidgetHtml()}
-
-    ${dashboardWorkspaceWidgetHtml()}
-
-    ${dashboardOperatorWorkHtml()}
-
-    ${dashboardCockpitHtml(context)}
-    ${dashboardStoppedWorkHtml(orders)}
-    ${dashboardPlanningRiskHtml(orders, context)}
+      <div class="dashboard-grid ${operatorShowProductionOverview() ? '' : 'dashboard-grid-simple'}">
+        <div class="dashboard-main-col">
+          ${dashboardOperatorWorkHtml()}
+          ${operatorShowProductionOverview() ? dashboardCockpitHtml(context) : ''}
+        </div>
+        <aside class="dashboard-side-col">
+          ${dashboardWorkspaceWidgetHtml()}
+          ${operatorShowProductionOverview() ? `
+            ${dashboardStoppedWorkHtml(orders)}
+            ${dashboardPlanningRiskHtml(orders, context)}
+          ` : ''}
+        </aside>
+      </div>
+    </div>
   `;
 }
 
@@ -3309,6 +3328,68 @@ function dashboardContext(orders, stats) {
   const loads = stationLoadSummaries();
   const bottleneck = loads[0];
   return { orders, stats, queueItems, openIssues, overdueOrders, blockedOrders, loads, bottleneck };
+}
+
+function dashboardOverviewRailHtml(context) {
+  const { stats, queueItems, openIssues, overdueOrders, blockedOrders, bottleneck } = context;
+  const punctuality = stats.total ? Math.max(0, Math.round((stats.total - overdueOrders.length) / stats.total * 100)) : 100;
+  const bottleneckLabel = bottleneck ? bottleneck.station.name : 'bez zátěže';
+  const bottleneckCount = bottleneck ? bottleneck.count : 0;
+  const items = [
+    {
+      cls: 'primary',
+      icon: '📋',
+      label: 'Zakázky',
+      value: stats.total,
+      sub: `${stats.inProg} ve výrobě`,
+      action: "showOrdersFiltered(null)",
+    },
+    {
+      cls: queueItems.length ? 'watch' : 'ok',
+      icon: '🧭',
+      label: 'Tok práce',
+      value: queueItems.length,
+      sub: 'položek ve frontách',
+      action: "navigateTo('queue')",
+    },
+    {
+      cls: openIssues.length || blockedOrders.length ? 'danger' : 'ok',
+      icon: '⚠️',
+      label: 'Zásahy',
+      value: openIssues.length + blockedOrders.length,
+      sub: `${openIssues.length} problémů · ${blockedOrders.length} blok.`,
+      action: "navigateTo('issues')",
+    },
+    {
+      cls: overdueOrders.length ? 'danger' : 'ok',
+      icon: '⏱',
+      label: 'Včasnost',
+      value: `${punctuality}%`,
+      sub: `${overdueOrders.length} po termínu`,
+      action: "showOrdersFiltered('overdue')",
+    },
+    {
+      cls: bottleneck?.level === 'high' ? 'danger' : bottleneck?.level === 'medium' ? 'watch' : 'ok',
+      icon: bottleneck?.station?.icon || '✅',
+      label: 'Úzké místo',
+      value: bottleneckCount,
+      sub: bottleneckLabel,
+      action: bottleneck ? `openQueueForStation('${bottleneck.station.id}')` : "navigateTo('queue')",
+    },
+  ];
+
+  return `<section class="dashboard-rail" aria-label="Souhrn přehledu">
+    ${items.map(item => `
+      <button class="dashboard-rail-tile ${item.cls}" type="button" onclick="${item.action}">
+        <span>${item.icon}</span>
+        <div>
+          <em>${escapeHtml(item.label)}</em>
+          <strong>${escapeHtml(String(item.value))}</strong>
+          <small>${escapeHtml(item.sub)}</small>
+        </div>
+      </button>
+    `).join('')}
+  </section>`;
 }
 
 function dashboardStationRows(context) {
@@ -3323,6 +3404,8 @@ function dashboardStationRows(context) {
 }
 
 function dashboardShiftCommandHtml(context) {
+  if (operatorDashboardFocusOnly()) return dashboardOperatorShiftCommandHtml(context);
+
   const { orders, stats, queueItems, openIssues, overdueOrders, blockedOrders, bottleneck } = context;
   const pressure = overdueOrders.length + openIssues.length + blockedOrders.length + (bottleneck && bottleneck.level !== 'ok' ? 1 : 0);
   const tone = pressure >= 4 ? 'risk' : pressure > 0 ? 'watch' : 'calm';
@@ -3371,9 +3454,82 @@ function dashboardShiftCommandHtml(context) {
   </section>`;
 }
 
+function dashboardOperatorShiftCommandHtml(context) {
+  const queueItems = context.queueItems || [];
+  const stations = accessibleStations();
+  const activeItems = queueItems.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label));
+  const issueItems = queueItems.filter(item => item.station.status === 'issue');
+  const primary = queueItems[0];
+  const empty = !queueItems.length;
+  const primaryAction = primary
+    ? `openStation('${primary.order.id}', '${primary.station.stId}')`
+    : "navigateTo('queue')";
+
+  return `<section class="app-shift-command app-shift-command-${empty ? 'calm' : issueItems.length ? 'risk' : 'watch'}">
+    <div class="app-shift-main">
+      <div class="app-shift-label">
+        <span>${empty ? '🟢' : '🎯'}</span>
+        <strong>Moje stanoviště</strong>
+      </div>
+      <h2>${empty ? 'Teď není přiřazená práce' : 'Další práce pro operátora'}</h2>
+      <p>${escapeHtml(empty
+        ? `Sledujete jen přiřazená stanoviště: ${stationAccessLabel()}.`
+        : 'Přehled je zúžený na vaše stanoviště. Detaily zakázky a širší provoz řídí mistr nebo admin.'
+      )}</p>
+      <div class="app-shift-actions">
+        <button class="btn btn-primary" onclick="${primaryAction}">${primary ? 'Otevřít práci' : 'Moje fronta'}</button>
+        <button class="btn btn-ghost" onclick="navigateTo('queue')">Moje fronta</button>
+        <button class="btn btn-ghost" onclick="openWorkspace('attendance')">Docházka</button>
+      </div>
+    </div>
+    <div class="app-shift-side">
+      <button class="app-shift-next" type="button" onclick="${primaryAction}">
+        <span>${primary?.stInfo?.icon || '🎯'}</span>
+        <div>
+          <strong>${primary ? `${primary.order.number} · ${primary.stInfo?.name || 'Stanoviště'}` : 'Bez čekající práce'}</strong>
+          <em>${primary ? `${primary.queueState.label} · ${positiveQty(primary.order.qty)} ks` : 'Počkejte na přiřazení dalšího úkolu.'}</em>
+        </div>
+        <b>→</b>
+      </button>
+      <div class="app-shift-metrics">
+        <button type="button" onclick="navigateTo('queue')">
+          <span>${stations.length}</span><em>stanoviště</em>
+        </button>
+        <button type="button" onclick="navigateTo('queue')">
+          <span>${queueItems.length}</span><em>moje práce</em>
+        </button>
+        <button type="button" onclick="navigateTo('queue')">
+          <span>${activeItems.length}</span><em>rozpracováno</em>
+        </button>
+        <button type="button" onclick="navigateTo('issues')">
+          <span>${issueItems.length}</span><em>problémy</em>
+        </button>
+      </div>
+      ${dashboardQuickActionsHtml(context)}
+    </div>
+  </section>`;
+}
+
 function dashboardQuickActionsHtml(context) {
   const { openIssues, overdueOrders, bottleneck } = context;
   const issueCount = openIssues.length || context.stats?.issues || 0;
+  if (operatorDashboardFocusOnly()) {
+    const items = [
+      { icon:'🧭', label:'Moje fronta', desc:'přiřazená stanoviště', action:"navigateTo('queue')" },
+      { icon:'📅', label:'Docházka', desc:'zápis dne', action:"openWorkspace('attendance')" },
+      { icon:'📒', label:'Moje práce', desc:'poznámky a kusy', action:"openWorkspace('notes')" },
+      { icon:'⚠️', label:'Problém', desc:'hlášení k práci', action:"navigateTo('issues')" },
+    ];
+    return `<div class="app-shift-quick" aria-label="Rychlé akce">
+      ${items.map(item => `
+        <button type="button" onclick="${item.action}">
+          <span>${item.icon}</span>
+          <strong>${escapeHtml(item.label)}</strong>
+          <em>${escapeHtml(item.desc)}</em>
+        </button>
+      `).join('')}
+    </div>`;
+  }
   const items = [
     { icon:'🔎', label:'Hledat', desc:'zakázku / osobu', action:'openGlobalSearch()' },
     { icon:'📌', label:'Kanban', desc:'tok výroby', action:"navigateTo('kanban')" },
@@ -5168,6 +5324,7 @@ function operatorStationTaskPanelHtml(order, station, stInfo) {
   const nextStation = (order.stations || [])[index + 1];
   const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
   const noteCount = stationNotes(order.id, station.stId).length;
+  const hideContext = operatorHideOrderContext();
 
   return `<div class="card" style="border-left:5px solid ${state.color};background:linear-gradient(135deg,rgba(34,184,158,.10),rgba(15,23,42,.02))">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px">
@@ -5195,10 +5352,14 @@ function operatorStationTaskPanelHtml(order, station, stInfo) {
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:${notes.length ? '12px' : '0'}">
-      <span style="font-size:11px;color:var(--text2)">Další krok:</span>
-      <span class="badge" style="background:rgba(59,130,246,.14);color:var(--blue)">
-        ${nextInfo ? `${nextInfo.icon} ${escapeHtml(nextInfo.name)}` : '🏁 poslední stanoviště'}
-      </span>
+      ${hideContext ? `
+        <span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">🎯 pouze vaše stanoviště</span>
+      ` : `
+        <span style="font-size:11px;color:var(--text2)">Další krok:</span>
+        <span class="badge" style="background:rgba(59,130,246,.14);color:var(--blue)">
+          ${nextInfo ? `${nextInfo.icon} ${escapeHtml(nextInfo.name)}` : '🏁 poslední stanoviště'}
+        </span>
+      `}
       <span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">📝 ${noteCount} pozn.</span>
       ${station.qtyScrap ? `<span class="badge" style="background:rgba(239,68,68,.14);color:var(--red)">Zmetek ${positiveQty(station.qtyScrap)}</span>` : ''}
     </div>
@@ -5218,6 +5379,7 @@ function stationWorkSummaryHtml(order, station, stInfo) {
   const remaining = Math.max(0, available - processed);
   const nextStation = (order.stations || [])[index + 1];
   const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  const hideRoute = operatorHideOrderContext();
   return `<div class="station-work-summary" style="--summary-color:${state.color}">
     <div class="station-summary-main">
       <span class="station-summary-icon">${state.icon}</span>
@@ -5232,7 +5394,9 @@ function stationWorkSummaryHtml(order, station, stInfo) {
       <div><b>${remaining}</b><span>Zbývá</span></div>
     </div>
     <div class="station-summary-route">
-      ${nextInfo
+      ${hideRoute
+        ? `<span class="station-route-final">🎯 Zaměřeno jen na vaše stanoviště</span>`
+        : nextInfo
         ? `<button class="station-next-btn" onclick="openStation('${escapeHtml(order.id)}','${nextStation.stId}')">
             <span>Další stanoviště</span>
             <strong>${nextInfo.icon} ${escapeHtml(nextInfo.name)}</strong>
@@ -5258,6 +5422,7 @@ function stationFastPanelHtml(order, station, stInfo) {
   const blocked = isOrderBlocked(order);
   const worker = stationWorkerLabel(station);
   const claimLabel = !claimed ? 'Volné k převzetí' : claimedByExactUser ? 'Převzato vámi' : `Převzal ${worker}`;
+  const hideContext = operatorHideOrderContext();
   return `<section class="station-fast-panel" style="--station-fast-color:${state.color}">
     <div class="station-fast-main">
       <div class="station-fast-kicker"><span>${state.icon}</span><strong>Rychlá práce</strong></div>
@@ -5292,7 +5457,7 @@ function stationFastPanelHtml(order, station, stInfo) {
         ${stationWorkActionButtons(order, station)}
         <button class="btn btn-primary btn-sm" onclick="saveQty()">Uložit počty</button>
         <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Problém</button>
-        <button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Zakázka</button>
+        ${hideContext ? '' : `<button class="btn btn-ghost btn-sm" onclick="openOrder('${order.id}')">Zakázka</button>`}
       </div>
     </div>
   </section>`;
@@ -5300,6 +5465,7 @@ function stationFastPanelHtml(order, station, stInfo) {
 
 function renderStationDetail(stInfo) {
   const s = selectedStation;
+  const hideContext = operatorHideOrderContext();
   const stationSupportCards = `
     ${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
   `;
@@ -5325,9 +5491,9 @@ function renderStationDetail(stInfo) {
   const pg = document.getElementById('page-station');
   pg.innerHTML = `
     <div class="station-back-link"
-         onclick="openOrder('${selectedOrder.id}')">
+         onclick="${hideContext ? "navigateTo('queue')" : `openOrder('${selectedOrder.id}')`}">
       <span style="color:var(--text2);font-size:20px">←</span>
-      <span style="font-size:12px;color:var(--text2)">Zpět na zakázku</span>
+      <span style="font-size:12px;color:var(--text2)">${hideContext ? 'Zpět na moji frontu' : 'Zpět na zakázku'}</span>
     </div>
 
     <div class="station-hero">
@@ -8063,9 +8229,14 @@ function renderAdminSettings() {
     notifyOnIssue:      { label:'Notifikovat při problému', desc:'Zasílat notifikace mistrovi', type:'toggle' },
     shiftHours:         { label:'Délka směny (hod)', desc:'Pro výpočet KPI a kapacity', type:'number' },
   });
+  const operatorSettings = Object.entries({
+    operatorSimpleMode:           { label:'Jednoduchý režim operátora', desc:'Operátor vidí hlavně úkol, počty a stav; podpůrné karty jsou sbalené', type:'toggle' },
+    operatorDashboardFocusOnly:   { label:'Přehled jen pro moje stanoviště', desc:'Hlavní obrazovka operátora skryje celofiremní provozní panely a ukáže jen jeho práci', type:'toggle' },
+    operatorShowProductionOverview:{ label:'Operátor vidí provozní přehled', desc:'Zapne operátorovi širší přehled front, úzkých míst a rizik směny', type:'toggle' },
+    operatorHideOrderContext:     { label:'Skrýt další tok zakázky', desc:'Operátor neuvidí tlačítka na další stanoviště a zůstane soustředěný na svůj krok', type:'toggle' },
+  });
   const featureSettings = Object.entries({
     compactAdvancedUi:       { label:'Kompaktní obrazovky', desc:'Méně používané karty schovat do rozbalovacích sekcí', type:'toggle' },
-    operatorSimpleMode:      { label:'Jednoduchý režim operátora', desc:'Operátor vidí hlavně úkol, počty a stav; podpůrné karty jsou sbalené', type:'toggle' },
     featureProductMemory:    { label:'Programy a fotky výrobku', desc:'Programy strojů, fotka výrobku a paměť pro opakovanou výrobu', type:'toggle' },
     featureAiSummary:        { label:'AI přehled zakázky', desc:'Stručné shrnutí zakázky a rizik', type:'toggle' },
     featureReadiness:        { label:'Připravenost zakázky', desc:'Materiál, dokumentace, program a další semafory připravenosti', type:'toggle' },
@@ -8104,6 +8275,13 @@ function renderAdminSettings() {
     <div class="card">
       <div class="card-title">⚙️ Základní nastavení</div>
       ${generalSettings.map(rowHtml).join('')}
+    </div>
+    <div class="card" style="border-left:4px solid var(--cyan)">
+      <div class="card-title">👷 Obrazovka operátora</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
+        Admin zde řídí, jestli operátor uvidí jen vlastní stanoviště, nebo i širší kontext výroby.
+      </div>
+      ${operatorSettings.map(rowHtml).join('')}
     </div>
     <div class="card" style="border-left:4px solid var(--teal)">
       <div class="card-title">🧩 Viditelnost funkcí</div>
@@ -8154,12 +8332,21 @@ function setAppDisplayMode(mode) {
   if (mode === 'simple') {
     APP_SETTINGS.compactAdvancedUi = true;
     APP_SETTINGS.operatorSimpleMode = true;
+    APP_SETTINGS.operatorDashboardFocusOnly = true;
+    APP_SETTINGS.operatorShowProductionOverview = false;
+    APP_SETTINGS.operatorHideOrderContext = true;
   } else if (mode === 'standard') {
     APP_SETTINGS.compactAdvancedUi = true;
     APP_SETTINGS.operatorSimpleMode = true;
+    APP_SETTINGS.operatorDashboardFocusOnly = true;
+    APP_SETTINGS.operatorShowProductionOverview = false;
+    APP_SETTINGS.operatorHideOrderContext = true;
   } else if (mode === 'service') {
     APP_SETTINGS.compactAdvancedUi = false;
     APP_SETTINGS.operatorSimpleMode = false;
+    APP_SETTINGS.operatorDashboardFocusOnly = false;
+    APP_SETTINGS.operatorShowProductionOverview = true;
+    APP_SETTINGS.operatorHideOrderContext = false;
   }
   writeAudit(
     'app.display_mode_changed',
@@ -8335,6 +8522,11 @@ function exportMyWorkspaceCsv() {
 function switchWorkspaceTab(tab) {
   workspaceTab = tab;
   renderWorkspace();
+}
+
+function openWorkspace(tab = 'notes') {
+  workspaceTab = tab || 'notes';
+  navigateTo('workspace');
 }
 
 function renderWorkspaceContent() {
@@ -9016,7 +9208,8 @@ function dashboardWorkspaceWidgetHtml() {
 
   return `
     <div class="workspace-banner">
-      <div class="workspace-banner-main">
+      <div class="workspace-banner-main workspace-banner-clickable" role="button" tabindex="0"
+        onclick="openWorkspace('notes')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWorkspace('notes')}">
         <span class="workspace-banner-icon">📒</span>
         <div>
           <div class="workspace-banner-title">Můj prostor</div>
@@ -9025,7 +9218,9 @@ function dashboardWorkspaceWidgetHtml() {
           </div>
         </div>
       </div>
-      <div class="workspace-banner-status" style="border-color:${todayMeta.color};">
+      <div class="workspace-banner-status workspace-banner-clickable" style="border-color:${todayMeta.color};"
+        role="button" tabindex="0" onclick="openWorkspace('attendance')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWorkspace('attendance')}">
         <span style="color:${todayMeta.color}">${todayRec ? todayMeta.icon : '📅'}</span>
         <div>
           <strong>${todayRec ? todayMeta.label : 'Dnes nezapsáno'}</strong>
@@ -9034,8 +9229,8 @@ function dashboardWorkspaceWidgetHtml() {
       </div>
       <div class="workspace-banner-actions">
         <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('${todayDateStr()}')">📅 Zapsat den</button>
-        <button class="btn btn-ghost btn-sm" onclick="workspaceTab='attendance';navigateTo('workspace')">Kalendář</button>
-        <button class="btn btn-ghost btn-sm" onclick="navigateTo('workspace')">→</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWorkspace('attendance')">Kalendář</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWorkspace('notes')">Moje práce</button>
       </div>
     </div>`;
 }

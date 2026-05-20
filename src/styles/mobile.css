@@ -265,6 +265,16 @@
     #app .app-list-toolbar { padding: 4px 0 10px; align-items: flex-start; }
     #app .app-page-title { font-size: 18px; line-height: 1.2; }
     #app .app-page-subtitle { font-size: 11px; line-height: 1.35; }
+    #app .dashboard-overview { gap: 10px; }
+    #app .dashboard-grid,
+    #app .dashboard-grid-simple { grid-template-columns: 1fr; gap: 10px; }
+    #app .dashboard-side-col { position: static; }
+    #app .dashboard-main-col,
+    #app .dashboard-side-col { gap: 10px; }
+    #app .dashboard-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    #app .dashboard-rail-tile { grid-template-columns: 32px minmax(0, 1fr); padding: 10px; }
+    #app .dashboard-rail-tile > span { width: 32px; height: 32px; font-size: 16px; }
+    #app .dashboard-rail-tile strong { font-size: 18px; }
     #app .app-shift-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
     #app .app-shift-main h2 { font-size: 19px; }
     #app .app-shift-main p { font-size: 12px; }
@@ -334,7 +344,8 @@
     #app .workspace-board-counts { grid-template-columns: 1fr; gap: 6px; }
     #app .workspace-banner { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
     #app .workspace-banner-status { width: 100%; }
-    #app .workspace-banner-actions { justify-content: stretch; display: grid; grid-template-columns: 1fr 1fr auto; }
+    #app .workspace-banner-actions { justify-content: stretch; display: grid; grid-template-columns: 1fr; }
+    #app .workspace-banner-actions .btn { justify-content: center; width: 100%; }
     #app .attendance-hero { grid-template-columns: 1fr; align-items: flex-start; padding: 14px; }
     #app .attendance-current { width: 100%; }
     #app .attendance-actions { width: 100%; display: grid; grid-template-columns: auto 1fr auto; }
