@@ -931,12 +931,13 @@
 
   @media (min-width: 761px) {
     #app {
-      padding-left: 172px;
+      --app-sidebar-w: clamp(136px, 14vw, 184px);
+      padding-left: 0;
     }
 
     #app .topbar {
       height: 56px;
-      padding: 0 18px;
+      padding: 0 clamp(14px, 2vw, 24px);
       background: rgba(7,10,12,.94);
       border-bottom-color: rgba(168,180,189,.11);
       box-shadow: 0 1px 0 rgba(255,255,255,.03), 0 16px 42px rgba(0,0,0,.28);
@@ -948,35 +949,38 @@
 
     #app .navtabs {
       position: fixed;
-      inset: 0 auto 0 0;
-      width: 172px;
-      z-index: 130;
+      inset: 56px auto 0 0;
+      width: var(--app-sidebar-w);
+      z-index: 90;
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 6px;
-      padding: 16px 10px;
+      gap: 5px;
+      padding: 12px 8px 16px;
       overflow: hidden auto;
       border-right: 1px solid rgba(125,214,210,.12);
       border-bottom: 0;
       background:
         linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.01)),
         rgba(6,9,11,.96);
-      box-shadow: 18px 0 44px rgba(0,0,0,.22);
+      box-shadow: 14px 0 34px rgba(0,0,0,.24);
     }
 
     #app .navtab {
       width: 100%;
-      height: 42px;
+      min-height: 39px;
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      gap: 9px;
-      padding: 0 12px;
+      gap: 8px;
+      padding: 9px 10px;
       border-radius: 8px;
-      font-size: 11px;
+      font-size: 10.5px;
+      font-weight: 900;
       line-height: 1.15;
       text-align: left;
+      text-transform: uppercase;
+      letter-spacing: .25px;
       color: var(--text3);
       background: transparent;
       overflow: hidden;
@@ -990,8 +994,8 @@
 
     #app .navtab.active {
       color: var(--gold);
-      background: rgba(226,184,32,.10);
-      box-shadow: inset 3px 0 0 var(--gold), 0 10px 24px rgba(0,0,0,.22);
+      background: linear-gradient(90deg, rgba(226,184,32,.16), rgba(125,214,210,.055));
+      box-shadow: inset 3px 0 0 var(--gold), 0 8px 20px rgba(0,0,0,.20);
     }
 
     #app .navtab .tab-icon {
@@ -1004,12 +1008,29 @@
     }
 
     #app .page {
-      max-width: 1260px;
+      width: calc(100% - var(--app-sidebar-w));
+      max-width: min(1480px, calc(100vw - var(--app-sidebar-w)));
+      margin-left: var(--app-sidebar-w);
+      margin-right: auto;
+      padding: 22px clamp(14px, 2vw, 26px) 36px;
       padding-top: 22px;
     }
 
     #app #page-dashboard {
-      max-width: 1240px;
+      max-width: min(1440px, calc(100vw - var(--app-sidebar-w)));
+    }
+  }
+
+  @media (min-width: 761px) and (max-width: 980px) {
+    #app {
+      --app-sidebar-w: 132px;
+    }
+
+    #app .navtab {
+      gap: 7px;
+      padding: 8px 9px;
+      font-size: 10px;
+      letter-spacing: .15px;
     }
   }
 

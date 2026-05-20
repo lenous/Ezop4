@@ -262,10 +262,10 @@
     #app .navtabs { padding: 6px 8px; }
     #app .page { max-width: 100%; padding: 12px 10px calc(88px + env(safe-area-inset-bottom)); }
     #app .app-page-hero,
-    #app .app-list-toolbar { padding: 4px 0 10px; align-items: flex-start; }
+    #app .app-list-toolbar { padding: 12px; margin-bottom: 10px; align-items: flex-start; border-radius: 8px; }
     #app .app-page-title { font-size: 18px; line-height: 1.2; }
     #app .app-page-subtitle { font-size: 11px; line-height: 1.35; }
-    #app .dashboard-clean { gap: 10px; }
+    #app .dashboard-clean { grid-template-columns: 1fr; gap: 10px; }
     #app .dashboard-focus-card { grid-template-columns: 1fr; padding: 13px; gap: 5px; }
     #app .dashboard-focus-card strong { font-size: 17px; white-space: normal; }
     #app .dashboard-focus-card small { white-space: normal; }

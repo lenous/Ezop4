@@ -1417,11 +1417,19 @@
     justify-content: space-between;
     gap: 14px;
     flex-wrap: wrap;
-    padding: 8px 0 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(168,180,189,.12);
+    border-left: 3px solid rgba(226,184,32,.68);
+    border-radius: 10px;
+    background:
+      linear-gradient(135deg, rgba(226,184,32,.075), rgba(125,214,210,.045)),
+      rgba(8,14,17,.74);
+    box-shadow: 0 14px 32px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.035);
   }
 
   #app .app-page-title {
-    font-size: 24px;
+    font-size: clamp(20px, 2.1vw, 28px);
     font-weight: 900;
     color: var(--text);
     letter-spacing: -.3px;
@@ -1472,8 +1480,14 @@
 
   #app .dashboard-clean {
     display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(280px, .72fr);
     gap: 12px;
     margin-bottom: 16px;
+    align-items: stretch;
+  }
+
+  #app .dashboard-focus-card {
+    grid-column: 1 / -1;
   }
 
   #app .dashboard-secondary-grid {
@@ -1586,6 +1600,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+    align-self: stretch;
   }
 
   #app .dashboard-summary-card {
@@ -1628,6 +1643,7 @@
     padding: 14px;
     display: grid;
     gap: 8px;
+    align-self: stretch;
   }
 
   #app .dashboard-mini-list-calm {
