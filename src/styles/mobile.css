@@ -296,9 +296,15 @@
     #app .app-shift-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #app .app-shift-quick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #app .app-shift-quick button { padding: 8px; }
+    #app .operator-queue-list { grid-template-columns: 1fr; }
+    #app .operator-queue-progress { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    #app .operator-queue-progress span { padding: 8px 5px; }
     #app .queue-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
     #app .queue-command-main h2 { font-size: 20px; }
     #app .queue-filter-pills { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .queue-load-head { display: block; }
+    #app .queue-load-head .btn { margin-top: 8px; width: 100%; justify-content: center; }
+    #app .queue-load-grid { grid-template-columns: 1fr; }
     #app .queue-action-card { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 10px; }
     #app .queue-action-card > span { width: 36px; height: 36px; font-size: 19px; }
     #app .orders-command { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
@@ -424,6 +430,7 @@
     #app .station-work-actions-buttons .btn { width: 100%; min-width: 0; justify-content: center; }
     #app .station-work-actions-buttons > span { grid-column: 1 / -1; }
     #app .station-work-actions-buttons .station-action-done { justify-content: center; }
+    #app .station-state-overview { grid-template-columns: 1fr; }
     .modal-overlay { padding: 10px; align-items: flex-end; }
     .modal-box { max-width: 100%; max-height: 92vh; padding: 18px 14px; border-radius: 16px 16px 0 0; }
     .modal-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }
@@ -448,6 +455,15 @@
     #app .admin-content-head { display: block; border-left-color: rgba(168,180,189,.16); }
     #app .admin-content-head h2 { font-size: 18px; }
     #app .admin-content-head p { display: none; }
+    #app .admin-command-head { display: block; }
+    #app .admin-command-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 9px; }
+    #app .admin-command-actions .btn { width: 100%; min-width: 0; justify-content: center; }
+    #app .admin-command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .admin-users-head { align-items: flex-start; }
+    #app .admin-user-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .user-card { align-items: flex-start; flex-wrap: wrap; }
+    #app .user-info { min-width: 0; flex: 1 1 160px; }
+    #app .user-card > div:last-child { width: 100%; justify-content: flex-end; }
     #app .admin-group-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
     #app .admin-group-section.active { grid-column: 1 / -1; }
     #app .admin-group-tab { justify-content: center; text-align: center; min-height: 44px; }
@@ -456,6 +472,9 @@
     #app .admin-tabs-nested { margin: 0 0 2px; padding-left: 0; border-left: 0; }
     #app .display-mode-grid { grid-template-columns: 1fr; }
     #app .display-mode-card { min-height: 0; }
+    #app .operator-settings-grid { grid-template-columns: 1fr; }
+    #app .operator-preset-grid { grid-template-columns: 1fr; }
+    #app .operator-settings-preview span { flex: 1 1 calc(50% - 7px); justify-content: center; }
     #app .role-permission-name { align-items: flex-start; flex-direction: column; gap: 2px; }
     #app .role-permission-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #app .role-permission-cell { min-height: 48px; }

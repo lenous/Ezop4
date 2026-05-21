@@ -215,6 +215,7 @@ const ROLE_LABELS = cloneDefault('roleLabels') || {};
 const BUILTIN_USER_ROLES = Object.fromEntries(USERS.map(u => [normalizeLogin(u.login), u.role]));
 const DEFAULT_DEMO_PASSWORD = '1234';
 const USER_CREDENTIALS_KEY = 'vyrobais-creds-v2';
+const PASSWORD_HASH_PREFIX = 'sha256$';
 
 let USER_PASSWORDS = loadUserPasswords();
 let USER_WORKSPACE = {};
@@ -271,16 +272,50 @@ function saveUserPasswords() {
   catch { /* Demo umi bezet i bez localStorage. */ }
 }
 
-function passwordForUser(user) {
-  const login = normalizeLogin(user?.login);
-  return USER_PASSWORDS[login] || DEFAULT_DEMO_PASSWORD;
+function passwordDigestHex(buffer) {
+  return [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function setUserPassword(login, password) {
+async function hashLocalPassword(login, password) {
+  if (!window.crypto?.subtle || !window.TextEncoder) return '';
+  const key = normalizeLogin(login);
+  const material = new TextEncoder().encode(`ezop4-local-password:${key}:${String(password)}`);
+  const digest = await crypto.subtle.digest('SHA-256', material);
+  return PASSWORD_HASH_PREFIX + passwordDigestHex(digest);
+}
+
+function isHashedLocalPassword(value) {
+  return String(value || '').startsWith(PASSWORD_HASH_PREFIX);
+}
+
+async function setUserPassword(login, password) {
   const key = normalizeLogin(login);
   if (!key || !password) return;
-  USER_PASSWORDS[key] = String(password);
+  USER_PASSWORDS[key] = await hashLocalPassword(key, password) || String(password);
   saveUserPasswords();
+}
+
+async function verifyLocalPassword(user, password) {
+  const login = normalizeLogin(user?.login);
+  const stored = USER_PASSWORDS[login];
+  if (!stored) return String(password) === DEFAULT_DEMO_PASSWORD;
+  if (isHashedLocalPassword(stored)) {
+    const hashed = await hashLocalPassword(login, password);
+    return Boolean(hashed && hashed === stored);
+  }
+  if (stored === String(password)) {
+    await setUserPassword(login, password);
+    return true;
+  }
+  return false;
+}
+
+function localPasswordPolicyError(password, { allowDemoPassword = false } = {}) {
+  const value = String(password || '');
+  if (!value) return 'Vyplňte heslo.';
+  if (!allowDemoPassword && value === DEFAULT_DEMO_PASSWORD) return 'Heslo 1234 je jen pro vestavěné demo účty. Zvolte jiné dočasné heslo.';
+  if (!allowDemoPassword && value.length < 8) return 'Heslo musí mít alespoň 8 znaků.';
+  return '';
 }
 
 function migrateCredentialsFromState(state) {
@@ -377,6 +412,26 @@ function operatorShowProductionOverview() {
 
 function operatorHideOrderContext() {
   return currentUser?.role === 'operator' && APP_SETTINGS?.operatorHideOrderContext !== false;
+}
+
+function operatorShowOrderIdentifier() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowOrderIdentifier !== false;
+}
+
+function operatorShowCustomerContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowCustomerContext === true;
+}
+
+function operatorShowDueContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowDueContext !== false;
+}
+
+function operatorShowTechnologyContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowTechnologyContext !== false;
+}
+
+function operatorShowNotesContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowNotesContext !== false;
 }
 
 function advancedPanelHtml(title, body, options = {}) {
@@ -490,7 +545,8 @@ function positiveQty(value) {
 }
 
 function stationProcessedQty(station) {
-  return positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework) + positiveQty(station?.qtyScrap);
+  return window.EZOP_FLOW?.stationProcessedQty(station)
+    ?? (positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework) + positiveQty(station?.qtyScrap));
 }
 
 function stationReadyQty(station) {
@@ -498,60 +554,16 @@ function stationReadyQty(station) {
 }
 
 function stationNonScrapQty(station) {
-  return positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework);
+  return window.EZOP_FLOW?.stationNonScrapQty(station)
+    ?? (positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework));
 }
 
 function stationInputQty(order, station, index) {
-  if (!order || !station) return 0;
-  if (index <= 0) return positiveQty(order.qty);
-  return positiveQty(station.qtyReceived);
+  return window.EZOP_FLOW?.stationInputQty(order, station, index) ?? 0;
 }
 
 function syncOrderStationFlow(order) {
-  if (!order || !Array.isArray(order.stations)) return false;
-  let changed = false;
-
-  order.stations.forEach((station, index) => {
-    if (index > 0) {
-      const previous = order.stations[index - 1];
-      const previousReady = stationReadyQty(previous);
-      const previousScrap = positiveQty(previous.qtyScrap);
-      if (previousReady > 0 && positiveQty(station.qtyReceived) < previousReady) {
-        station.qtyReceived = previousReady;
-        changed = true;
-      }
-      if (previousScrap > positiveQty(station.qtyScrap)) {
-        station.qtyScrap = previousScrap;
-        changed = true;
-      }
-    }
-
-    const available = stationInputQty(order, station, index);
-    if (station.status === 'completed' && stationNonScrapQty(station) === 0 && available > 0) {
-      const autoOk = Math.max(0, available - positiveQty(station.qtyScrap));
-      if (positiveQty(station.qtyOk) !== autoOk || positiveQty(station.qtyRework) !== 0) {
-        station.qtyOk = autoOk;
-        station.qtyRework = 0;
-        changed = true;
-      }
-    }
-    const over = stationProcessedQty(station) - available;
-    if (available > 0 && over > 0) {
-      const okBefore = positiveQty(station.qtyOk);
-      const reworkBefore = positiveQty(station.qtyRework);
-      station.qtyOk = Math.max(0, okBefore - over);
-      const remainingOver = over - (okBefore - station.qtyOk);
-      if (remainingOver > 0) station.qtyRework = Math.max(0, reworkBefore - remainingOver);
-      console.warn(
-        `[syncFlow] Stanice "${station.stId}" zakázky "${order.number}": ` +
-        `součet kusů přesahoval dostupné (${available} ks). ` +
-        `qtyOk: ${okBefore}→${station.qtyOk}, qtyRework: ${reworkBefore}→${station.qtyRework}`
-      );
-      changed = true;
-    }
-  });
-
-  return changed;
+  return window.EZOP_FLOW?.syncOrderStationFlow(order) ?? false;
 }
 
 function stationCardQtyHtml(order, station, index) {
@@ -875,11 +887,16 @@ function activeStationIndex(order) {
 }
 
 function stationQueueState(order, station, index) {
-  if (isOrderBlocked(order)) return { label: 'Blokováno', color: 'var(--red)', rank: 0 };
-  if (station.status === 'issue') return { label: 'Problém', color: 'var(--red)', rank: 1 };
-  if (['in_progress','partial'].includes(station.status)) return { label: 'Rozpracováno', color: 'var(--blue)', rank: 2 };
-  if (stationInputQty(order, station, index) > 0 || index === 0) return { label: 'Připraveno', color: 'var(--green)', rank: 3 };
-  return { label: 'Čeká na předchozí krok', color: 'var(--amber)', rank: 4 };
+  const state = window.EZOP_FLOW?.stationQueueState({
+    blocked: isOrderBlocked(order),
+    status: station.status,
+    available: stationInputQty(order, station, index),
+    firstStation: index === 0,
+  }) || { label: 'Čeká na předchozí krok', tone: 'waiting', rank: 4 };
+  return {
+    ...state,
+    color: window.EZOP_FLOW?.queueStateColor(state.tone) || 'var(--text2)',
+  };
 }
 
 function workQueueItems(stationId = '') {
@@ -1181,32 +1198,38 @@ function setSelectedStation(orderId, stId) {
 }
 
 function stationWorkActionButtons(order, station) {
-  if (!canOperateStation(station)) return '';
-  if (isOrderBlocked(order)) return '';
   const claimedByOther = stationClaimedByOther(station);
   const claimed = Boolean(station.workerUserId || station.workerLogin);
-  if (claimedByOther) {
-    return `<span style="font-size:11px;color:var(--text3);align-self:center">Převzato: ${escapeHtml(stationWorkerLabel(station))}</span>`;
-  }
-  const buttons = [];
-  if (!claimed) {
-    buttons.push(`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Převzít práci</button>`);
-    if (isManagerRole()) {
-      buttons.push(`<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`);
+  const actions = window.EZOP_FLOW?.stationWorkActions({
+    canOperate: canOperateStation(station),
+    blocked: isOrderBlocked(order),
+    claimedByOther,
+    claimed,
+    managerRole: isManagerRole(),
+    status: station.status,
+    paused: Boolean(station.workPausedAt),
+  }) || [];
+  return actions.map(action => {
+    if (action === 'claimed_by_other') {
+      return `<span style="font-size:11px;color:var(--text3);align-self:center">Převzato: ${escapeHtml(stationWorkerLabel(station))}</span>`;
     }
-  } else if (station.status === 'completed') {
-    buttons.push(`<span class="station-action-done">Dokončeno: ${escapeHtml(stationWorkerLabel(station))}</span>`);
-  } else if (station.workPausedAt) {
-    buttons.push(`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Obnovit práci</button>`);
-    buttons.push(`<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`);
-  } else {
-    if (station.status === 'waiting') {
-      buttons.push(`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Zahájit práci</button>`);
+    if (action === 'claim') {
+      return `<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Převzít práci</button>`;
     }
-    buttons.push(`<button class="btn btn-ghost btn-sm" onclick="pauseStationWork('${order.id}', '${station.stId}')">Pozastavit</button>`);
-    buttons.push(`<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`);
-  }
-  return buttons.join('');
+    if (action === 'resume') {
+      return `<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Obnovit práci</button>`;
+    }
+    if (action === 'pause') {
+      return `<button class="btn btn-ghost btn-sm" onclick="pauseStationWork('${order.id}', '${station.stId}')">Pozastavit</button>`;
+    }
+    if (action === 'finish') {
+      return `<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`;
+    }
+    if (action === 'done') {
+      return `<span class="station-action-done">Dokončeno: ${escapeHtml(stationWorkerLabel(station))}</span>`;
+    }
+    return '';
+  }).join('');
 }
 
 function claimStationWork(orderId, stId) {
@@ -2568,7 +2591,7 @@ async function doLogin() {
   }
 
   const found = resolveLoginUser(rawLogin);
-  if (!found || passwordForUser(found) !== p) {
+  if (!found || !(await verifyLocalPassword(found, p))) {
     registerLoginFailure(u);
     recordLoginEvent(u || '(prazdne)', null, false);
     document.getElementById('login-error').textContent = loginFailureMessage(rawLogin, found, supabaseError);
@@ -3953,6 +3976,7 @@ let queueSearch = '';
 let queueQuickFilter = '';
 
 function renderWorkQueue() {
+  const operatorFocused = currentUser?.role === 'operator';
   const allItems = workQueueItems(queueStationFilter);
   const q = queueSearch.trim().toLowerCase();
   const searchedItems = q
@@ -3970,26 +3994,29 @@ function renderWorkQueue() {
   document.getElementById('page-queue').innerHTML = `
     <div class="app-list-toolbar">
       <div>
-        <div class="app-page-title"><strong>🧭 Fronty pracovišť</strong></div>
-        <div class="app-page-subtitle">Řazeno podle blokace, problému, priority a termínu.</div>
+        <div class="app-page-title"><strong>${operatorFocused ? '🧭 Moje práce' : '🧭 Fronty pracovišť'}</strong></div>
+        <div class="app-page-subtitle">${operatorFocused
+          ? `Jen přiřazená stanoviště: ${escapeHtml(stationAccessLabel())}.`
+          : 'Řazeno podle blokace, problému, priority a termínu.'}</div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="quickOpenOrderModal()">📎 QR / kód</button>
     </div>
 
     ${queueCommandHtml(list, allItems, manualPlanning)}
+    ${operatorFocused ? '' : queueStationLoadBoardHtml()}
 
     <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
           <div class="input-label">Stanoviště</div>
           <select class="input" id="queue-station" onchange="queueStationFilter=this.value;queueQuickFilter='';renderWorkQueue()">
-            <option value="">Aktuální krok každé zakázky</option>
+            <option value="">${operatorFocused ? 'Moje aktuální práce' : 'Aktuální krok každé zakázky'}</option>
             ${accessibleStations().map(st => `<option value="${st.id}" ${String(st.id)===String(queueStationFilter)?'selected':''}>${st.icon} ${escapeHtml(st.name)}</option>`).join('')}
           </select>
         </div>
         <div>
           <div class="input-label">Hledat ve frontě</div>
-          <input class="input" id="queue-search" value="${escapeHtml(queueSearch)}" placeholder="číslo, výrobek, zákazník..."
+          <input class="input" id="queue-search" value="${escapeHtml(queueSearch)}" placeholder="${operatorFocused ? 'stanoviště nebo práce...' : 'číslo, výrobek, zákazník...'}"
             oninput="queueSearch=this.value;renderWorkQueue()">
         </div>
       </div>
@@ -4011,14 +4038,55 @@ function renderWorkQueue() {
       </div>
     ` : ''}
 
-    <div id="queue-list">
+    <div id="queue-list" class="${operatorFocused ? 'operator-queue-list' : ''}">
       ${list.length ? list.map((item, index) => queueCardHtml(item, index, list.length)).join('') : `<div class="card" style="text-align:center;color:var(--text2);padding:28px">Fronta je prázdná.</div>`}
     </div>
   `;
 }
 
+function queueStationLoadBoardHtml() {
+  if (!isManagerRole()) return '';
+  const loads = stationLoadSummaries().slice(0, 8);
+  if (!loads.length) return `<section class="queue-load-board calm">
+    <div>
+      <strong>Zatížení stanovišť</strong>
+      <span>Ve frontách teď není žádná otevřená práce.</span>
+    </div>
+  </section>`;
+  return `<section class="queue-load-board">
+    <div class="queue-load-head">
+      <div>
+        <strong>Zatížení stanovišť</strong>
+        <span>Rychlý pohled pro mistra a admina. Kliknutím otevřete frontu pracoviště.</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="queueStationFilter='';queueQuickFilter='';renderWorkQueue()">Všechny fronty</button>
+    </div>
+    <div class="queue-load-grid">
+      ${loads.map(load => {
+        const color = stationLoadColor(load.level);
+        const pct = Math.min(100, 18 + load.count * 13 + load.overdue * 12 + load.blocked * 12 + load.inProgress * 8);
+        return `<button class="queue-load-card ${load.level}" type="button" onclick="openQueueForStation('${load.station.id}')">
+          <div class="queue-load-title">
+            <span>${load.station.icon}</span>
+            <strong>${escapeHtml(load.station.name)}</strong>
+            <b style="color:${color}">${load.count}</b>
+          </div>
+          <div class="queue-load-bar"><i style="width:${pct}%;background:${color}"></i></div>
+          <div class="queue-load-meta">
+            <em>${load.inProgress} běží</em>
+            <em>${load.urgent} urgent</em>
+            <em>${load.overdue} po termínu</em>
+            <em>${load.blocked} blok.</em>
+          </div>
+        </button>`;
+      }).join('')}
+    </div>
+  </section>`;
+}
+
 function queueCommandHtml(list, allItems, manualPlanning) {
   const primary = list[0];
+  const operatorFocused = currentUser?.role === 'operator';
   const stats = {
     ready: allItems.filter(item => item.queueState.label === 'Připraveno').length,
     active: allItems.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label)).length,
@@ -4038,10 +4106,12 @@ function queueCommandHtml(list, allItems, manualPlanning) {
 
   return `<section class="queue-command">
     <div class="queue-command-main">
-      <div class="app-shift-label"><span>🧭</span><strong>Rychlé řízení fronty</strong></div>
-      <h2>${primary ? escapeHtml(primary.order.number) : 'Fronta je prázdná'}</h2>
+      <div class="app-shift-label"><span>🧭</span><strong>${operatorFocused ? 'Moje další práce' : 'Rychlé řízení fronty'}</strong></div>
+      <h2>${primary ? escapeHtml(operatorFocused && !operatorShowOrderIdentifier() ? primary.stInfo?.name || 'Stanoviště' : primary.order.number) : 'Fronta je prázdná'}</h2>
       <p>${primary
-        ? `${escapeHtml(primary.order.name)} · ${escapeHtml(primary.stInfo?.name || 'Stanoviště')} · ${escapeHtml(primary.queueState.label)}`
+        ? operatorFocused
+          ? `${escapeHtml(primary.stInfo?.name || 'Stanoviště')} · ${escapeHtml(primary.queueState.label)} · ${stationInputQty(primary.order, primary.station, primary.index)} ks k dispozici`
+          : `${escapeHtml(primary.order.name)} · ${escapeHtml(primary.stInfo?.name || 'Stanoviště')} · ${escapeHtml(primary.queueState.label)}`
         : 'Vyberte stanoviště nebo změňte filtr pro další práci.'}</p>
       <div class="queue-filter-pills">
         <button class="queue-filter-pill ${queueQuickFilter === '' ? 'active' : ''}" onclick="setQueueQuickFilter('')">
@@ -4060,7 +4130,9 @@ function queueCommandHtml(list, allItems, manualPlanning) {
           <span>${primary.stInfo?.icon || '🔧'}</span>
           <div>
             <strong>${escapeHtml(primary.stInfo?.name || 'Stanoviště')}</strong>
-            <em>${escapeHtml(primary.order.customer || primary.order.name || '')}</em>
+            <em>${escapeHtml(operatorFocused
+              ? (operatorShowOrderIdentifier() ? primary.order.name : 'Otevřít pracovní obrazovku')
+              : primary.order.customer || primary.order.name || '')}</em>
           </div>
           <b>Otevřít</b>
         </button>
@@ -4106,7 +4178,27 @@ function queueCardHtml(item, position = 0, total = 0) {
   const meta = stationStatusMeta(station.status);
   const blockReason = orderBlockReason(order);
   const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter) && Number(queueStationFilter) === Number(station.stId);
-  return `<div class="card app-queue-card" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
+  const operatorFocused = currentUser?.role === 'operator';
+  const showOrder = operatorShowOrderIdentifier();
+  const showCustomer = operatorShowCustomerContext();
+  const showDue = operatorShowDueContext();
+  const showNotes = operatorShowNotesContext();
+  const available = stationInputQty(order, station, index);
+  const processed = stationProcessedQty(station);
+  const remaining = Math.max(0, available - processed);
+  const notes = stationNotes(order.id, station.stId).length;
+  const title = operatorFocused && !showOrder ? (stInfo?.name || 'Stanoviště') : order.number;
+  const subtitle = operatorFocused && !showOrder ? 'Práce na stanovišti' : order.name;
+  const taskState = operatorFocused ? stationTaskState(order, station) : null;
+  const contextLine = operatorFocused
+    ? [
+      stInfo?.name || 'Stanoviště',
+      queueState.label,
+      showDue ? `termín ${formatDate(order.due || '')}` : '',
+    ].filter(Boolean).join(' · ')
+    : `${escapeHtml(order.customer || '')} · ${escapeHtml(stInfo?.name || 'Stanoviště')} · ${escapeHtml(queueState.label)}`;
+
+  return `<div class="card app-queue-card ${operatorFocused ? 'operator-queue-card' : ''}" ${manualPlanning ? `draggable="true" ondragstart="queueDragStart(event,'${order.id}','${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'${order.id}','${station.stId}')"` : ''}
     role="button" tabindex="0" aria-label="Otevřít stanoviště ${escapeHtml(stInfo?.name || 'stanoviště')} zakázky ${escapeHtml(order.number)}"
     onclick="queueCardOpen(event,'${order.id}','${station.stId}')"
     onkeydown="queueCardKeyOpen(event,'${order.id}','${station.stId}')"
@@ -4115,18 +4207,33 @@ function queueCardHtml(item, position = 0, total = 0) {
       <div style="font-size:26px;line-height:1">${stInfo?.icon || '🔧'}</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-          <span style="font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:900;color:var(--gold)">${escapeHtml(order.number)}</span>
-          <span class="badge badge-${order.priority}">${priorityLabel(order.priority)}</span>
+          <span style="font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:900;color:var(--gold)">${escapeHtml(title)}</span>
+          ${operatorFocused ? '' : `<span class="badge badge-${order.priority}">${priorityLabel(order.priority)}</span>`}
           ${orderBlockedBadgeHtml(order)}
-          ${orderReadinessBadgeHtml(order)}
+          ${operatorFocused ? '' : orderReadinessBadgeHtml(order)}
           ${stationWorkBadgeHtml(station)}
           <span class="badge ${meta.badge}">${meta.label}</span>
           ${queueRankValue(station) < Number.MAX_SAFE_INTEGER ? `<span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">#${queueRankValue(station)}</span>` : ''}
         </div>
-        <div style="font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(order.name)}</div>
-        <div style="font-size:11px;color:var(--teal2);margin:2px 0 6px">${escapeHtml(order.customer || '')} · ${escapeHtml(stInfo?.name || 'Stanoviště')} · ${escapeHtml(queueState.label)}</div>
+        <div style="font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(subtitle)}</div>
+        <div style="font-size:11px;color:var(--teal2);margin:2px 0 6px">${operatorFocused ? escapeHtml(contextLine) : contextLine}</div>
         ${station.workPausedAt ? `<div style="font-size:11px;color:var(--amber);margin-bottom:5px">⏸ Pozastaveno ${formatDateTime(station.workPausedAt)}${station.workPauseReason ? ` · ${escapeHtml(station.workPauseReason)}` : ''}</div>` : ''}
-        ${stationCardQtyHtml(order, station, index)}
+        ${operatorFocused ? `
+          <div class="operator-next-action" style="--operator-action-color:${taskState.color}">
+            <span>${taskState.icon}</span>
+            <div>
+              <strong>${escapeHtml(taskState.label)}</strong>
+              <em>${escapeHtml(taskState.action)}</em>
+            </div>
+          </div>
+          <div class="operator-queue-progress">
+            <span><b>${available}</b><em>k dispozici</em></span>
+            <span><b>${processed}</b><em>zapsáno</em></span>
+            <span><b>${remaining}</b><em>zbývá</em></span>
+          </div>
+        ` : stationCardQtyHtml(order, station, index)}
+        ${operatorFocused && showCustomer ? `<div style="font-size:11px;color:var(--text2);margin-top:6px">Zákazník: ${escapeHtml(order.customer || '—')}</div>` : ''}
+        ${operatorFocused && showNotes && notes ? `<div style="font-size:11px;color:var(--teal2);margin-top:6px">📝 ${notes} poznámek k tomuto kroku</div>` : ''}
         ${blockReason ? `<div style="font-size:11px;color:var(--red);margin-top:6px">⛔ ${escapeHtml(blockReason)}</div>` : ''}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
           ${manualPlanning ? `
@@ -4134,8 +4241,8 @@ function queueCardHtml(item, position = 0, total = 0) {
             <button class="btn btn-ghost btn-sm" onclick="moveQueueItem('${order.id}', '${station.stId}', 1)" ${position >= total - 1 ? 'disabled style="opacity:.45"' : ''}>↓</button>
           ` : ''}
           ${stationWorkActionButtons(order, station)}
-          <button class="btn btn-primary btn-sm" onclick="openStation('${order.id}', '${station.stId}')">Otevřít stanoviště</button>
-          ${orderMoreButton(order.id, station.stId)}
+          <button class="btn btn-primary btn-sm" onclick="openStation('${order.id}', '${station.stId}')">${operatorFocused ? 'Otevřít práci' : 'Otevřít stanoviště'}</button>
+          ${operatorFocused ? '' : orderMoreButton(order.id, station.stId)}
         </div>
       </div>
     </div>
@@ -5642,6 +5749,14 @@ function stationContextPanelHtml(order, station, stInfo) {
   const claimed = Boolean(station.workerUserId || station.workerLogin);
   const worker = claimed ? stationWorkerLabel(station) : 'Volné';
   const blocked = isOrderBlocked(order);
+  const showOrder = operatorShowOrderIdentifier();
+  const showCustomer = operatorShowCustomerContext();
+  const showDue = operatorShowDueContext();
+  const showTech = operatorShowTechnologyContext();
+  const showNotes = operatorShowNotesContext();
+  const orderTitle = showOrder
+    ? `${order.number} · ${order.name}`
+    : 'Práce na stanovišti';
 
   return `<section class="station-context-panel" style="--station-context-color:${state.color}">
     <div class="station-context-head">
@@ -5649,8 +5764,8 @@ function stationContextPanelHtml(order, station, stInfo) {
         <div class="station-context-icon">${stInfo?.icon ?? '🔧'}</div>
         <div>
           <span>${escapeHtml(stInfo?.name ?? 'Stanoviště')}</span>
-          <strong>${escapeHtml(order.number)} · ${escapeHtml(order.name)}</strong>
-          <em>${escapeHtml(order.customer || 'Zákazník neuveden')}</em>
+          <strong>${escapeHtml(orderTitle)}</strong>
+          ${showCustomer ? `<em>${escapeHtml(order.customer || 'Zákazník neuveden')}</em>` : ''}
         </div>
       </div>
       ${hideContext ? '' : `<div class="station-context-actions">
@@ -5671,12 +5786,12 @@ function stationContextPanelHtml(order, station, stInfo) {
       <div class="station-context-facts">
         ${stationContextFactHtml('Stav', meta.label, meta.action)}
         ${stationContextFactHtml('Přístup', worker, claimed ? 'ok' : '')}
-        ${stationContextFactHtml('Termín', formatDate(order.due || ''))}
+        ${showDue ? stationContextFactHtml('Termín', formatDate(order.due || '')) : ''}
         ${stationContextFactHtml('Priorita', priorityLabel(order.priority))}
-        ${stationContextFactHtml('Technologie', techLabel)}
-        ${stationContextFactHtml('Typ výroby', pt.label)}
-        ${order.stencilNumber ? stationContextFactHtml('Planžeta', order.stencilNumber) : ''}
-        ${stationContextFactHtml('Poznámky', `${noteCount} k tomuto kroku`, noteCount ? 'info' : '')}
+        ${showTech ? stationContextFactHtml('Technologie', techLabel) : ''}
+        ${showTech ? stationContextFactHtml('Typ výroby', pt.label) : ''}
+        ${showTech && order.stencilNumber ? stationContextFactHtml('Planžeta', order.stencilNumber) : ''}
+        ${showNotes ? stationContextFactHtml('Poznámky', `${noteCount} k tomuto kroku`, noteCount ? 'info' : '') : ''}
       </div>
 
       <div class="station-context-route">
@@ -5693,6 +5808,25 @@ function stationContextPanelHtml(order, station, stInfo) {
       </div>
     </div>
   </section>`;
+}
+
+function stationStateOverviewHtml(order, station) {
+  const meta = stationStatusMeta(station.status);
+  const blocked = isOrderBlocked(order);
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const paused = Boolean(station.workPausedAt);
+  const items = [
+    { label:'Stav', value: meta.label, tone: meta.action },
+    { label:'Převzetí', value: claimed ? stationWorkerLabel(station) : 'Volné', tone: claimed ? 'ok' : '' },
+    { label:'Režim', value: blocked ? 'Blokováno' : paused ? 'Pozastaveno' : 'Aktivní', tone: blocked ? 'danger' : paused ? 'warn' : 'ok' },
+  ];
+  return `<div class="station-state-overview">
+    ${items.map(item => `<div class="station-state-item ${item.tone}">
+      <span>${escapeHtml(item.label)}</span>
+      <strong>${escapeHtml(item.value)}</strong>
+    </div>`).join('')}
+    ${paused && station.workPauseReason ? `<div class="station-state-note">Důvod pauzy: ${escapeHtml(station.workPauseReason)}</div>` : ''}
+  </div>`;
 }
 
 function renderStationDetail(stInfo) {
@@ -5757,13 +5891,7 @@ function renderStationDetail(stInfo) {
               <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Nahlásit problém</button>
             </div>
           </div>
-          <div class="station-status-divider"></div>
-          <div class="station-status-label">Průběžný stav</div>
-          <div class="action-grid">
-            ${stationStatusButton('waiting', '🧰 Příprava')}
-            ${stationStatusButton('in_progress', '▶ Rozpracováno')}
-            ${stationStatusButton('partial', '◐ Částečně hotovo')}
-          </div>
+          ${stationStateOverviewHtml(selectedOrder, selectedStation)}
         </div>
 
         ${stationNotesHtml}
@@ -5817,11 +5945,15 @@ function scrapControlHtml() {
 }
 
 function qtyAvailable() {
-  return window.EZOP_FLOW?.qtyAvailable(selectedOrder, selectedStation) ?? 0;
+  const index = stationIndexInOrder(selectedOrder, selectedStation);
+  return window.EZOP_FLOW?.stationInputQty(selectedOrder, selectedStation, index)
+    ?? window.EZOP_FLOW?.qtyAvailable(selectedOrder, selectedStation)
+    ?? 0;
 }
 
 function qtyValidation() {
-  return window.EZOP_FLOW?.qtyValidation(selectedOrder, selectedStation) ?? {
+  const index = stationIndexInOrder(selectedOrder, selectedStation);
+  return window.EZOP_FLOW?.qtyValidationForStation(selectedOrder, selectedStation, index) ?? {
     sum: 0, available: 0, exceed: false, remaining: 0,
   };
 }
@@ -6109,9 +6241,8 @@ function setStatus(newStatus) {
 
 function updateStationStatusFromQty(validation = qtyValidation()) {
   if (!selectedStation) return;
-  if (validation.sum === 0) selectedStation.status = 'waiting';
-  else if (validation.remaining === 0) selectedStation.status = 'completed';
-  else selectedStation.status = 'partial';
+  selectedStation.status = window.EZOP_FLOW?.statusFromQty(validation)
+    || (validation.sum === 0 ? 'waiting' : validation.remaining === 0 ? 'completed' : 'partial');
 }
 
 function nextStationAfterCurrent() {
@@ -7057,6 +7188,7 @@ function rerenderKpiLocation() {
 // ── ADMIN ─────────────────────────────────────────────
 let adminTab = 'users';
 let adminGroup = 'people';
+let adminUserFilter = 'all';
 
 function adminGroups() {
   return [
@@ -7499,6 +7631,8 @@ function renderAdmin() {
           <span class="badge badge-admin">ADMIN</span>
         </div>
 
+        ${renderAdminCommandCenter()}
+
         <div class="admin-section ${adminTab==='users'?'active':''}" id="adm-users">
           ${renderAdminUsers()}
         </div>
@@ -7541,6 +7675,41 @@ function renderAdmin() {
       </main>
     </div>
   `;
+}
+
+function renderAdminCommandCenter() {
+  const operators = USERS.filter(user => user.role === 'operator');
+  const assignedOperators = operators.filter(user => Array.isArray(user.stationIds) && user.stationIds.length > 0).length;
+  const openIssues = ISSUES.filter(issue => issue.status !== 'closed').length;
+  const riskyLoads = stationLoadSummaries().filter(load => load.level !== 'ok').length;
+  const hiddenOperatorNav = APP_SETTINGS.hiddenNavByRole?.operator?.length || 0;
+  const mode = APP_SETTINGS.appDisplayMode || 'standard';
+  const cards = [
+    { label:'Uživatelé', value: USERS.length, desc:`${operators.length} operátorů`, action:"switchAdminTab('users')", tone:'info' },
+    { label:'Přiřazení', value:`${assignedOperators}/${operators.length || 0}`, desc:'operátoři se stanovišti', action:"switchAdminTab('users')", tone: assignedOperators === operators.length ? 'ok' : 'warn' },
+    { label:'Problémy', value: openIssues, desc:'otevřená hlášení', action:"navigateTo('issues')", tone: openIssues ? 'warn' : 'ok' },
+    { label:'Přetížení', value: riskyLoads, desc:'pracoviště nad limitem', action:"navigateTo('queue')", tone: riskyLoads ? 'warn' : 'ok' },
+  ];
+  return `<section class="admin-command-center">
+    <div class="admin-command-head">
+      <div>
+        <strong>Rychlý stav aplikace</strong>
+        <span>Režim: ${escapeHtml(mode)} · skryté záložky operátora: ${hiddenOperatorNav}</span>
+      </div>
+      <div class="admin-command-actions">
+        <button class="btn btn-ghost btn-sm" onclick="switchAdminTab('settings')">Nastavení</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchAdminTab('role_permissions')">Oprávnění</button>
+        <button class="btn btn-primary btn-sm" onclick="navigateTo('queue')">Fronty</button>
+      </div>
+    </div>
+    <div class="admin-command-grid">
+      ${cards.map(card => `<button class="admin-command-card ${card.tone}" onclick="${card.action}">
+        <span>${escapeHtml(card.label)}</span>
+        <strong>${escapeHtml(String(card.value))}</strong>
+        <em>${escapeHtml(card.desc)}</em>
+      </button>`).join('')}
+    </div>
+  </section>`;
 }
 
 function renderAdminRolePermissions() {
@@ -8102,7 +8271,10 @@ function renderAdminCloud() {
       </div>
       <div class="input-group">
         <div class="input-label">Anon (public) key</div>
-        <input class="input" id="cloud-key" placeholder="eyJhbGciOiJI..." value="${escapeHtml(key)}">
+        <input class="input" id="cloud-key" type="password" autocomplete="off" placeholder="eyJhbGciOiJI..." value="${escapeHtml(key)}">
+        <div style="font-size:11px;color:var(--text2);margin-top:5px">
+          Vkládejte pouze anon/public key. Service role key nikdy nepatří do prohlížeče.
+        </div>
       </div>
 
       <div style="display:flex;gap:8px;margin-top:8px">
@@ -8132,10 +8304,46 @@ function renderAdminCloud() {
   `;
 }
 
+function decodeJwtPayloadUnsafe(token) {
+  try {
+    const payload = String(token || '').split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function cloudConfigValidationError(url, key) {
+  let parsedUrl;
+  try { parsedUrl = new URL(url); }
+  catch { return 'Supabase URL není platná URL.'; }
+  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname);
+  if (parsedUrl.protocol !== 'https:' && !isLocal) {
+    return 'Pro cloud režim použijte HTTPS Supabase URL.';
+  }
+  if (!isLocal && !parsedUrl.hostname.endsWith('.supabase.co')) {
+    return 'URL nevypadá jako Supabase projekt. Zkontrolujte Settings → API → Project URL.';
+  }
+  const payload = decodeJwtPayloadUnsafe(key);
+  if (!payload) return 'Supabase key nevypadá jako platný JWT anon key.';
+  if (payload.role === 'service_role') {
+    return 'Service role key nesmí být uložený v prohlížeči. Použijte pouze anon/public key.';
+  }
+  if (payload.role && payload.role !== 'anon') {
+    return `Očekávám anon/public key, ale klíč má roli "${payload.role}".`;
+  }
+  return '';
+}
+
 window.saveCloudConfig = function() {
   const url = document.getElementById('cloud-url').value.trim();
   const key = document.getElementById('cloud-key').value.trim();
   if (!url || !key) { showToast('⚠️ Vyplňte URL i klíč'); return; }
+  const validationError = cloudConfigValidationError(url, key);
+  if (validationError) { showToast('⚠️ ' + validationError); return; }
   localStorage.setItem('vyrobais_supabase_url', url);
   localStorage.setItem('vyrobais_supabase_key', key);
   showToast('✅ Uloženo, restartuji…');
@@ -8346,25 +8554,67 @@ function accountModeNoticeHtml(context = 'admin') {
 }
 
 function renderAdminUsers() {
+  const operators = USERS.filter(user => user.role === 'operator');
+  const missingStation = operators.filter(user => !Array.isArray(user.stationIds) || user.stationIds.length === 0);
+  const adminRoles = USERS.filter(user => ['admin','dispatcher','tpv','management'].includes(user.role));
+  const filters = [
+    ['all', 'Všichni', USERS.length],
+    ['operators', 'Operátoři', operators.length],
+    ['missing_station', 'Bez stanoviště', missingStation.length],
+    ['admin_roles', 'Admin role', adminRoles.length],
+  ];
+  const filteredUsers = USERS.filter(user => {
+    if (adminUserFilter === 'operators') return user.role === 'operator';
+    if (adminUserFilter === 'missing_station') return user.role === 'operator' && (!Array.isArray(user.stationIds) || user.stationIds.length === 0);
+    if (adminUserFilter === 'admin_roles') return ['admin','dispatcher','tpv','management'].includes(user.role);
+    return true;
+  });
   return `${accountModeNoticeHtml('admin')}
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <div style="font-size:13px;color:var(--text2)">${USERS.length} uživatelů v systému</div>
+  <div class="admin-users-head">
+    <div>
+      <div style="font-size:13px;color:var(--text2)">${USERS.length} uživatelů v systému</div>
+      <div style="font-size:11px;color:${missingStation.length ? 'var(--amber)' : 'var(--green)'};margin-top:4px">
+        ${missingStation.length ? `${missingStation.length} operátorů nemá přiřazené stanoviště` : 'Všichni operátoři mají přiřazené stanoviště'}
+      </div>
+    </div>
     <button class="btn btn-primary btn-sm" onclick="newUserModal()">+ Přidat uživatele</button>
   </div>
-  ${USERS.map(u => `
-    <div class="user-card">
+  <div class="admin-user-filters">
+    ${filters.map(([id, label, count]) => `<button class="${adminUserFilter === id ? 'active' : ''}" onclick="setAdminUserFilter('${id}')">
+      <span>${count}</span><strong>${label}</strong>
+    </button>`).join('')}
+  </div>
+  ${filteredUsers.length ? filteredUsers.map(u => {
+    const stationIds = Array.isArray(u.stationIds) ? u.stationIds : [];
+    const noStations = u.role === 'operator' && stationIds.length === 0;
+    const stationChips = u.role === 'operator'
+      ? stationIds.map(id => {
+        const st = STATIONS.find(item => Number(item.id) === Number(id));
+        return `<span>${st?.icon || '🔧'} ${escapeHtml(st?.name || `Stanoviště ${id}`)}</span>`;
+      }).join('')
+      : '<span>plný provozní přístup podle role</span>';
+    return `
+    <div class="user-card ${noStations ? 'needs-attention' : ''}">
       <div class="user-avatar" style="background:${escapeHtml(u.color)}22;color:${escapeHtml(u.color)}">${escapeHtml(u.avatar)}</div>
       <div class="user-info">
         <div class="user-name">${escapeHtml(u.name)}</div>
         <div class="user-login" style="color:var(--text3)">Login: <b style="color:var(--text2)">${escapeHtml(u.login)}</b> · Heslo: <b style="color:var(--text2)">skryté lokálně</b></div>
-        <div class="user-login" style="color:var(--text3);margin-top:3px">Stanoviště: <b style="color:var(--text2)">${escapeHtml(stationAccessLabel(u))}</b></div>
+        <div class="user-station-chips ${noStations ? 'warning' : ''}">
+          ${noStations ? '<span>⚠️ bez přiřazeného stanoviště</span>' : stationChips}
+        </div>
       </div>
       <span class="role-badge role-${u.role}">${ROLE_LABELS[u.role]}</span>
       <div style="display:flex;gap:6px">
         <button class="btn btn-ghost btn-sm" title="Upravit uživatele" onclick="editUserModal('${u.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" title="Smazat uživatele" onclick="deleteUserModal('${u.id}')">🗑️</button>
       </div>
-    </div>`).join('')}`;
+    </div>`;
+  }).join('') : `<div class="card" style="text-align:center;color:var(--text2);padding:24px">Žádný uživatel neodpovídá filtru.</div>`}`;
+}
+
+function setAdminUserFilter(filter) {
+  adminUserFilter = ['all','operators','missing_station','admin_roles'].includes(filter) ? filter : 'all';
+  renderAdmin();
 }
 
 function renderAdminLoginLogs() {
@@ -8458,12 +8708,28 @@ function renderAdminSettings() {
     notifyOnIssue:      { label:'Notifikovat při problému', desc:'Zasílat notifikace mistrovi', type:'toggle' },
     shiftHours:         { label:'Délka směny (hod)', desc:'Pro výpočet KPI a kapacity', type:'number' },
   });
-  const operatorSettings = Object.entries({
+  const operatorBehaviorSettings = Object.entries({
     operatorSimpleMode:           { label:'Jednoduchý režim operátora', desc:'Operátor vidí hlavně úkol, počty a stav; podpůrné karty jsou sbalené', type:'toggle' },
     operatorDashboardFocusOnly:   { label:'Přehled jen pro moje stanoviště', desc:'Hlavní obrazovka operátora skryje celofiremní provozní panely a ukáže jen jeho práci', type:'toggle' },
     operatorShowProductionOverview:{ label:'Operátor vidí provozní přehled', desc:'Zapne operátorovi širší přehled front, úzkých míst a rizik směny', type:'toggle' },
     operatorHideOrderContext:     { label:'Skrýt další tok zakázky', desc:'Operátor neuvidí tlačítka na další stanoviště a zůstane soustředěný na svůj krok', type:'toggle' },
   });
+  const operatorVisibilitySettings = Object.entries({
+    operatorShowOrderIdentifier:  { label:'Operátor vidí číslo a název zakázky', desc:'Vypnutí nahradí zakázku neutrálním textem Práce na stanovišti', type:'toggle' },
+    operatorShowCustomerContext:  { label:'Operátor vidí zákazníka', desc:'Zobrazí zákazníka v hlavičce stanoviště', type:'toggle' },
+    operatorShowDueContext:       { label:'Operátor vidí termín', desc:'Zobrazí plánovaný termín u aktuální práce', type:'toggle' },
+    operatorShowTechnologyContext:{ label:'Operátor vidí technologii', desc:'Zobrazí technologii, typ výroby a planžetu', type:'toggle' },
+    operatorShowNotesContext:     { label:'Operátor vidí počet poznámek', desc:'Zobrazí počet poznámek k aktuálnímu kroku', type:'toggle' },
+  });
+  const operatorPreview = [
+    ['Vlastní stanoviště', APP_SETTINGS.operatorDashboardFocusOnly !== false],
+    ['Širší provoz', APP_SETTINGS.operatorShowProductionOverview === true],
+    ['Číslo zakázky', APP_SETTINGS.operatorShowOrderIdentifier !== false],
+    ['Zákazník', APP_SETTINGS.operatorShowCustomerContext === true],
+    ['Termín', APP_SETTINGS.operatorShowDueContext !== false],
+    ['Technologie', APP_SETTINGS.operatorShowTechnologyContext !== false],
+    ['Poznámky', APP_SETTINGS.operatorShowNotesContext !== false],
+  ];
   const featureSettings = Object.entries({
     compactAdvancedUi:       { label:'Kompaktní obrazovky', desc:'Méně používané karty schovat do rozbalovacích sekcí', type:'toggle' },
     featureProductMemory:    { label:'Programy a fotky výrobku', desc:'Programy strojů, fotka výrobku a paměť pro opakovanou výrobu', type:'toggle' },
@@ -8506,12 +8772,42 @@ function renderAdminSettings() {
       <div class="card-title">⚙️ Základní nastavení</div>
       ${generalSettings.map(rowHtml).join('')}
     </div>
-    <div class="card" style="border-left:4px solid var(--cyan)">
+    <div class="card operator-settings-card" style="border-left:4px solid var(--cyan)">
       <div class="card-title">👷 Obrazovka operátora</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
         Admin zde řídí, jestli operátor uvidí jen vlastní stanoviště, nebo i širší kontext výroby.
       </div>
-      ${operatorSettings.map(rowHtml).join('')}
+      <div class="operator-settings-preview" aria-label="Aktuální viditelnost operátora">
+        ${operatorPreview.map(([label, enabled]) => `
+          <span class="${enabled ? 'on' : 'off'}">
+            <b>${enabled ? '✓' : '–'}</b>${escapeHtml(label)}
+          </span>
+        `).join('')}
+      </div>
+      <div class="operator-preset-grid" aria-label="Rychlé předvolby operátora">
+        <button class="operator-preset-card" onclick="setOperatorViewPreset('focused')">
+          <strong>Soustředěný operátor</strong>
+          <span>Minimum informací, jen moje práce a nutné kroky.</span>
+        </button>
+        <button class="operator-preset-card" onclick="setOperatorViewPreset('balanced')">
+          <strong>Běžný provoz</strong>
+          <span>Doporučené nastavení pro výrobu a kontrolu termínů.</span>
+        </button>
+        <button class="operator-preset-card" onclick="setOperatorViewPreset('service')">
+          <strong>Servisní pohled</strong>
+          <span>Více kontextu pro zaučení, řešení problémů a dohled.</span>
+        </button>
+      </div>
+      <div class="operator-settings-grid">
+        <div class="operator-settings-group">
+          <div class="operator-settings-group-title">Chování obrazovky</div>
+          ${operatorBehaviorSettings.map(rowHtml).join('')}
+        </div>
+        <div class="operator-settings-group">
+          <div class="operator-settings-group-title">Informace ve frontě a stanovišti</div>
+          ${operatorVisibilitySettings.map(rowHtml).join('')}
+        </div>
+      </div>
     </div>
     <div class="card" style="border-left:4px solid var(--teal)">
       <div class="card-title">🧩 Viditelnost funkcí</div>
@@ -8554,6 +8850,70 @@ function saveSettingChange(key, before, after) {
   showToast('Nastavení uloženo');
 }
 
+function setOperatorViewPreset(preset) {
+  if (!can('app_settings')) return;
+  const before = cloneForAudit({
+    operatorSimpleMode: APP_SETTINGS.operatorSimpleMode,
+    operatorDashboardFocusOnly: APP_SETTINGS.operatorDashboardFocusOnly,
+    operatorShowProductionOverview: APP_SETTINGS.operatorShowProductionOverview,
+    operatorHideOrderContext: APP_SETTINGS.operatorHideOrderContext,
+    operatorShowOrderIdentifier: APP_SETTINGS.operatorShowOrderIdentifier,
+    operatorShowCustomerContext: APP_SETTINGS.operatorShowCustomerContext,
+    operatorShowDueContext: APP_SETTINGS.operatorShowDueContext,
+    operatorShowTechnologyContext: APP_SETTINGS.operatorShowTechnologyContext,
+    operatorShowNotesContext: APP_SETTINGS.operatorShowNotesContext,
+  });
+  const presets = {
+    focused: {
+      operatorSimpleMode: true,
+      operatorDashboardFocusOnly: true,
+      operatorShowProductionOverview: false,
+      operatorHideOrderContext: true,
+      operatorShowOrderIdentifier: false,
+      operatorShowCustomerContext: false,
+      operatorShowDueContext: true,
+      operatorShowTechnologyContext: false,
+      operatorShowNotesContext: true,
+    },
+    balanced: {
+      operatorSimpleMode: true,
+      operatorDashboardFocusOnly: true,
+      operatorShowProductionOverview: false,
+      operatorHideOrderContext: true,
+      operatorShowOrderIdentifier: true,
+      operatorShowCustomerContext: false,
+      operatorShowDueContext: true,
+      operatorShowTechnologyContext: true,
+      operatorShowNotesContext: true,
+    },
+    service: {
+      operatorSimpleMode: false,
+      operatorDashboardFocusOnly: false,
+      operatorShowProductionOverview: true,
+      operatorHideOrderContext: false,
+      operatorShowOrderIdentifier: true,
+      operatorShowCustomerContext: true,
+      operatorShowDueContext: true,
+      operatorShowTechnologyContext: true,
+      operatorShowNotesContext: true,
+    },
+  };
+  const next = presets[preset];
+  if (!next) return;
+  Object.assign(APP_SETTINGS, next);
+  writeAudit(
+    'app.operator_view_preset_changed',
+    'app_settings',
+    'operator-view',
+    `Předvolba operátora: ${preset}`,
+    before,
+    cloneForAudit(next),
+  );
+  saveState();
+  renderAdmin();
+  showToast('Předvolba operátora uložena');
+}
+
 function setAppDisplayMode(mode) {
   const valid = ['simple', 'standard', 'service'];
   if (!valid.includes(mode)) return;
@@ -8565,18 +8925,33 @@ function setAppDisplayMode(mode) {
     APP_SETTINGS.operatorDashboardFocusOnly = true;
     APP_SETTINGS.operatorShowProductionOverview = false;
     APP_SETTINGS.operatorHideOrderContext = true;
+    APP_SETTINGS.operatorShowOrderIdentifier = true;
+    APP_SETTINGS.operatorShowCustomerContext = false;
+    APP_SETTINGS.operatorShowDueContext = true;
+    APP_SETTINGS.operatorShowTechnologyContext = true;
+    APP_SETTINGS.operatorShowNotesContext = true;
   } else if (mode === 'standard') {
     APP_SETTINGS.compactAdvancedUi = true;
     APP_SETTINGS.operatorSimpleMode = true;
     APP_SETTINGS.operatorDashboardFocusOnly = true;
     APP_SETTINGS.operatorShowProductionOverview = false;
     APP_SETTINGS.operatorHideOrderContext = true;
+    APP_SETTINGS.operatorShowOrderIdentifier = true;
+    APP_SETTINGS.operatorShowCustomerContext = false;
+    APP_SETTINGS.operatorShowDueContext = true;
+    APP_SETTINGS.operatorShowTechnologyContext = true;
+    APP_SETTINGS.operatorShowNotesContext = true;
   } else if (mode === 'service') {
     APP_SETTINGS.compactAdvancedUi = false;
     APP_SETTINGS.operatorSimpleMode = false;
     APP_SETTINGS.operatorDashboardFocusOnly = false;
     APP_SETTINGS.operatorShowProductionOverview = true;
     APP_SETTINGS.operatorHideOrderContext = false;
+    APP_SETTINGS.operatorShowOrderIdentifier = true;
+    APP_SETTINGS.operatorShowCustomerContext = true;
+    APP_SETTINGS.operatorShowDueContext = true;
+    APP_SETTINGS.operatorShowTechnologyContext = true;
+    APP_SETTINGS.operatorShowNotesContext = true;
   }
   writeAudit(
     'app.display_mode_changed',
@@ -10025,9 +10400,9 @@ function newUserModal() {
     </div>
     <div class="input-group">
       <div class="input-label">Dočasné heslo</div>
-      <input class="input" id="nu-pass" type="password" value="${DEFAULT_DEMO_PASSWORD}" autocomplete="new-password">
+      <input class="input" id="nu-pass" type="password" placeholder="min. 8 znaků" autocomplete="new-password">
       <div style="font-size:11px;color:var(--text2);margin-top:5px">
-        Heslo se ukládá pouze lokálně v tomto zařízení, ne do GitHubu ani do cloudu.
+        Pro nové lokální účty nepoužívejte demo heslo 1234. Heslo se uloží lokálně jako hash a neposílá se do GitHubu ani do cloudu.
       </div>
     </div>
     <div class="input-group">
@@ -10043,20 +10418,22 @@ function newUserModal() {
   ]);
 }
 
-function createUser() {
+async function createUser() {
   const name = document.getElementById('nu-name').value.trim();
   const login = normalizeLogin(document.getElementById('nu-login').value);
   if (!name || !login) { showToast('⚠️ Vyplňte jméno a login'); return; }
   if (USERS.find(u=>normalizeLogin(u.login)===login)) { showToast('⚠️ Login již existuje'); return; }
   const role = document.getElementById('nu-role').value;
   const colors = { admin:'#ef4444', dispatcher:'#3b82f6', tpv:'#a855f7', management:'#22c55e', operator:'#6b7280' };
-  const password = document.getElementById('nu-pass').value || DEFAULT_DEMO_PASSWORD;
+  const password = document.getElementById('nu-pass').value;
+  const passwordError = localPasswordPolicyError(password);
+  if (passwordError) { showToast('⚠️ ' + passwordError); return; }
   USERS.push({
     id: 'u' + Date.now(), login,
     role, name, avatar: '👤', color: colors[role],
     stationIds: role === 'operator' ? readStationAccess('nu') : [],
   });
-  setUserPassword(login, password);
+  await setUserPassword(login, password);
   autoSave();
   closeModal(); showToast('✅ Uživatel ' + login + ' vytvořen'); renderAdmin();
 }
@@ -10091,7 +10468,7 @@ function editUserModal(uid) {
   ]);
 }
 
-function saveEditUser(uid) {
+async function saveEditUser(uid) {
   const u = USERS.find(x=>x.id===uid);
   if (!u) return;
   const oldLogin = normalizeLogin(u.login);
@@ -10101,15 +10478,21 @@ function saveEditUser(uid) {
     showToast('⚠️ Login již existuje');
     return;
   }
+  const newPassword = document.getElementById('eu-pass').value;
+  if (newPassword) {
+    const passwordError = localPasswordPolicyError(newPassword);
+    if (passwordError) { showToast('⚠️ ' + passwordError); return; }
+  }
   u.name  = document.getElementById('eu-name').value;
   u.login = newLogin;
-  const newPassword = document.getElementById('eu-pass').value;
   if (newLogin && oldLogin !== newLogin && USER_PASSWORDS[oldLogin] && !USER_PASSWORDS[newLogin]) {
     USER_PASSWORDS[newLogin] = USER_PASSWORDS[oldLogin];
     delete USER_PASSWORDS[oldLogin];
     saveUserPasswords();
   }
-  if (newPassword) setUserPassword(newLogin, newPassword);
+  if (newPassword) {
+    await setUserPassword(newLogin, newPassword);
+  }
   u.role  = document.getElementById('eu-role').value;
   u.stationIds = u.role === 'operator' ? readStationAccess('eu') : [];
   autoSave();
