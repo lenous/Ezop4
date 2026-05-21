@@ -427,6 +427,16 @@
     font-weight: 800;
     align-self: center;
   }
+  #app .station-work-actions-buttons .station-action-done {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid rgba(34,197,94,.34);
+    border-radius: 8px;
+    background: rgba(34,197,94,.10);
+    color: var(--green);
+  }
   #app .station-status-divider {
     height: 1px;
     margin: 12px 0;

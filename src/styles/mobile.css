@@ -423,6 +423,7 @@
     #app .station-work-actions-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     #app .station-work-actions-buttons .btn { width: 100%; min-width: 0; justify-content: center; }
     #app .station-work-actions-buttons > span { grid-column: 1 / -1; }
+    #app .station-work-actions-buttons .station-action-done { justify-content: center; }
     .modal-overlay { padding: 10px; align-items: flex-end; }
     .modal-box { max-width: 100%; max-height: 92vh; padding: 18px 14px; border-radius: 16px 16px 0 0; }
     .modal-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }

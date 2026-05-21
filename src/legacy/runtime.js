@@ -1194,8 +1194,15 @@ function stationWorkActionButtons(order, station) {
     if (isManagerRole()) {
       buttons.push(`<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`);
     }
+  } else if (station.status === 'completed') {
+    buttons.push(`<span class="station-action-done">Dokončeno: ${escapeHtml(stationWorkerLabel(station))}</span>`);
+  } else if (station.workPausedAt) {
+    buttons.push(`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Obnovit práci</button>`);
+    buttons.push(`<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`);
   } else {
-    buttons.push(`<button class="btn btn-ghost btn-sm" onclick="claimStationWork('${order.id}', '${station.stId}')">Obnovit práci</button>`);
+    if (station.status === 'waiting') {
+      buttons.push(`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('${order.id}', '${station.stId}')">Zahájit práci</button>`);
+    }
     buttons.push(`<button class="btn btn-ghost btn-sm" onclick="pauseStationWork('${order.id}', '${station.stId}')">Pozastavit</button>`);
     buttons.push(`<button class="btn btn-primary btn-sm" onclick="finishStationWork('${order.id}', '${station.stId}')">Dokončit</button>`);
   }
