@@ -325,6 +325,12 @@ function orderCardSimpleHtml(o: any): string {
 function injectQuickFilters() {
   const page = document.getElementById('page-orders');
   if (!page) return;
+  const user = W.__ezopBridge?.user?.() || null;
+  const settings = W.__ezopBridge?.settings?.() || {};
+  if (user?.role === 'operator' && settings.operatorSimpleMode !== false) {
+    page.querySelector('#ux-order-filters')?.remove();
+    return;
+  }
   const toolbar = page.querySelector('.app-filter-card');
   if (!toolbar) return;
   let bar = page.querySelector<HTMLDivElement>('#ux-order-filters');

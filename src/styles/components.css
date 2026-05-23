@@ -2325,6 +2325,19 @@
     white-space: nowrap;
   }
 
+  #app .dashboard-mini-more {
+    appearance: none;
+    border: 1px dashed rgba(226,184,32,.35);
+    border-radius: 8px;
+    background: rgba(226,184,32,.06);
+    color: var(--gold);
+    padding: 9px 10px;
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    text-align: center;
+  }
+
   #app .orders-command {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(340px, .85fr);
@@ -2653,6 +2666,77 @@
   #app .order-card-footer .danger {
     color: var(--red);
     font-weight: 900;
+  }
+
+  #app .app-order-card-simple {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+  }
+
+  #app .simple-order-main {
+    min-width: 0;
+    display: grid;
+    gap: 7px;
+  }
+
+  #app .simple-order-kicker,
+  #app .simple-order-meta,
+  #app .simple-order-progress,
+  #app .simple-order-action {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  #app .simple-order-kicker span {
+    color: var(--gold);
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  #app .simple-order-main strong {
+    min-width: 0;
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #app .simple-order-meta {
+    color: var(--text2);
+    font-size: 12px;
+  }
+
+  #app .simple-order-progress {
+    max-width: 360px;
+  }
+
+  #app .simple-order-progress .progress-bar {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  #app .simple-order-progress span {
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  #app .simple-order-action {
+    justify-content: flex-end;
+    min-width: 150px;
+  }
+
+  #app .simple-order-action .danger {
+    color: var(--red);
+    font-size: 12px;
   }
 
   #app .dashboard-overview {

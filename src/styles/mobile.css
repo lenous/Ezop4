@@ -320,6 +320,10 @@
     #app .order-card-badges { justify-content: flex-start; }
     #app .order-card-title strong { white-space: normal; }
     #app .order-card-meta, #app .order-card-footer { gap: 7px; }
+    #app .app-order-card-simple { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    #app .simple-order-main strong { white-space: normal; font-size: 15px; }
+    #app .simple-order-action { justify-content: stretch; min-width: 0; }
+    #app .simple-order-action .btn { width: 100%; justify-content: center; }
     #app .app-cockpit { grid-template-columns: 1fr; gap: 10px; }
     #app .app-cockpit-left,
     #app .app-cockpit-main { padding: 12px; }

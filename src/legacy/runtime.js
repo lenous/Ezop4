@@ -1851,6 +1851,7 @@ function showLoginScreen() {
 }
 
 function openDemoLogin() {
+  setEzop4AuthMode('demo');
   showLoginScreen();
   const userInput = document.getElementById('login-user');
   const passInput = document.getElementById('login-pass');
@@ -3512,13 +3513,13 @@ function dashboardCleanOverviewHtml(orders, stats) {
 }
 
 function dashboardStopMiniHtml(items) {
-  const top = items.slice(0, 3);
+  const top = items.slice(0, 2);
   if (!top.length) {
     return `<div class="dashboard-mini-list dashboard-mini-list-calm">
       <div class="app-panel-head">
         <div>
-          <div class="card-title">Co brzdí výrobu</div>
-          <div class="app-muted">Žádná otevřená blokace, problém ani prošlý termín.</div>
+          <div class="card-title">Důležité</div>
+          <div class="app-muted">Výroba nemá akutní blokaci ani problém.</div>
         </div>
       </div>
     </div>`;
@@ -3526,10 +3527,10 @@ function dashboardStopMiniHtml(items) {
   return `<div class="dashboard-mini-list">
     <div class="app-panel-head">
       <div>
-        <div class="card-title">Co brzdí výrobu</div>
-        <div class="app-muted">Jen nejdůležitější položky. Detail je ve frontách a problémech.</div>
+        <div class="card-title">Důležité</div>
+        <div class="app-muted">Jen položky, které vyžadují pozornost.</div>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="showOrdersFiltered('blocked')">Detail</button>
+      <button class="btn btn-ghost btn-sm" onclick="navigateTo('issues')">Vše</button>
     </div>
     ${top.map(item => `
       <button class="dashboard-mini-row ${item.tone}" type="button" onclick="${item.station ? `openStation('${item.order.id}','${item.station.stId}')` : `openOrder('${item.order.id}')`}">
@@ -3539,6 +3540,7 @@ function dashboardStopMiniHtml(items) {
         <em>${item.stInfo ? `${item.stInfo.icon} ${escapeHtml(item.stInfo.name)}` : escapeHtml(item.order.name)}</em>
       </button>
     `).join('')}
+    ${items.length > top.length ? `<button class="dashboard-mini-more" type="button" onclick="navigateTo('issues')">+ ${items.length - top.length} dalších upozornění</button>` : ''}
   </div>`;
 }
 
@@ -4436,13 +4438,14 @@ function ordersCommandHtml(list) {
 function renderOrders() {
   const list = filterOrders(orderSearch);
   const activeFilter = orderFilterLabel(orderFilter);
+  const commandHtml = operatorSimpleMode() ? '' : ordersCommandHtml(list);
   document.getElementById('page-orders').innerHTML = `
     <div class="app-list-toolbar">
       <div class="app-page-title"><strong>📋 Zakázky</strong></div>
       ${can('create_order') ? `<button class="btn btn-primary btn-sm" onclick="newOrderModal()">+ Nová zakázka</button>` : ''}
     </div>
 
-    ${ordersCommandHtml(list)}
+    ${commandHtml}
 
     <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:8px">
@@ -4474,6 +4477,9 @@ function ordersListHtml(list) {
     return `<div class="card" style="text-align:center;color:var(--text2);padding:30px">
       Žádná zakázka neodpovídá hledání
     </div>`;
+  }
+  if (operatorSimpleMode()) {
+    return list.map(simpleOrderCardHtml).join('');
   }
   return list.map(o => {
     const done = o.stations.filter(s=>s.status==='completed').length;
@@ -4524,6 +4530,40 @@ function ordersListHtml(list) {
       </div>
     </div>`;
   }).join('');
+}
+
+function simpleOrderCardHtml(o) {
+  const done = o.stations.filter(s=>s.status==='completed').length;
+  const pct = Math.round(done/o.stations.length*100);
+  const activeIndex = activeStationIndex(o);
+  const station = activeIndex >= 0 ? o.stations[activeIndex] : null;
+  const stInfo = station ? STATIONS.find(st => Number(st.id) === Number(station.stId)) : null;
+  const meta = station ? stationStatusMeta(station.status) : null;
+  const hasIssue = o.stations.some(s=>s.status==='issue');
+  const actionLabel = hasIssue ? 'Vyřešit problém' : station ? 'Pokračovat' : 'Otevřít';
+  return `<div class="card app-order-card app-order-card-simple" onclick="openOrder('${o.id}')">
+    <div class="simple-order-main">
+      <div class="simple-order-kicker">
+        <span>${operatorShowOrderIdentifier() ? escapeHtml(o.number) : 'Zakázka'}</span>
+        <em class="badge badge-${o.priority}">${priorityLabel(o.priority)}</em>
+      </div>
+      <strong>${escapeHtml(o.name)}</strong>
+      <div class="simple-order-meta">
+        <span>📦 ${positiveQty(o.qty)} ks</span>
+        ${operatorShowDueContext() ? `<span>📅 ${formatDate(o.due)}</span>` : ''}
+        ${stInfo ? `<span>${stInfo.icon} ${escapeHtml(stInfo.name)}</span>` : ''}
+      </div>
+      <div class="simple-order-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <span>${pct}%</span>
+      </div>
+    </div>
+    <div class="simple-order-action">
+      ${meta ? `<span class="badge ${meta.badge}">${escapeHtml(meta.label)}</span>` : ''}
+      ${hasIssue ? `<b class="danger">⚠️ Problém</b>` : ''}
+      <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openOrder('${o.id}')">${actionLabel}</button>
+    </div>
+  </div>`;
 }
 
 function orderTimelineItems(order) {
@@ -4711,6 +4751,10 @@ function openOrder(orderId, options = {}) {
   const orderControlHtml = operatorSimpleMode()
     ? advancedPanelHtml('Řízení a připravenost', orderControlCards, { subtitle: 'pokročilé' })
     : orderControlCards;
+  const orderInfoHtml = operatorSimpleMode()
+    ? advancedPanelHtml('Údaje o zakázce', orderInfoCardHtml(selectedOrder), { subtitle: 'datum, planžeta, technologie' })
+    : orderInfoCardHtml(selectedOrder);
+  const orderTimelineHtml = advancedPanelHtml('Historie zakázky', orderTimelineCardHtml(selectedOrder), { subtitle: 'audit a změny' });
 
   pg.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;cursor:pointer" onclick="navigateTo('orders')">
@@ -4752,8 +4796,8 @@ function openOrder(orderId, options = {}) {
     </div>
 
     ${orderControlHtml}
-    ${orderInfoCardHtml(selectedOrder)}
-    ${orderTimelineCardHtml(selectedOrder)}
+    ${orderInfoHtml}
+    ${orderTimelineHtml}
     ${advancedPanelHtml('Další informace k zakázce', `
       ${featureEnabled('featureProductMemory') ? productPhotoCardHtml(selectedOrder) : ''}
       ${orderDocsCardHtml(selectedOrder)}
@@ -9733,7 +9777,7 @@ function renderGlobalSearchResults() {
     <div class="gs-row" data-idx="${i}"
       style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;
              ${i === _globalSearchSelectedIdx ? 'background:rgba(212,160,23,.15);border:1px solid var(--gold)' : 'border:1px solid transparent'}"
-      onclick="${r.action}"
+      onclick="runGlobalSearchResult(${i})"
       onmouseenter="_globalSearchSelectedIdx=${i};renderGlobalSearchResults()">
       <div style="font-size:20px">${r.icon}</div>
       <div style="flex:1;min-width:0">
@@ -9742,6 +9786,53 @@ function renderGlobalSearchResults() {
       </div>
       <span class="role-badge" style="font-size:9px;text-transform:uppercase">${r.type}</span>
     </div>`).join('');
+}
+
+function runGlobalSearchResult(index) {
+  const result = _globalSearchResults[Number(index)];
+  if (!result) return;
+  runGlobalSearchAction(result.action);
+}
+
+function globalSearchArg(value) {
+  return String(value || '').replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+}
+
+function runGlobalSearchAction(action) {
+  const commands = String(action || '')
+    .split(';')
+    .map(cmd => cmd.trim())
+    .filter(Boolean);
+
+  commands.forEach(command => {
+    if (command === 'closeGlobalSearch()') {
+      closeGlobalSearch();
+      return;
+    }
+
+    let match = command.match(/^openOrder\('([^']*)'\)$/);
+    if (match) {
+      openOrder(globalSearchArg(match[1]));
+      return;
+    }
+
+    match = command.match(/^navigateTo\('([^']*)'\)$/);
+    if (match) {
+      navigateTo(globalSearchArg(match[1]));
+      return;
+    }
+
+    match = command.match(/^switchAdminTab\('([^']*)'\)$/);
+    if (match) {
+      switchAdminTab(globalSearchArg(match[1]));
+      return;
+    }
+
+    match = command.match(/^switchWorkspaceTab\('([^']*)'\)$/);
+    if (match) {
+      switchWorkspaceTab(globalSearchArg(match[1]));
+    }
+  });
 }
 
 function handleGlobalSearchKey(e) {
@@ -9756,7 +9847,7 @@ function handleGlobalSearchKey(e) {
   } else if (e.key === 'Enter') {
     e.preventDefault();
     const r = _globalSearchResults[_globalSearchSelectedIdx];
-    if (r) eval(r.action);
+    if (r) runGlobalSearchAction(r.action);
   } else if (e.key === 'Escape') {
     closeGlobalSearch();
   }
