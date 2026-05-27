@@ -166,6 +166,11 @@ function filterIssueCards(mode: string) {
   });
 }
 
+function issueIdFromCard(card: HTMLElement): string | null {
+  const match = (card.getAttribute('onclick') || '').match(/openIssueDetail\('([^']+)'\)/);
+  return match?.[1] || null;
+}
+
 function reorderIssueCards() {
   const page = document.getElementById('page-issues');
   if (!page) return;
@@ -178,8 +183,7 @@ function reorderIssueCards() {
   const allCards = Array.from(page.querySelectorAll<HTMLElement>('.card[onclick*="openIssueDetail"]'));
   // Rozdělíme open vs closed podle issue.resolved
   const openCards = allCards.filter(c => {
-    const m = (c.getAttribute('onclick') || '').match(/openIssueDetail\('([^']+)'\)/);
-    const id = m ? m[1] : '';
+    const id = issueIdFromCard(c);
     return id && issuesById[id] && !issuesById[id].resolved;
   });
   if (openCards.length < 2) return;
@@ -189,8 +193,8 @@ function reorderIssueCards() {
 
   // Stabilní sort: tone-rank ASC, pak age DESC
   openCards.sort((a, b) => {
-    const ia = issuesById[(a.getAttribute('onclick') || '').match(/openIssueDetail\('([^']+)'\)/)![1]];
-    const ib = issuesById[(b.getAttribute('onclick') || '').match(/openIssueDetail\('([^']+)'\)/)![1]];
+    const ia = issuesById[issueIdFromCard(a) || ''];
+    const ib = issuesById[issueIdFromCard(b) || ''];
     const ageA = calcIssueAge(ia);
     const ageB = calcIssueAge(ib);
     const rA = ageA ? TONE_RANK[ageA.tone] : 99;

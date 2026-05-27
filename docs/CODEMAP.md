@@ -21,6 +21,7 @@ Use this map before opening large files. It keeps future changes focused and che
 - Issue detail workflow: `src/legacy/runtime.js`, search `renderIssues`, `issueCardHtml`, `openIssueDetail`, and `resolveIssueFromDetail`; styles use `issue-detail-*`
 - Issue summary on Problems page: `src/features/ux/issueAnalysis.ts`; styles use `ux-issue-summary-*` in `src/styles/ux.css`
 - Dashboard clean overview: `src/legacy/runtime.js`, search `dashboardCleanOverviewHtml`, `dashboardSecondaryOverviewHtml`, `dashboardStopMiniHtml`, and `orderStopItems`; styles use `dashboard-*`
+- Simplified operator order cards: `src/legacy/runtime.js`, search `simpleOrderCardHtml`; styles use `app-order-card-simple` and `simple-order-*`
 - Dashboard UX add-ons: `src/features/ux/bottleneck.ts`, `kpiCharts.ts`, and `predictive.ts`; they must not inject large panels when `.dashboard-clean` is present.
 - Work queue cards and click-through: `src/legacy/runtime.js`, search `renderWorkQueue`, `queueCardHtml`, and `queueCardOpen`
 - Secondary order actions menu: `src/legacy/runtime.js`, search `openOrderActionsModal` and `orderMoreButton`; styles in `src/styles/components.css` under `action-menu`

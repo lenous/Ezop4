@@ -305,7 +305,7 @@ export function decorateOrderListBadges() {
   const page = document.getElementById('page-orders');
   if (!page) return;
   const orders = bridgeOrders();
-  page.querySelectorAll<HTMLElement>('.app-order-card').forEach(card => {
+  page.querySelectorAll<HTMLElement>('.app-order-card:not(.app-order-card-simple)').forEach(card => {
     if (card.querySelector('.ux-est-pill')) return;
     const onclick = card.getAttribute('onclick') || '';
     const m = onclick.match(/openOrder\('([^']+)'\)/);
@@ -398,6 +398,8 @@ function patchOpenOrderEstimate() {
     setTimeout(() => {
       const page = document.getElementById('page-station');
       if (!page || page.querySelector('.ux-est-card')) return;
+      const user = W.__ezopBridge?.user?.() || null;
+      if (user?.role === 'operator') return;
       const orderId = args[0];
       const order = bridgeOrders().find((o: any) => o.id === orderId);
       if (!order) return;
