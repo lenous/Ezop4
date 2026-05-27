@@ -2769,6 +2769,12 @@ const ROLE_NAV_ITEMS = [
   { id:'profile', label:'Profil', icon:'👤', lockedFor:['admin','dispatcher','tpv','management','operator'] },
 ];
 
+const ROLE_PERMISSION_NAV = {
+  view_orders: ['orders'],
+  view_kpi: ['kpi'],
+  app_settings: ['admin'],
+};
+
 function rolePermissionOverride(role, action) {
   return APP_SETTINGS?.rolePermissionOverrides?.[role]?.[action];
 }
@@ -2795,11 +2801,17 @@ function navHiddenForRole(role, navId) {
   return Array.isArray(APP_SETTINGS?.hiddenNavByRole?.[role]) && APP_SETTINGS.hiddenNavByRole[role].includes(navId);
 }
 
+function navRequiredPermission(navId) {
+  return Object.entries(ROLE_PERMISSION_NAV).find(([, items]) => items.includes(navId))?.[0] || '';
+}
+
 function navVisibleForCurrentUser(navId) {
   const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
   if (!role) return false;
   const meta = ROLE_NAV_ITEMS.find(item => item.id === navId);
   if (meta?.lockedFor?.includes(role)) return true;
+  const required = navRequiredPermission(navId);
+  if (required) return can(required);
   return !navHiddenForRole(role, navId);
 }
 
@@ -2856,6 +2868,7 @@ function getNavItems() {
   if (role === 'operator') {
     return [
       { id:'queue', label:'Moje práce', icon:'🧭' },
+      { id:'orders', label:'Zakázky', icon:'📋' },
       { id:'issues', label:'Problém' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
       { id:'profile', label:'Profil', icon:'👤' },
     ].filter(item => navVisibleForCurrentUser(item.id));
@@ -2881,7 +2894,7 @@ function bottomNavPriority() {
   const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
   if (role === 'admin') return ['dashboard', 'orders', 'issues', 'admin', 'profile'];
   if (['dispatcher', 'management', 'tpv'].includes(role)) return ['dashboard', 'orders', 'queue', 'issues', 'profile'];
-  return ['queue', 'issues', 'profile'];
+  return ['queue', 'orders', 'issues', 'profile'];
 }
 
 function getBottomNavModel(items) {
@@ -3336,7 +3349,20 @@ function issueRecipientLabel(issue) {
   return 'všichni uživatelé';
 }
 
+function operatorCanSeeIssue(issue) {
+  const stationId = Number(issue?.stationId);
+  if (!stationId || !userCanAccessStation(stationId)) return false;
+  const order = ORDERS.find(o => o.id === issue.orderId || String(o.number) === String(issue.orderNumber));
+  const stationIndex = order?.stations?.findIndex(station => Number(station.stId) === stationId) ?? -1;
+  const station = stationIndex >= 0 ? order.stations[stationIndex] : null;
+  if (!order || !station || ['completed','skipped'].includes(station.status)) return false;
+  const progress = stationProgressForDisplay(order, station, stationIndex);
+  return progress.available > 0 && progress.remaining > 0;
+}
+
 function userCanSeeIssue(issue) {
+  if (isManagerRole(currentUser?.role)) return true;
+  if (currentUser?.role === 'operator') return operatorCanSeeIssue(issue);
   const login = normalizeLogin(currentUser?.login);
   if (issue.reportedByUserId && issue.reportedByUserId === currentUser?.id) return true;
   if (issue.reportedByLogin && normalizeLogin(issue.reportedByLogin) === login) return true;
@@ -8150,6 +8176,7 @@ function renderRoleNavVisibility() {
     .filter(([role]) => roles.includes(role))
     .flatMap(([role, items]) => (Array.isArray(items) ? items : [])
       .filter(navId => ROLE_NAV_ITEMS.some(item => item.id === navId))
+      .filter(navId => !navRequiredPermission(navId))
       .map(navId => ({ role, navId })));
   return `
     <div class="card" style="border-left:4px solid var(--teal)">
@@ -8183,6 +8210,14 @@ function roleNavCellHtml(role, item) {
   const locked = item.lockedFor?.includes(role);
   const hidden = navHiddenForRole(role, item.id);
   const label = ROLE_LABELS[role] || role;
+  const required = navRequiredPermission(item.id);
+  if (required) {
+    const baseAllowed = BASE_ROLE_PERMISSIONS[required]?.includes(role) ?? false;
+    const effective = role === 'admin' || (baseAllowed && rolePermissionAllowed(role, required));
+    return `<button class="role-permission-cell ${role === 'admin' ? 'locked' : effective ? 'enabled' : 'disabled'}" disabled title="Tato položka menu se řídí oprávněním: ${escapeHtml(ROLE_PERMISSION_LABELS[required] || required)}">
+      <span>${escapeHtml(label)}</span><b>${role === 'admin' ? 'Vždy' : effective ? 'Dle práva' : 'Bez práva'}</b>
+    </button>`;
+  }
   if (locked) {
     return `<button class="role-permission-cell locked" disabled title="Tuto položku menu nelze pro roli skrýt">
       <span>${escapeHtml(label)}</span><b>Vždy</b>
@@ -8199,6 +8234,11 @@ function toggleRoleNav(role, navId) {
   if (!can('app_settings')) return;
   const item = ROLE_NAV_ITEMS.find(nav => nav.id === navId);
   if (!item) return;
+  const required = navRequiredPermission(navId);
+  if (required) {
+    showToast('Tuto položku řídí oprávnění: ' + (ROLE_PERMISSION_LABELS[required] || required));
+    return;
+  }
   if (item.lockedFor?.includes(role)) {
     showToast('Tuto položku menu nelze skrýt');
     return;
@@ -8218,6 +8258,7 @@ function toggleRoleNav(role, navId) {
     'role-navigation',
     `${ROLE_LABELS[role] || role}: ${item.label} ${hidden ? 'zobrazeno v menu' : 'skryto z menu'}`
   );
+  saveState();
   buildNav();
   renderAdmin();
   showToast(hidden ? 'Položka menu obnovena' : 'Položka menu skryta');
@@ -8260,6 +8301,11 @@ function toggleRolePermission(role, action) {
   const disabled = rolePermissionOverride(role, action) === false;
   if (disabled) {
     delete APP_SETTINGS.rolePermissionOverrides[role][action];
+    (ROLE_PERMISSION_NAV[action] || []).forEach(navId => {
+      if (!Array.isArray(APP_SETTINGS.hiddenNavByRole?.[role])) return;
+      APP_SETTINGS.hiddenNavByRole[role] = APP_SETTINGS.hiddenNavByRole[role].filter(id => id !== navId);
+      if (APP_SETTINGS.hiddenNavByRole[role].length === 0) delete APP_SETTINGS.hiddenNavByRole[role];
+    });
   } else {
     APP_SETTINGS.rolePermissionOverrides[role][action] = false;
   }
@@ -8272,6 +8318,8 @@ function toggleRolePermission(role, action) {
     'role-permissions',
     `${ROLE_LABELS[role] || role}: ${ROLE_PERMISSION_LABELS[action] || action} ${disabled ? 'zapnuto' : 'vypnuto'}`
   );
+  saveState();
+  buildNav();
   renderAdmin();
   showToast(disabled ? 'Oprávnění role obnoveno' : 'Oprávnění role vypnuto');
 }
