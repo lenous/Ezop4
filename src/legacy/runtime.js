@@ -562,6 +562,19 @@ function stationInputQty(order, station, index) {
   return window.EZOP_FLOW?.stationInputQty(order, station, index) ?? 0;
 }
 
+function stationProgressForDisplay(order, station, index) {
+  const available = stationInputQty(order, station, index) || positiveQty(order?.qty);
+  const rawProcessed = stationProcessedQty(station);
+  const processed = available > 0 ? Math.min(rawProcessed, available) : rawProcessed;
+  return {
+    available,
+    processed,
+    rawProcessed,
+    remaining: Math.max(0, available - processed),
+    overLimit: available > 0 && rawProcessed > available,
+  };
+}
+
 function syncOrderStationFlow(order) {
   return window.EZOP_FLOW?.syncOrderStationFlow(order) ?? false;
 }
@@ -1390,8 +1403,51 @@ let ORDERS = cloneDefault('orders') || [];
 
 const LOGIN_LOG_KEY = 'vyrobais-login-log-v1';
 const NOTIFICATION_READ_KEY = 'ezop4-notification-read-v1';
+const APP_THEME_KEY = 'ezop4-app-theme-v1';
 let LOGIN_LOGS = loadLoginLogs();
 let PRODUCT_MEMORY = {};
+
+function normalizeAppTheme(theme) {
+  return theme === 'light' ? 'light' : 'dark';
+}
+
+function getAppTheme() {
+  try {
+    return normalizeAppTheme(localStorage.getItem(APP_THEME_KEY));
+  } catch {
+    return 'dark';
+  }
+}
+
+function applyAppTheme(theme = getAppTheme()) {
+  const normalized = normalizeAppTheme(theme);
+  document.body.classList.toggle('ezop-theme-light', normalized === 'light');
+  document.body.classList.toggle('ezop-theme-dark', normalized === 'dark');
+  document.body.dataset.appTheme = normalized;
+  const btn = document.getElementById('tbar-theme');
+  if (btn) {
+    btn.textContent = normalized === 'light' ? '☀️' : '🌙';
+    btn.title = normalized === 'light' ? 'Přepnout na tmavý režim' : 'Přepnout na světlý režim';
+    btn.setAttribute('aria-label', btn.title);
+    btn.setAttribute('aria-pressed', normalized === 'light' ? 'true' : 'false');
+  }
+}
+
+function setAppTheme(theme) {
+  const normalized = normalizeAppTheme(theme);
+  try {
+    localStorage.setItem(APP_THEME_KEY, normalized);
+  } catch {}
+  applyAppTheme(normalized);
+  if (document.getElementById('page-profile')?.classList.contains('active')) renderProfile();
+  showToast(normalized === 'light' ? '☀️ Světlý režim zapnutý' : '🌙 Tmavý režim zapnutý', { skipSave: true });
+}
+
+function toggleAppTheme() {
+  setAppTheme(getAppTheme() === 'light' ? 'dark' : 'light');
+}
+
+applyAppTheme();
 
 function autoReadyBase(note) {
   const parts = String(note?.autoKey || '').split(':');
@@ -1592,10 +1648,10 @@ const START_PAGE_LABELS = {
 };
 const ROLE_START_PAGE_OPTIONS = {
   admin: ['dashboard','orders','queue','kanban','issues','kpi','admin','workspace','profile'],
-  dispatcher: ['issues','queue','kanban','orders','dashboard','kpi','workspace','profile'],
-  management: ['issues','kpi','kanban','orders','dashboard','workspace','profile'],
+  dispatcher: ['dashboard','queue','kanban','orders','issues','kpi','workspace','profile'],
+  management: ['dashboard','kpi','queue','kanban','orders','issues','workspace','profile'],
   tpv: ['orders','issues','queue','kanban','dashboard','kpi','workspace','profile'],
-  operator: ['orders','queue','issues','dashboard','profile'],
+  operator: ['queue','issues','profile'],
 };
 
 function startPageStorageKey(user = currentUser) {
@@ -1605,9 +1661,9 @@ function startPageStorageKey(user = currentUser) {
 function defaultStartPageForRole(role = currentUser?.role) {
   const configured = APP_SETTINGS?.startPagesByRole?.[role];
   if (configured) return configured;
-  if (role === 'operator') return 'orders';
-  if (role === 'dispatcher') return 'issues';
-  if (role === 'management') return 'issues';
+  if (role === 'operator') return 'queue';
+  if (role === 'dispatcher') return 'dashboard';
+  if (role === 'management') return 'dashboard';
   if (role === 'tpv') return 'orders';
   return 'dashboard';
 }
@@ -2757,6 +2813,7 @@ async function initApp() {
 
   // Topbar
   refreshTopbarUser();
+  applyAppTheme();
 
   // Cloud indikátor
   const cb = document.getElementById('tbar-cloud');
@@ -2793,7 +2850,15 @@ async function initApp() {
 
 // ── NAVIGATION ────────────────────────────────────────
 function getNavItems() {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
   const openIssueCount = visibleIssues().filter(i => !i.resolved).length;
+  if (role === 'operator') {
+    return [
+      { id:'queue', label:'Moje práce', icon:'🧭' },
+      { id:'issues', label:'Problém' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
+      { id:'profile', label:'Profil', icon:'👤' },
+    ].filter(item => navVisibleForCurrentUser(item.id));
+  }
   const items = [
     { id:'dashboard', label:'Přehled',  icon:'🏠' },
     { id:'queue',     label:'Fronty',   icon:'🧭' },
@@ -2815,7 +2880,7 @@ function bottomNavPriority() {
   const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
   if (role === 'admin') return ['dashboard', 'orders', 'issues', 'admin', 'profile'];
   if (['dispatcher', 'management', 'tpv'].includes(role)) return ['dashboard', 'orders', 'queue', 'issues', 'profile'];
-  return ['dashboard', 'queue', 'orders', 'issues', 'profile'];
+  return ['queue', 'issues', 'profile'];
 }
 
 function getBottomNavModel(items) {
@@ -4005,7 +4070,7 @@ function renderWorkQueue() {
     ${queueCommandHtml(list, allItems, manualPlanning)}
     ${operatorFocused ? '' : queueStationLoadBoardHtml()}
 
-    <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
+    ${operatorFocused ? '' : `<div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div>
           <div class="input-label">Stanoviště</div>
@@ -4025,7 +4090,7 @@ function renderWorkQueue() {
         ${queueQuickFilter ? ` · filtr: ${escapeHtml(queueQuickFilterLabel(queueQuickFilter))}` : ''}
         ${manualPlanning ? ` · ruční pořadí zapnuto pro vybrané stanoviště` : ''}
       </div>
-    </div>
+    </div>`}
 
     ${can('manage_order_stations') ? `
       <div class="card" style="border-left:4px solid ${manualPlanning ? 'var(--teal)' : 'var(--amber)'};padding:10px;margin-bottom:10px">
@@ -4103,6 +4168,30 @@ function queueCommandHtml(list, allItems, manualPlanning) {
     ['overdue', 'Po termínu', stats.overdue],
     ['blocked', 'Blokace', stats.blocked],
   ];
+
+  if (operatorFocused) {
+    return `<section class="queue-command operator-work-command">
+      <div class="queue-command-main">
+        <div class="app-shift-label"><span>🧭</span><strong>Moje další práce</strong></div>
+        <h2>${primary ? escapeHtml(operatorShowOrderIdentifier() ? primary.order.number : primary.stInfo?.name || 'Stanoviště') : 'Bez čekající práce'}</h2>
+        <p>${primary
+          ? `${escapeHtml(primary.order.name)} · ${stationInputQty(primary.order, primary.station, primary.index)} ks`
+          : `Sledujete jen přiřazená stanoviště: ${escapeHtml(stationAccessLabel())}.`}</p>
+      </div>
+      <div class="queue-command-side">
+        ${primary ? `
+          <button class="queue-action-card operator-primary-open" type="button" onclick="openStation('${primary.order.id}', '${primary.station.stId}')">
+            <span>${primary.stInfo?.icon || '🔧'}</span>
+            <div>
+              <strong>${escapeHtml(primary.stInfo?.name || 'Stanoviště')}</strong>
+              <em>${escapeHtml(primary.queueState.label)}</em>
+            </div>
+            <b>Otevřít</b>
+          </button>
+        ` : `<div class="queue-action-card queue-action-empty">Žádná aktuální operace</div>`}
+      </div>
+    </section>`;
+  }
 
   return `<section class="queue-command">
     <div class="queue-command-main">
@@ -4677,6 +4766,65 @@ function orderTimelineCardHtml(order) {
   </div>`;
 }
 
+function orderManagerInsightHtml(order) {
+  if (currentUser?.role === 'operator' || !order) return '';
+  const stations = order.stations || [];
+  const total = stations.length || 1;
+  const done = stations.filter(s => ['completed','skipped'].includes(s.status)).length;
+  const active = stations.filter(s => ['in_progress','partial','issue'].includes(s.status));
+  const scrap = stations.reduce((sum, station) => sum + positiveQty(station.qtyScrap), 0);
+  const qualityBase = Math.max(orderGoodQty(order), scrap);
+  const defectRate = qualityBase ? Math.round(scrap / qualityBase * 100) : 0;
+  const workers = [...new Set(active.map(stationWorkerLabel).filter(Boolean).filter(x => x !== 'Neznámý'))];
+  const late = isOrderOverdue(order);
+  const blocked = isOrderBlocked(order);
+  const issueCount = stations.filter(station => station.status === 'issue').length;
+  const progress = Math.round(done / total * 100);
+  const activeIndex = activeStationIndex(order);
+  const currentStation = stations[activeIndex] || stations[0];
+  const progressDisplay = currentStation ? stationProgressForDisplay(order, currentStation, activeIndex) : null;
+  const currentStationInfo = currentStation ? STATIONS.find(st => Number(st.id) === Number(currentStation.stId)) : null;
+  const wipLabel = progressDisplay ? `${progressDisplay.processed}/${progressDisplay.available} ks` : '0/0 ks';
+  const wipDetail = progressDisplay?.overLimit
+    ? `zapsáno ${progressDisplay.rawProcessed} ks - zkontrolovat počty`
+    : active.length
+    ? `aktuální krok: ${currentStationInfo?.name || 'stanoviště'}`
+    : done >= total ? 'zakázka dokončena' : 'čeká na další krok';
+
+  return `<section class="manager-order-insight">
+    <div class="manager-insight-tile ${blocked ? 'danger' : issueCount ? 'warn' : 'ok'}">
+      <span>Stav výroby</span>
+      <strong>${blocked ? 'Blokováno' : issueCount ? 'Problém' : `${progress}% hotovo`}</strong>
+      <em>${done}/${total} stanovišť</em>
+    </div>
+    <div class="manager-insight-tile">
+      <span>Kdo pracuje</span>
+      <strong>${escapeHtml(workers.length ? workers.slice(0, 2).join(', ') : 'Nikdo')}</strong>
+      <em>${active.length} aktivní operace</em>
+    </div>
+    <div class="manager-insight-tile ${late ? 'danger' : 'ok'}">
+      <span>Zpoždění</span>
+      <strong>${late ? `${orderDaysLate(order)} dní` : 'V termínu'}</strong>
+      <em>${formatDate(order.due || '')}</em>
+    </div>
+    <div class="manager-insight-tile ${order.priority === 'urgent' ? 'danger' : order.priority === 'high' ? 'warn' : ''}">
+      <span>Priorita</span>
+      <strong>${escapeHtml(priorityLabel(order.priority))}</strong>
+      <em>${escapeHtml(order.customer || 'Zákazník neuveden')}</em>
+    </div>
+    <div class="manager-insight-tile ${defectRate > 5 ? 'danger' : defectRate > 0 ? 'warn' : 'ok'}">
+      <span>Chybovost</span>
+      <strong>${defectRate}%</strong>
+      <em>${scrap} zmetků</em>
+    </div>
+    <div class="manager-insight-tile ${progressDisplay?.overLimit ? 'warn' : ''}">
+      <span>Rozpracovanost</span>
+      <strong>${escapeHtml(wipLabel)}</strong>
+      <em>${escapeHtml(wipDetail)}</em>
+    </div>
+  </section>`;
+}
+
 // ── ORDER DETAIL ──────────────────────────────────────
 function openOrder(orderId, options = {}) {
   selectedOrder = ORDERS.find(o => o.id === orderId);
@@ -4751,6 +4899,7 @@ function openOrder(orderId, options = {}) {
       </div>
     </div>
 
+    ${orderManagerInsightHtml(selectedOrder)}
     ${orderControlHtml}
     ${orderInfoCardHtml(selectedOrder)}
     ${orderTimelineCardHtml(selectedOrder)}
@@ -5337,7 +5486,53 @@ function orderDocsCardHtml(o) {
   </div>`;
 }
 
-function addDocToOrder(orderId) {
+function stationDocumentsPanelHtml(order, station) {
+  const docs = order.documents || [];
+  const required = [
+    { type:'bom', title:'BOM', hint:'Seznam materiálů a hodnot součástek.' },
+    { type:'drawing', title:'Osazovací výkres', hint:'Rozmístění součástek na desce.' },
+    { type:'procedure', title:'Výrobní postup', hint:'Kroky operace, nastavení a kontrolní body.' },
+  ];
+  const requiredTypes = new Set(required.map(item => item.type));
+  const otherDocs = docs.filter(doc => !requiredTypes.has(doc.type));
+  const docRows = required.map(item => {
+    const matches = docs.filter(doc => doc.type === item.type);
+    return `<div class="station-doc-item ${matches.length ? 'has-doc' : 'missing'}">
+      <span class="station-doc-icon">${docIcon(item.type)}</span>
+      <div class="station-doc-copy">
+        <strong>${escapeHtml(item.title)}</strong>
+        <em>${matches.length ? `${matches.length} připojeno` : item.hint}</em>
+        ${matches.map(doc => `<span class="station-doc-file">${escapeHtml(doc.name)} · ${(doc.size/1024).toFixed(0)} kB</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  const otherRows = otherDocs.length ? `
+    <div class="station-doc-extra">
+      <span>Další podklady</span>
+      ${otherDocs.map(doc => `<div class="station-doc-file-row">
+        <b>${docIcon(doc.type)}</b>
+        <span>${escapeHtml(doc.name)}</span>
+        <em>${docTypeLabel(doc.type)}</em>
+      </div>`).join('')}
+    </div>
+  ` : '';
+
+  return `<div class="card station-docs-card">
+    <div class="station-panel-head">
+      <div>
+        <div class="card-title" style="margin:0">📎 Dokumenty k výrobku</div>
+        <span>BOM, osazovací výkres a výrobní postup</span>
+      </div>
+      ${can('create_order') ? `<button class="btn btn-teal btn-sm" onclick="addDocToOrder('${order.id}', '${station.stId}')">+ Nahrát</button>` : ''}
+    </div>
+    <div class="station-doc-list">
+      ${docRows}
+      ${otherRows}
+    </div>
+  </div>`;
+}
+
+function addDocToOrder(orderId, returnStationId = '') {
   const o = ORDERS.find(x => x.id === orderId);
   if (!o) return;
   openModal('Nahrát dokument', `
@@ -5346,6 +5541,7 @@ function addDocToOrder(orderId) {
       <select class="input" id="ad-type">
         <option value="bom">📊 BOM</option>
         <option value="drawing">📐 Osazovací výkres</option>
+        <option value="procedure">🧾 Výrobní postup</option>
         <option value="paste">🎯 GBR data pasty</option>
         <option value="other">📄 Ostatní</option>
       </select>
@@ -5357,11 +5553,11 @@ function addDocToOrder(orderId) {
     </div>
   `, [
     { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
-    { label:'Nahrát', action:`saveDocToOrder('${orderId}')`, cls:'btn-primary' },
+    { label:'Nahrát', action:`saveDocToOrder('${orderId}', '${returnStationId}')`, cls:'btn-primary' },
   ]);
 }
 
-function saveDocToOrder(orderId) {
+function saveDocToOrder(orderId, returnStationId = '') {
   const f = document.getElementById('ad-file').files[0];
   if (!f) { showToast('⚠️ Vyberte soubor'); return; }
   const o = ORDERS.find(x => x.id === orderId);
@@ -5369,7 +5565,8 @@ function saveDocToOrder(orderId) {
   o.documents = o.documents || [];
   o.documents.push({ name:f.name, type:document.getElementById('ad-type').value, size:f.size });
   closeModal();
-  openOrder(orderId);
+  if (returnStationId) openStation(orderId, returnStationId);
+  else openOrder(orderId);
   showToast('✅ Dokument nahrán');
 }
 
@@ -5554,9 +5751,10 @@ function stationIndexInOrder(order, station) {
 
 function stationTaskState(order, station) {
   const index = stationIndexInOrder(order, station);
-  const available = stationInputQty(order, station, index);
-  const processed = stationProcessedQty(station);
-  const remaining = Math.max(0, available - processed);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
   const blocked = isOrderBlocked(order);
   const claimedByOther = stationClaimedByOther(station);
   const claimedByCurrent = stationClaimedByCurrent(station);
@@ -5582,6 +5780,9 @@ function stationTaskState(order, station) {
   }
   if (station.workPausedAt) {
     return { color:'var(--amber)', icon:'⏸', label:'Práce je pozastavená', action: station.workPauseReason || 'Obnovte práci, až bude možné pokračovat.' };
+  }
+  if (progressDisplay.overLimit) {
+    return { color:'var(--amber)', icon:'⚠️', label:'Zkontrolujte počty', action:`Na stanovišti je zapsáno ${progressDisplay.rawProcessed} ks, vstup je ${available} ks.` };
   }
   if (remaining <= 0 && available > 0) {
     return { color:'var(--green)', icon:'✅', label:'Počty jsou kompletní', action:'Uložte počty a dokončete stanoviště, pokud je operace skutečně hotová.' };
@@ -5612,9 +5813,10 @@ function compactStationNoteHtml(note) {
 function operatorStationTaskPanelHtml(order, station, stInfo) {
   const index = stationIndexInOrder(order, station);
   const state = stationTaskState(order, station);
-  const available = stationInputQty(order, station, index);
-  const processed = stationProcessedQty(station);
-  const remaining = Math.max(0, available - processed);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
   const notes = stationNotes(order.id, station.stId).slice(0, 3);
   const nextStation = (order.stations || [])[index + 1];
   const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
@@ -5829,7 +6031,127 @@ function stationStateOverviewHtml(order, station) {
   </div>`;
 }
 
+function stationManagerInsightHtml(order, station) {
+  if (currentUser?.role === 'operator') return '';
+  const index = stationIndexInOrder(order, station);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
+  const scrap = positiveQty(station.qtyScrap);
+  const rework = positiveQty(station.qtyRework);
+  const defectBase = progressDisplay.rawProcessed || processed;
+  const defectRate = defectBase ? Math.round((scrap + rework) / defectBase * 100) : 0;
+  const late = isOrderOverdue(order);
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const blocked = isOrderBlocked(order);
+  const meta = stationStatusMeta(station.status);
+  return `<section class="station-manager-insight">
+    <div class="station-manager-tile ${blocked ? 'danger' : station.status === 'issue' ? 'danger' : 'ok'}">
+      <span>Stav operace</span>
+      <strong>${blocked ? 'Blokováno' : meta.label}</strong>
+      <em>${blocked ? escapeHtml(orderBlockReason(order) || 'čeká') : 'aktuální stav'}</em>
+    </div>
+    <div class="station-manager-tile ${claimed ? 'ok' : 'warn'}">
+      <span>Pracuje</span>
+      <strong>${escapeHtml(claimed ? stationWorkerLabel(station) : 'Nikdo')}</strong>
+      <em>${station.workStartedAt ? formatDateTime(station.workStartedAt) : 'bez převzetí'}</em>
+    </div>
+    <div class="station-manager-tile ${late ? 'danger' : 'ok'}">
+      <span>Termín</span>
+      <strong>${late ? `${orderDaysLate(order)} dní skluz` : 'V termínu'}</strong>
+      <em>${formatDate(order.due || '')}</em>
+    </div>
+    <div class="station-manager-tile ${progressDisplay.overLimit ? 'warn' : ''}">
+      <span>Rozpracováno</span>
+      <strong>${processed}/${available}</strong>
+      <em>${progressDisplay.overLimit ? `zapsáno ${progressDisplay.rawProcessed} ks - kontrola počtů` : `zbývá ${remaining} ks`}</em>
+    </div>
+    <div class="station-manager-tile ${defectRate > 5 ? 'danger' : defectRate > 0 ? 'warn' : 'ok'}">
+      <span>Chybovost</span>
+      <strong>${defectRate}%</strong>
+      <em>oprava ${rework} · zmetek ${scrap}</em>
+    </div>
+  </section>`;
+}
+
+function renderOperatorStationDetail(stInfo) {
+  const order = selectedOrder;
+  const station = selectedStation;
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
+  const notes = stationNotes(order.id, station.stId).slice(0, 4);
+  const showOrder = operatorShowOrderIdentifier();
+  const title = showOrder ? order.number : 'Aktuální operace';
+  const instructionHtml = notes.length
+    ? notes.map(compactStationNoteHtml).join('')
+    : `<div class="operator-instruction-empty">Bez speciální poznámky. Postupujte podle pracovního postupu na pracovišti.</div>`;
+
+  const pg = document.getElementById('page-station');
+  pg.innerHTML = `
+    <div class="operator-work-screen">
+      <button class="station-back-link operator-back-link" type="button" onclick="navigateTo('queue')">
+        <span>←</span>
+        <span>Zpět na moji práci</span>
+      </button>
+
+      <section class="operator-work-hero" style="--operator-work-color:${state.color}">
+        <div class="operator-work-status">
+          <span>${state.icon}</span>
+          <strong>${escapeHtml(state.label)}</strong>
+        </div>
+        <div class="operator-work-title">
+          <span>${stInfo?.icon ?? '🔧'} ${escapeHtml(stInfo?.name ?? 'Stanoviště')}</span>
+          <h1>${escapeHtml(title)}</h1>
+          <p>${escapeHtml(order.name)}</p>
+        </div>
+        <div class="operator-work-facts">
+          <div><span>Počet</span><strong>${available}</strong><em>ks</em></div>
+          <div><span>OK</span><strong>${positiveQty(station.qtyOk)}</strong><em>ks</em></div>
+          <div><span>Zbývá</span><strong>${remaining}</strong><em>ks</em></div>
+        </div>
+        <div class="operator-work-actions">
+          ${stationWorkActionButtons(order, station)}
+          <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Nahlásit problém</button>
+        </div>
+      </section>
+
+      <section class="operator-work-card operator-instructions">
+        <div class="operator-card-head">
+          <strong>Pracovní instrukce</strong>
+          <span>${notes.length} pozn.</span>
+        </div>
+        ${instructionHtml}
+      </section>
+
+      <section class="operator-work-card operator-qty-entry">
+        <div class="operator-card-head">
+          <strong>Kusy</strong>
+          <span>${processed}/${available} zapsáno</span>
+        </div>
+        <div class="qty-grid" id="qty-grid">
+          ${qtyFieldHtml('ok',     'OK',      station.qtyOk,     'ok-color')}
+          ${qtyFieldHtml('rework', 'Oprava',  station.qtyRework, 'rework-color')}
+          ${qtyFieldHtml('scrap',  'Zmetek',  station.qtyScrap,  'scrap-color')}
+        </div>
+        <div id="qty-summary"></div>
+        <button class="btn btn-teal operator-save-btn" id="qty-save-btn" onclick="saveQty()">Uložit počty</button>
+        ${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
+      </section>
+    </div>
+  `;
+  updateQtySummary();
+}
+
 function renderStationDetail(stInfo) {
+  if (currentUser?.role === 'operator' && operatorSimpleMode()) {
+    renderOperatorStationDetail(stInfo);
+    return;
+  }
   const s = selectedStation;
   const hideContext = operatorHideOrderContext();
   const stationSupportCards = `
@@ -5837,8 +6159,8 @@ function renderStationDetail(stInfo) {
   `;
   const stationSupportHtml = advancedPanelHtml('Upozornění zakázky', stationSupportCards, { subtitle: 'blokace' });
   const stationNotesCard = `
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div class="card station-notes-card">
+      <div class="station-panel-head">
         <div class="card-title" style="margin:0">📝 Poznámky k výrobě (${stationNotes(selectedOrder.id, selectedStation.stId).length})</div>
         <button class="btn btn-teal btn-sm" onclick="addNoteModal()">+ Přidat</button>
       </div>
@@ -5846,60 +6168,75 @@ function renderStationDetail(stInfo) {
     </div>
   `;
   const stationNotesHtml = stationNotesCard;
-  const stationProgramPhotoHtml = featureEnabled('featureProductMemory')
-    ? advancedPanelHtml('Program a foto výrobku', `
+  const stationProgramPhotoContent = `
+    ${stationDocumentsPanelHtml(selectedOrder, selectedStation)}
+    ${featureEnabled('featureProductMemory') ? `
       ${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
       ${productPhotoCardHtml(selectedOrder, true)}
-    `, { subtitle: 'opakovaná výroba' })
+    ` : ''}
+  `;
+  const stationProgramPhotoHtml = stationProgramPhotoContent.trim()
+    ? `<section class="station-side-panel station-program-panel">
+        <div class="station-panel-head">
+          <div>
+            <div class="card-title" style="margin:0">Výrobní podklady</div>
+            <span>dokumenty, program a foto</span>
+          </div>
+        </div>
+        <div class="station-panel-body">${stationProgramPhotoContent}</div>
+      </section>`
     : '';
 
   const pg = document.getElementById('page-station');
   pg.innerHTML = `
-    <div class="station-back-link"
-         onclick="${hideContext ? "navigateTo('queue')" : `openOrder('${selectedOrder.id}')`}">
-      <span style="color:var(--text2);font-size:20px">←</span>
-      <span style="font-size:12px;color:var(--text2)">${hideContext ? 'Zpět na moji frontu' : 'Zpět na zakázku'}</span>
-    </div>
-
-    ${stationContextPanelHtml(selectedOrder, selectedStation, stInfo)}
-
-    <div class="station-workspace-grid">
-      <div class="station-workspace-main">
-        <div class="card station-primary-card station-qty-card">
-          <div class="card-title">📦 Zapsat kusy</div>
-          <div class="qty-grid" id="qty-grid">
-            ${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
-            ${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
-            ${qtyFieldHtml('scrap',  'Zmetek',  s.qtyScrap,  'scrap-color')}
-          </div>
-          <div id="qty-summary"></div>
-          <div style="display:flex;gap:8px;margin-top:12px">
-            <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
-          </div>
-          ${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
-        </div>
-
-        <div class="card station-primary-card station-status-card">
-          <div class="card-title">🔄 Stav práce</div>
-          <div class="station-work-actions">
-            <div class="station-work-actions-head">
-              <strong>Pracovní akce</strong>
-              <span>Převzetí, pauza, dokončení a problém</span>
-            </div>
-            <div class="station-work-actions-buttons">
-              ${stationWorkActionButtons(selectedOrder, selectedStation)}
-              <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Nahlásit problém</button>
-            </div>
-          </div>
-          ${stationStateOverviewHtml(selectedOrder, selectedStation)}
-        </div>
-
-        ${stationNotesHtml}
+    <div class="station-desktop-console">
+      <div class="station-back-link"
+           onclick="${hideContext ? "navigateTo('queue')" : `openOrder('${selectedOrder.id}')`}">
+        <span style="color:var(--text2);font-size:20px">←</span>
+        <span style="font-size:12px;color:var(--text2)">${hideContext ? 'Zpět na moji frontu' : 'Zpět na zakázku'}</span>
       </div>
 
-      <div class="station-workspace-side">
-        ${stationProgramPhotoHtml}
-        ${stationSupportHtml}
+      ${stationContextPanelHtml(selectedOrder, selectedStation, stInfo)}
+      ${stationManagerInsightHtml(selectedOrder, selectedStation)}
+
+      <div class="station-workspace-grid">
+        <div class="station-workspace-main">
+          <div class="card station-primary-card station-qty-card">
+            <div class="card-title">📦 Zapsat kusy</div>
+            <div class="qty-grid" id="qty-grid">
+              ${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
+              ${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
+              ${qtyFieldHtml('scrap',  'Zmetek',  s.qtyScrap,  'scrap-color')}
+            </div>
+            <div id="qty-summary"></div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
+            </div>
+            ${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
+          </div>
+
+          <div class="card station-primary-card station-status-card">
+            <div class="card-title">🔄 Stav práce</div>
+            <div class="station-work-actions">
+              <div class="station-work-actions-head">
+                <strong>Pracovní akce</strong>
+                <span>Převzetí, pauza, dokončení a problém</span>
+              </div>
+              <div class="station-work-actions-buttons">
+                ${stationWorkActionButtons(selectedOrder, selectedStation)}
+                <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Nahlásit problém</button>
+              </div>
+            </div>
+            ${stationStateOverviewHtml(selectedOrder, selectedStation)}
+          </div>
+
+          ${stationNotesHtml}
+        </div>
+
+        <div class="station-workspace-side">
+          ${stationProgramPhotoHtml}
+          ${stationSupportHtml}
+        </div>
       </div>
     </div>
   `;
@@ -9885,6 +10222,24 @@ function renderProfile() {
     </div>
 
     <div class="card">
+      <div class="card-title">🌓 Vzhled aplikace</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+        Volba se uloží pro tento prohlížeč.
+      </div>
+      <div class="display-mode-grid theme-mode-grid">
+        ${[
+          { id:'dark', label:'Tmavý režim', desc:'Doporučený pro výrobu, směny a dotykové obrazovky.' },
+          { id:'light', label:'Světlý režim', desc:'Čitelný na denním světle a v kanceláři.' },
+        ].map(mode => `
+          <button class="display-mode-card ${getAppTheme() === mode.id ? 'active' : ''}" onclick="setAppTheme('${mode.id}')">
+            <strong>${mode.label}</strong>
+            <span>${mode.desc}</span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">🏁 Spuštění aplikace</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
         Vyberte stránku, která se otevře hned po přihlášení na tomto zařízení.
@@ -10181,6 +10536,7 @@ function newOrderModal() {
         ${[
           ['bom',     '📊 BOM'],
           ['drawing', '📐 Osazovací výkres'],
+          ['procedure','🧾 Výrobní postup'],
           ['paste',   '🎯 GBR data pasty'],
           ['other',   '📄 Ostatní'],
         ].map(([k,l]) => `
@@ -10283,10 +10639,10 @@ function renderPendingDocs() {
 }
 
 function docIcon(t) {
-  return { bom:'📊', drawing:'📐', paste:'🎯', other:'📄' }[t] || '📎';
+  return { bom:'📊', drawing:'📐', procedure:'🧾', paste:'🎯', other:'📄' }[t] || '📎';
 }
 function docTypeLabel(t) {
-  return { bom:'BOM', drawing:'Osaz. výkres', paste:'GBR pasta', other:'Dokument' }[t] || t;
+  return { bom:'BOM', drawing:'Osaz. výkres', procedure:'Výrobní postup', paste:'GBR pasta', other:'Dokument' }[t] || t;
 }
 
 function createOrder() {

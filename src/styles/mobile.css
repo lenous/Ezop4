@@ -423,6 +423,12 @@
     #app .station-workspace-grid { grid-template-columns: 1fr; gap: 10px; }
     #app .station-workspace-main { grid-template-columns: 1fr; gap: 10px; }
     #app .station-workspace-side { gap: 8px; }
+    #app .station-side-panel { padding: 11px; border-radius: 8px; }
+    #app .station-panel-head { align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+    #app .station-doc-item { grid-template-columns: 30px minmax(0, 1fr); padding: 9px; }
+    #app .station-doc-icon { width: 30px; height: 30px; }
+    #app .station-doc-file-row { grid-template-columns: 22px minmax(0, 1fr); }
+    #app .station-doc-file-row em { grid-column: 2; }
     #app .station-work-actions { padding: 10px; }
     #app .station-work-actions-head { display: block; margin-bottom: 9px; }
     #app .station-work-actions-head span { display: block; text-align: left; margin-top: 3px; }
@@ -431,6 +437,26 @@
     #app .station-work-actions-buttons > span { grid-column: 1 / -1; }
     #app .station-work-actions-buttons .station-action-done { justify-content: center; }
     #app .station-state-overview { grid-template-columns: 1fr; }
+    #app .theme-mode-grid { grid-template-columns: 1fr; }
+    #app .operator-work-screen { gap: 10px; }
+    #app .operator-work-hero { grid-template-columns: 1fr; padding: 13px; gap: 12px; }
+    #app .operator-work-status { width: 100%; justify-content: center; }
+    #app .operator-work-title h1 { font-size: clamp(32px, 13vw, 52px); }
+    #app .operator-work-title p { font-size: 17px; }
+    #app .operator-work-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 0; }
+    #app .operator-work-facts div { padding: 10px 7px; text-align: center; }
+    #app .operator-work-facts strong { font-size: 30px; }
+    #app .operator-work-actions { grid-template-columns: 1fr; }
+    #app .operator-work-actions .btn,
+    #app .operator-save-btn { width: 100%; min-height: 58px; }
+    #app .operator-work-card { padding: 12px; border-radius: 8px; }
+    #app .operator-qty-entry .qty-field { min-height: 120px; }
+    #app .manager-order-insight { grid-template-columns: 1fr; gap: 7px; margin: 10px 0; }
+    #app .manager-insight-tile strong,
+    #app .manager-insight-tile em { white-space: normal; }
+    #app .station-manager-insight { grid-template-columns: 1fr; gap: 7px; }
+    #app .station-manager-tile strong,
+    #app .station-manager-tile em { white-space: normal; }
     .modal-overlay { padding: 10px; align-items: flex-end; }
     .modal-box { max-width: 100%; max-height: 92vh; padding: 18px 14px; border-radius: 16px 16px 0 0; }
     .modal-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; justify-content: stretch; }

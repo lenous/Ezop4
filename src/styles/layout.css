@@ -897,6 +897,14 @@
     transition: border-color .2s, color .2s, background .2s, transform .15s;
   }
   #app .logout-btn:hover { border-color: rgba(226,184,32,.5); color: var(--gold); background: rgba(226,184,32,.08); transform: translateY(-1px); }
+  #app .theme-toggle-btn {
+    width: 36px;
+    min-width: 36px;
+    min-height: 34px;
+    padding: 0;
+    font-size: 15px;
+    justify-content: center;
+  }
 
   /* ── NAV TABS — pill style ── */
   #app .navtabs {

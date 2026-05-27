@@ -81,6 +81,7 @@ export const shellHtml = `<!-- ════════════════�
     <button id="tbar-notifications" class="notification-btn" style="display:none" title="Upozornění" onclick="openNotificationsModal()">🔔<span id="notification-count"></span></button>
     <button id="tbar-messenger" class="notification-btn messenger-btn" style="display:none" title="Messenger" onclick="openMessengerModal()">💬<span id="messenger-count"></span></button>
     <button id="tbar-search" class="logout-btn" style="background:transparent;display:none" title="Hledat (Ctrl+K)" onclick="openGlobalSearch()">🔎</button>
+    <button id="tbar-theme" class="logout-btn theme-toggle-btn" title="Přepnout tmavý/světlý režim" aria-label="Přepnout tmavý/světlý režim" onclick="toggleAppTheme()">🌙</button>
     <button id="tbar-install" class="logout-btn" style="background:rgba(226,184,32,.15);color:var(--gold);display:none" title="Nainstalovat aplikaci" onclick="triggerPwaInstall()">📥 Instalovat</button>
     <button class="logout-btn" onclick="doLogout()">Odhlásit</button>
   </div>

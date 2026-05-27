@@ -372,21 +372,158 @@
     box-shadow: 0 12px 26px rgba(54,176,174,.18);
   }
   #app .station-fast-actions > span { color: var(--text2); font-size: 11px; font-weight: 800; }
-  #app .station-workspace-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(310px, .75fr); gap: 14px; align-items: start; }
+  #app .station-desktop-console {
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  #app .station-workspace-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(350px, .42fr);
+    gap: 16px;
+    align-items: start;
+  }
   #app .station-workspace-main,
   #app .station-workspace-side { min-width: 0; }
   #app .station-workspace-main {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
-    gap: 12px;
+    grid-template-columns: minmax(330px, .9fr) minmax(390px, 1.1fr);
+    gap: 14px;
     align-items: start;
   }
   #app .station-workspace-main > .card { margin-bottom: 0; }
   #app .station-workspace-main > .card:not(.station-qty-card):not(.station-status-card) {
     grid-column: 1 / -1;
   }
-  #app .station-workspace-side { display: grid; gap: 10px; align-content: start; }
+  #app .station-workspace-side { display: grid; gap: 12px; align-content: start; }
   #app .station-primary-card { border-color: rgba(54,176,174,.22); }
+  #app .station-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  #app .station-panel-head span {
+    display: block;
+    margin-top: 3px;
+    color: var(--text3);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  #app .station-side-panel {
+    border: 1px solid rgba(168,180,189,.15);
+    border-top-color: rgba(54,176,174,.38);
+    border-radius: 10px;
+    padding: 14px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.012)),
+      rgba(13,20,24,.94);
+    box-shadow: var(--shadow-card);
+  }
+  #app .station-panel-body {
+    display: grid;
+    gap: 12px;
+  }
+  #app .station-panel-body > .card {
+    margin-bottom: 0;
+    padding: 14px;
+    background: rgba(7,13,16,.7);
+  }
+  #app .station-notes-card {
+    min-height: 120px;
+  }
+  #app .station-doc-list {
+    display: grid;
+    gap: 8px;
+  }
+  #app .station-doc-item {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid rgba(168,180,189,.14);
+    border-radius: 8px;
+    background: rgba(255,255,255,.032);
+  }
+  #app .station-doc-item.has-doc {
+    border-color: rgba(34,197,94,.28);
+    background: rgba(34,197,94,.055);
+  }
+  #app .station-doc-item.missing {
+    border-style: dashed;
+  }
+  #app .station-doc-icon {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.06);
+    font-size: 17px;
+  }
+  #app .station-doc-copy {
+    min-width: 0;
+  }
+  #app .station-doc-copy strong {
+    display: block;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  #app .station-doc-copy em {
+    display: block;
+    margin-top: 3px;
+    color: var(--text3);
+    font-size: 11px;
+    font-style: normal;
+    line-height: 1.3;
+  }
+  #app .station-doc-file {
+    display: block;
+    margin-top: 6px;
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #app .station-doc-extra {
+    display: grid;
+    gap: 6px;
+    padding-top: 4px;
+  }
+  #app .station-doc-extra > span {
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  #app .station-doc-file-row {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 7px 8px;
+    border: 1px solid rgba(168,180,189,.12);
+    border-radius: 8px;
+    background: rgba(0,0,0,.15);
+  }
+  #app .station-doc-file-row span {
+    min-width: 0;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #app .station-doc-file-row em {
+    color: var(--text3);
+    font-size: 10px;
+    font-style: normal;
+  }
   #app .station-work-actions {
     border: 1px solid rgba(168,180,189,.14);
     border-radius: 8px;
@@ -478,6 +615,205 @@
     font-size: 11px;
     line-height: 1.35;
   }
+  #app .operator-work-screen {
+    display: grid;
+    gap: 12px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  #app .operator-back-link {
+    border: 0;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+  }
+  #app .operator-work-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: stretch;
+    padding: 18px;
+    border: 1px solid rgba(168,180,189,.16);
+    border-left: 5px solid var(--operator-work-color);
+    border-radius: 10px;
+    background:
+      radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--operator-work-color) 18%, transparent), transparent 34%),
+      linear-gradient(135deg, rgba(255,255,255,.055), rgba(255,255,255,.015)),
+      rgba(8,15,18,.96);
+    box-shadow: 0 22px 52px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  #app .operator-work-status {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    width: fit-content;
+    min-height: 34px;
+    padding: 7px 11px;
+    border: 1px solid color-mix(in srgb, var(--operator-work-color) 45%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--operator-work-color) 12%, transparent);
+    color: var(--operator-work-color);
+    font-size: 13px;
+    font-weight: 900;
+  }
+  #app .operator-work-title {
+    min-width: 0;
+    align-self: center;
+  }
+  #app .operator-work-title span {
+    display: block;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+  #app .operator-work-title h1 {
+    margin: 8px 0 4px;
+    color: var(--gold);
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: clamp(34px, 5vw, 68px);
+    line-height: .95;
+    overflow-wrap: anywhere;
+  }
+  #app .operator-work-title p {
+    margin: 0;
+    color: var(--text);
+    font-size: clamp(17px, 2vw, 25px);
+    font-weight: 900;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+  #app .operator-work-facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(92px, 1fr));
+    gap: 10px;
+    min-width: min(420px, 42vw);
+  }
+  #app .operator-work-facts div,
+  #app .station-manager-tile {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid rgba(168,180,189,.14);
+    border-radius: 8px;
+    background: rgba(255,255,255,.035);
+  }
+  #app .operator-work-facts span,
+  #app .station-manager-tile span {
+    display: block;
+    color: var(--text2);
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  #app .operator-work-facts strong {
+    display: block;
+    margin-top: 6px;
+    color: var(--text);
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 34px;
+    line-height: .95;
+  }
+  #app .operator-work-facts em,
+  #app .station-manager-tile em {
+    display: block;
+    margin-top: 5px;
+    color: var(--text3);
+    font-size: 11px;
+    font-style: normal;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #app .operator-work-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  #app .operator-work-actions .btn,
+  #app .operator-save-btn {
+    min-height: 56px;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 900;
+  }
+  #app .operator-work-card {
+    border: 1px solid rgba(168,180,189,.16);
+    border-radius: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.014)), rgba(10,17,21,.94);
+    padding: 14px;
+  }
+  #app .operator-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  #app .operator-card-head strong {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 900;
+  }
+  #app .operator-card-head span {
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 800;
+  }
+  #app .operator-instruction-empty {
+    padding: 14px;
+    border: 1px dashed rgba(168,180,189,.2);
+    border-radius: 8px;
+    color: var(--text2);
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+  }
+  #app .operator-qty-entry .qty-grid {
+    gap: 10px;
+  }
+  #app .operator-qty-entry .qty-field {
+    min-height: 132px;
+    display: grid;
+    align-content: center;
+  }
+  #app .operator-qty-entry .qty-field-val {
+    font-size: clamp(34px, 6vw, 58px);
+  }
+  #app .station-manager-insight {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+  #app .station-manager-tile {
+    border-top: 3px solid rgba(168,180,189,.2);
+  }
+  #app .station-manager-tile.ok {
+    border-top-color: var(--green);
+  }
+  #app .station-manager-tile.warn {
+    border-top-color: var(--amber);
+  }
+  #app .station-manager-tile.danger {
+    border-top-color: var(--red);
+  }
+  #app .station-manager-tile strong {
+    display: block;
+    margin-top: 6px;
+    color: var(--text);
+    font-size: 18px;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #app .station-manager-tile.ok strong { color: var(--green); }
+  #app .station-manager-tile.warn strong { color: var(--amber); }
+  #app .station-manager-tile.danger strong { color: var(--red); }
   #app .station-status-divider {
     height: 1px;
     margin: 12px 0;
@@ -490,6 +826,65 @@
     text-transform: uppercase;
     letter-spacing: .7px;
     margin-bottom: 8px;
+  }
+
+  #app .manager-order-insight {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0 16px;
+  }
+  #app .manager-insight-tile {
+    min-width: 0;
+    padding: 13px 12px;
+    border: 1px solid rgba(168,180,189,.15);
+    border-top: 3px solid rgba(168,180,189,.24);
+    border-radius: 9px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.052), rgba(255,255,255,.012)),
+      rgba(13,20,24,.93);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  #app .manager-insight-tile.ok { border-top-color: var(--green); }
+  #app .manager-insight-tile.warn { border-top-color: var(--amber); }
+  #app .manager-insight-tile.danger { border-top-color: var(--red); }
+  #app .manager-insight-tile span {
+    display: block;
+    color: var(--text2);
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+  }
+  #app .manager-insight-tile strong {
+    display: block;
+    margin-top: 7px;
+    color: var(--text);
+    font-size: 17px;
+    line-height: 1.12;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #app .manager-insight-tile.ok strong { color: var(--green); }
+  #app .manager-insight-tile.warn strong { color: var(--amber); }
+  #app .manager-insight-tile.danger strong { color: var(--red); }
+  #app .manager-insight-tile em {
+    display: block;
+    margin-top: 5px;
+    color: var(--text3);
+    font-size: 11px;
+    font-style: normal;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1180px) {
+    #app .station-workspace-grid { grid-template-columns: 1fr; }
+    #app .station-workspace-main { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #app .manager-order-insight { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
 
   /* QTY numeric input */
@@ -1477,6 +1872,9 @@
   .settings-desc { font-size: 11px; color: var(--text2); margin-top: 2px; }
   .display-mode-grid {
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+  }
+  .theme-mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .display-mode-card {
     text-align: left; border: 1px solid var(--border); border-radius: var(--radius);

@@ -54,3 +54,27 @@
   button, input, select, textarea { font: inherit; max-width: 100%; }
   button { -webkit-tap-highlight-color: transparent; }
   ::selection { background: rgba(54,176,174,.34); color: #fff; }
+
+  body.ezop-theme-light #app,
+  body.ezop-theme-light .modal-overlay,
+  body.ezop-theme-light .numpad-overlay,
+  body.ezop-theme-light .ux-panel-overlay,
+  body.ezop-theme-light .ux-help-overlay,
+  body.ezop-theme-light #toast {
+    --bg:        #f4f7f8;
+    --bg2:       #eaf0f2;
+    --card:      #ffffff;
+    --card2:     #eef3f5;
+    --border:    #cfdae0;
+    --border2:   #aebec7;
+    --teal:      #14727a;
+    --teal2:     #0b8f8c;
+    --cyan:      #0eaaa5;
+    --text:      #142027;
+    --text2:     #536671;
+    --text3:     #83939c;
+    --shadow:    0 20px 50px rgba(35,52,61,.16);
+    --shadow-soft: 0 8px 22px rgba(35,52,61,.12);
+    --shadow-card: 0 9px 24px rgba(35,52,61,.12), 0 1px 0 rgba(255,255,255,.9);
+    color-scheme: light;
+  }

@@ -2222,3 +2222,271 @@ html.ux-banner-active .topbar { top: 36px; }
   padding: 0;
   margin: 0;
 }
+
+body.ezop-theme-light #app {
+  background:
+    radial-gradient(circle at 14% 0%, rgba(14,170,165,.13), transparent 34%),
+    radial-gradient(circle at 90% 8%, rgba(226,184,32,.14), transparent 30%),
+    linear-gradient(180deg, #f8fbfc 0%, #edf4f6 48%, #f6f9fa 100%);
+  color: var(--text);
+}
+
+body.ezop-theme-light #app::before {
+  background-image:
+    linear-gradient(rgba(20,114,122,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,114,122,.08) 1px, transparent 1px);
+  opacity: .85;
+}
+
+body.ezop-theme-light #app .topbar,
+body.ezop-theme-light #app .navtabs,
+body.ezop-theme-light #app .bottom-nav {
+  background: rgba(255,255,255,.88);
+  border-color: rgba(15,111,119,.16);
+  box-shadow: 0 1px 0 rgba(255,255,255,.9), 0 14px 30px rgba(35,52,61,.10);
+}
+
+body.ezop-theme-light #app .card,
+body.ezop-theme-light #app .stat-card,
+body.ezop-theme-light #app .station-context-panel,
+body.ezop-theme-light #app .station-fast-panel,
+body.ezop-theme-light #app .station-side-panel,
+body.ezop-theme-light #app .station-manager-tile,
+body.ezop-theme-light #app .manager-insight-tile,
+body.ezop-theme-light #app .operator-work-hero,
+body.ezop-theme-light #app .operator-work-card,
+body.ezop-theme-light #app .advanced-panel,
+body.ezop-theme-light #app .workspace-banner,
+body.ezop-theme-light #app .queue-command,
+body.ezop-theme-light #app .app-current-work,
+body.ezop-theme-light #app .ux-tile,
+body.ezop-theme-light .modal-box,
+body.ezop-theme-light .numpad,
+body.ezop-theme-light .ux-panel,
+body.ezop-theme-light .ux-help-box {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.82)),
+    var(--card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+body.ezop-theme-light #app .station-context-task,
+body.ezop-theme-light #app .station-context-facts,
+body.ezop-theme-light #app .station-context-route,
+body.ezop-theme-light #app .station-context-fact,
+body.ezop-theme-light #app .station-work-actions,
+body.ezop-theme-light #app .station-state-item,
+body.ezop-theme-light #app .station-doc-item,
+body.ezop-theme-light #app .station-doc-file-row,
+body.ezop-theme-light #app .qty-field,
+body.ezop-theme-light #app .action-btn,
+body.ezop-theme-light #app .action-menu-item,
+body.ezop-theme-light #app .display-mode-card,
+body.ezop-theme-light #app .role-permission-row,
+body.ezop-theme-light #app .bn-item,
+body.ezop-theme-light .modal-overlay .input,
+body.ezop-theme-light .ux-field input,
+body.ezop-theme-light .ux-field textarea,
+body.ezop-theme-light .ux-field select,
+body.ezop-theme-light .ux-section,
+body.ezop-theme-light .ux-toggle-row {
+  background: rgba(255,255,255,.72);
+  border-color: var(--border);
+}
+
+body.ezop-theme-light #app .input,
+body.ezop-theme-light .modal-overlay .input {
+  background: rgba(255,255,255,.92);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+body.ezop-theme-light #app .tbl th,
+body.ezop-theme-light #app .tbl tr:hover td,
+body.ezop-theme-light #app .station-panel-body > .card,
+body.ezop-theme-light #app .station-doc-icon,
+body.ezop-theme-light #app .operator-instruction-empty,
+body.ezop-theme-light #app .numpad-display,
+body.ezop-theme-light .messenger-message.theirs {
+  background: var(--card2);
+}
+
+body.ezop-theme-light #app .logout-btn,
+body.ezop-theme-light #app .btn-ghost,
+body.ezop-theme-light .modal-overlay .btn-ghost,
+body.ezop-theme-light .numpad-overlay .btn-ghost,
+body.ezop-theme-light .ux-btn {
+  background: rgba(255,255,255,.74);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+body.ezop-theme-light #app .navtab:hover,
+body.ezop-theme-light #app .bn-item:hover,
+body.ezop-theme-light #app .btn-ghost:hover,
+body.ezop-theme-light .modal-overlay .btn-ghost:hover,
+body.ezop-theme-light .ux-btn:hover {
+  background: rgba(14,170,165,.10);
+}
+
+body.ezop-theme-light #app .progress-bar,
+body.ezop-theme-light #app .operator-queue-progress,
+body.ezop-theme-light .ux-undo-bar {
+  background: rgba(83,102,113,.16);
+}
+
+body.ezop-theme-light .ux-panel-overlay {
+  background: rgba(34,48,56,.24);
+  backdrop-filter: blur(4px);
+}
+
+body.ezop-theme-light .ux-panel-head,
+body.ezop-theme-light .ux-panel-foot {
+  border-color: var(--border);
+}
+
+body.ezop-theme-light .ux-panel-close {
+  background: rgba(255,255,255,.78);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+body.ezop-theme-light .ux-news-box {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,251,252,.9)),
+    var(--card);
+  border-color: rgba(226,184,32,.34);
+}
+
+body.ezop-theme-light .ux-list li,
+body.ezop-theme-light .ux-list.empty {
+  background: rgba(255,255,255,.76);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+body.ezop-theme-light #app .card::before {
+  opacity: .42;
+}
+
+body.ezop-theme-light #app .station-hero,
+body.ezop-theme-light #app .station-summary-main,
+body.ezop-theme-light #app .station-summary-route,
+body.ezop-theme-light #app .app-page-hero,
+body.ezop-theme-light #app .app-list-toolbar,
+body.ezop-theme-light #app .app-filter-card,
+body.ezop-theme-light #app .app-queue-card,
+body.ezop-theme-light #app .dashboard-focus-card,
+body.ezop-theme-light #app .dashboard-summary-card,
+body.ezop-theme-light #app .dashboard-mini-list,
+body.ezop-theme-light #app .operator-next-action,
+body.ezop-theme-light #app .dashboard-rail-tile,
+body.ezop-theme-light #app .ux-kb-command,
+body.ezop-theme-light #app .ux-kb-focus-card,
+body.ezop-theme-light #app .queue-load-board,
+body.ezop-theme-light #app .orders-command,
+body.ezop-theme-light #app .orders-focus-card,
+body.ezop-theme-light #app .issues-focus-card,
+body.ezop-theme-light #app .kpi-focus-card,
+body.ezop-theme-light #app .ux-kpi-panel,
+body.ezop-theme-light #app .kpi-command,
+body.ezop-theme-light #app .kpi-metric-card,
+body.ezop-theme-light #app .queue-action-card,
+body.ezop-theme-light #app .workspace-today-card,
+body.ezop-theme-light #app .workspace-empty,
+body.ezop-theme-light #app .workspace-note,
+body.ezop-theme-light #app .workspace-board,
+body.ezop-theme-light #app .attendance-hero,
+body.ezop-theme-light #app .attendance-current,
+body.ezop-theme-light #app .admin-sidebar,
+body.ezop-theme-light #app .admin-content-head,
+body.ezop-theme-light #app .admin-command-center,
+body.ezop-theme-light .ux-fab-btn,
+body.ezop-theme-light .ux-fab-label,
+body.ezop-theme-light .ux-kb-col,
+body.ezop-theme-light .ux-kb-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.95), rgba(244,248,249,.82)),
+    var(--card);
+  border-color: var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+body.ezop-theme-light #app .station-summary-main,
+body.ezop-theme-light #app .station-context-task,
+body.ezop-theme-light #app .operator-next-action,
+body.ezop-theme-light #app .workspace-today-card,
+body.ezop-theme-light #app .attendance-hero {
+  background:
+    linear-gradient(135deg, rgba(14,170,165,.12), rgba(226,184,32,.08)),
+    rgba(255,255,255,.92);
+}
+
+body.ezop-theme-light #app .station-context-fact,
+body.ezop-theme-light #app .station-panel-body > .card,
+body.ezop-theme-light #app .dashboard-mini-row,
+body.ezop-theme-light #app .ux-kpi-card,
+body.ezop-theme-light #app .ux-kpi-svg,
+body.ezop-theme-light #app .ux-kpi-empty,
+body.ezop-theme-light #app .kpi-command-metrics button,
+body.ezop-theme-light #app .kpi-quality-grid div,
+body.ezop-theme-light #app .kpi-risk-list button,
+body.ezop-theme-light #app .ux-kb-command-metrics button,
+body.ezop-theme-light #app .ux-kb-quality div,
+body.ezop-theme-light #app .queue-load-card,
+body.ezop-theme-light #app .orders-command-stats button,
+body.ezop-theme-light #app .orders-filter-pill,
+body.ezop-theme-light #app .operator-next-action > span,
+body.ezop-theme-light #app .dashboard-rail-tile > span,
+body.ezop-theme-light #app .ux-kb-focus-card > span,
+body.ezop-theme-light #app .orders-focus-card > span,
+body.ezop-theme-light #app .issues-focus-card > span,
+body.ezop-theme-light #app .kpi-focus-card > span,
+body.ezop-theme-light #app .queue-action-card > span,
+body.ezop-theme-light #app .workspace-today-card > span,
+body.ezop-theme-light #app .attendance-current > span,
+body.ezop-theme-light #app .admin-sidebar-title span,
+body.ezop-theme-light #app .admin-tab,
+body.ezop-theme-light #app .admin-tabs-nested .admin-tab,
+body.ezop-theme-light #app .admin-group-tab,
+body.ezop-theme-light #app .admin-command-card,
+body.ezop-theme-light #app .admin-user-filters button,
+body.ezop-theme-light #app .user-card,
+body.ezop-theme-light #app .user-station-chips span,
+body.ezop-theme-light .ux-kb-col-head,
+body.ezop-theme-light .ux-kb-col-count {
+  background: var(--card2);
+  border-color: var(--border);
+}
+
+body.ezop-theme-light #app .queue-load-bar {
+  background: rgba(83,102,113,.16);
+}
+
+body.ezop-theme-light #app .ux-kpi-panel-side {
+  border-top-color: var(--border);
+}
+
+body.ezop-theme-light #app .input:focus,
+body.ezop-theme-light .modal-overlay .input:focus,
+body.ezop-theme-light .ux-field input:focus,
+body.ezop-theme-light .ux-field textarea:focus,
+body.ezop-theme-light .ux-field select:focus {
+  background: #fff;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(226,184,32,.18);
+}
+
+body.ezop-theme-light #app .qty-field:hover,
+body.ezop-theme-light #app .qty-field.active,
+body.ezop-theme-light #app .app-order-card:hover,
+body.ezop-theme-light #app .app-queue-card:hover,
+body.ezop-theme-light #app .dashboard-rail-tile:hover,
+body.ezop-theme-light .ux-fab-btn:hover {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(239,246,247,.88)),
+    var(--card);
+  border-color: rgba(14,170,165,.42);
+  box-shadow: 0 14px 30px rgba(35,52,61,.14);
+}
