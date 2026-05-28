@@ -44,6 +44,7 @@ export interface AppSettings {
   messengerAllowDeleteOwn?: boolean;
   messengerMaxLength?: number;
   rolePermissionOverrides?: Partial<Record<Role, Partial<Record<Permission, boolean>>>>;
+  userPermissionOverrides?: Record<string, Partial<Record<Permission, boolean>>>;
   hiddenNavByRole?: Partial<Record<Role, string[]>>;
   appDisplayMode?: 'simple' | 'standard' | 'service';
 }

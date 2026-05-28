@@ -566,6 +566,13 @@
     #app .role-permission-name { align-items: flex-start; flex-direction: column; gap: 2px; }
     #app .role-permission-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #app .role-permission-cell { min-height: 48px; }
+    #app .user-permission-layout { grid-template-columns: 1fr; gap: 8px; }
+    #app .user-permission-head { align-items: flex-start; flex-direction: column; }
+    #app .user-permission-row { grid-template-columns: 1fr; gap: 8px; padding: 9px; }
+    #app .user-permission-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #app .permission-choice { padding: 6px 4px; font-size: 10px; }
+    #app .permission-active-row { align-items: flex-start; flex-direction: column; }
+    #app .permission-active-row .btn { width: 100%; justify-content: center; }
     #toast {
       bottom: calc(74px + env(safe-area-inset-bottom));
       max-width: calc(100vw - 28px);

@@ -47,6 +47,7 @@ export const appSettings = {
   messengerAllowDeleteOwn: false,
   messengerMaxLength: 500,
   rolePermissionOverrides: {},
+  userPermissionOverrides: {},
   hiddenNavByRole: {
     operator: ['kpi'],
   },

@@ -1978,12 +1978,7 @@ function directMessagePeers() {
 }
 
 function userCanUseMessenger(user) {
-  const role = BUILTIN_USER_ROLES[normalizeLogin(user?.login)] || user?.role;
-  if (!role) return false;
-  if (role === 'admin') return true;
-  return featureEnabled('featureMessenger')
-    && (BASE_ROLE_PERMISSIONS.use_messenger?.includes(role) ?? false)
-    && rolePermissionAllowed(role, 'use_messenger');
+  return userEffectivePermission(user, 'use_messenger');
 }
 
 function messageTouchesUser(message, userId = currentUser?.id) {
@@ -2758,6 +2753,12 @@ const ROLE_PERMISSION_ACTIONS = [
   'view_kpi',
 ];
 
+const USER_PERMISSION_ACTIONS = [
+  ...ROLE_PERMISSION_ACTIONS,
+  'manage_users',
+  'app_settings',
+];
+
 const ROLE_NAV_ITEMS = [
   { id:'dashboard', label:'Přehled', icon:'🏠', lockedFor:['admin'] },
   { id:'queue', label:'Fronty', icon:'🧭' },
@@ -2784,8 +2785,21 @@ function rolePermissionAllowed(role, action) {
   return rolePermissionOverride(role, action) !== false;
 }
 
-function can(action) {
-  const r = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+function effectiveRoleForUser(user) {
+  return BUILTIN_USER_ROLES[normalizeLogin(user?.login)] || user?.role || '';
+}
+
+function userPermissionKey(user) {
+  return String(user?.id || '');
+}
+
+function userPermissionOverride(user, action) {
+  const key = userPermissionKey(user);
+  return key ? APP_SETTINGS?.userPermissionOverrides?.[key]?.[action] : undefined;
+}
+
+function permissionFeatureEnabledForUser(user, action) {
+  const role = effectiveRoleForUser(user);
   const gatedFeatures = {
     edit_product_memory: 'featureProductMemory',
     manage_scrap: 'featureScrapManagement',
@@ -2793,8 +2807,24 @@ function can(action) {
     use_messenger: 'featureMessenger',
   };
   const gate = gatedFeatures[action];
-  if (gate && !featureEnabled(gate) && r !== 'admin') return false;
-  return (BASE_ROLE_PERMISSIONS[action]?.includes(r) ?? false) && rolePermissionAllowed(r, action);
+  return !gate || featureEnabled(gate) || role === 'admin';
+}
+
+function roleBasePermissionAllowed(role, action) {
+  return (BASE_ROLE_PERMISSIONS[action]?.includes(role) ?? false) && rolePermissionAllowed(role, action);
+}
+
+function userEffectivePermission(user, action) {
+  if (!user || !permissionFeatureEnabledForUser(user, action)) return false;
+  const role = effectiveRoleForUser(user);
+  const override = userPermissionOverride(user, action);
+  if (override === true) return true;
+  if (override === false) return false;
+  return roleBasePermissionAllowed(role, action);
+}
+
+function can(action) {
+  return userEffectivePermission(currentUser, action);
 }
 
 function navHiddenForRole(role, navId) {
@@ -2866,12 +2896,16 @@ function getNavItems() {
   const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
   const openIssueCount = visibleIssues().filter(i => !i.resolved).length;
   if (role === 'operator') {
-    return [
+    const operatorItems = [
       { id:'queue', label:'Moje práce', icon:'🧭' },
       { id:'orders', label:'Zakázky', icon:'📋' },
       { id:'issues', label:'Problém' + (openIssueCount?` (${openIssueCount})`:''), icon:'⚠️' },
-      { id:'profile', label:'Profil', icon:'👤' },
-    ].filter(item => navVisibleForCurrentUser(item.id));
+    ];
+    if (can('view_kpi') || APP_SETTINGS.showKpiOperator) {
+      operatorItems.push({ id:'kpi', label:'KPI', icon:'📊' });
+    }
+    operatorItems.push({ id:'profile', label:'Profil', icon:'👤' });
+    return operatorItems.filter(item => navVisibleForCurrentUser(item.id));
   }
   const items = [
     { id:'dashboard', label:'Přehled',  icon:'🏠' },
@@ -7596,6 +7630,7 @@ function rerenderKpiLocation() {
 let adminTab = 'users';
 let adminGroup = 'people';
 let adminUserFilter = 'all';
+let adminPermissionUserId = '';
 
 function adminGroups() {
   return [
@@ -8130,16 +8165,24 @@ function renderAdminRolePermissions() {
     <div class="card" style="border-left:4px solid var(--gold)">
       <div class="card-title">🛡️ Role a oprávnění</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
-        Tady admin vypíná méně používané nebo citlivé funkce pro jednotlivé role. Tabulka práva jen ubírá:
-        role nedostane funkci, kterou v základu nemá. Admin zůstává vždy s plnými právy.
+        Role jsou výchozí šablona. Konkrétnímu uživateli lze právo přidat nebo odebrat bez změny jeho role.
+        Aktuálně přihlášenému adminovi nejde odebrat správu uživatelů ani nastavení aplikace.
       </div>
       <div class="role-permission-legend">
         <span><i class="perm-dot on"></i> povoleno</span>
-        <span><i class="perm-dot off"></i> vypnuto adminem</span>
+        <span><i class="perm-dot off"></i> vypnuto</span>
         <span><i class="perm-dot none"></i> mimo roli</span>
       </div>
     </div>
 
+    ${renderUserPermissionEditor()}
+
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧩 Výchozí práva podle role</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Tato část nastavuje základ role. Uživatelská výjimka výše má při vyhodnocení přednost.
+      </div>
+    </div>
     <div class="role-permission-list">
       ${ROLE_PERMISSION_ACTIONS.map(action => `
         <div class="role-permission-row">
@@ -8156,8 +8199,10 @@ function renderAdminRolePermissions() {
 
     ${renderRoleNavVisibility()}
 
+    ${renderActiveUserPermissionOverrides()}
+
     <div class="card">
-      <div class="card-title">📌 Aktivní omezení</div>
+      <div class="card-title">📌 Aktivní omezení rolí</div>
       ${activeOverrides.length === 0
         ? `<div style="font-size:13px;color:var(--text2)">Žádné roli teď není ručně vypnuté oprávnění.</div>`
         : activeOverrides.map(item => `
@@ -8166,6 +8211,155 @@ function renderAdminRolePermissions() {
             <button class="btn btn-ghost btn-sm" onclick="toggleRolePermission('${item.role}','${item.action}')">Vrátit</button>
           </div>
         `).join('')}
+    </div>
+  `;
+}
+
+function permissionUserList() {
+  const order = { operator: 1, dispatcher: 2, tpv: 3, management: 4, admin: 5 };
+  return [...USERS].sort((a, b) =>
+    (order[effectiveRoleForUser(a)] || 9) - (order[effectiveRoleForUser(b)] || 9) ||
+    String(a.name || a.login).localeCompare(String(b.name || b.login), 'cs')
+  );
+}
+
+function selectedPermissionUser() {
+  const users = permissionUserList();
+  if (!users.length) return null;
+  const selected = users.find(user => user.id === adminPermissionUserId);
+  if (selected) return selected;
+  const fallback = users.find(user => user.role === 'operator') || users.find(user => user.id !== currentUser?.id) || users[0];
+  adminPermissionUserId = fallback.id;
+  return fallback;
+}
+
+function selectPermissionUser(uid) {
+  if (!USERS.some(user => user.id === uid)) return;
+  adminPermissionUserId = uid;
+  renderAdmin();
+}
+
+function renderUserPermissionEditor() {
+  const users = permissionUserList();
+  const selected = selectedPermissionUser();
+  if (!selected) return '';
+  const selectedRole = effectiveRoleForUser(selected);
+  const overrideCount = Object.keys(APP_SETTINGS.userPermissionOverrides?.[selected.id] || {}).length;
+  return `
+    <section class="user-permission-layout">
+      <div class="card user-permission-users">
+        <div class="card-title">👤 Vybrat uživatele</div>
+        <div class="user-permission-user-list">
+          ${users.map(user => {
+            const role = effectiveRoleForUser(user);
+            const count = Object.keys(APP_SETTINGS.userPermissionOverrides?.[user.id] || {}).length;
+            return `<button class="user-permission-user-btn ${user.id === selected.id ? 'active' : ''}" onclick="selectPermissionUser('${user.id}')">
+              <span>${escapeHtml(user.avatar || '👤')}</span>
+              <b>${escapeHtml(user.name || user.login)}</b>
+              <em>${escapeHtml(user.login)} · ${escapeHtml(ROLE_LABELS[role] || role)}${count ? ` · ${count} výj.` : ''}</em>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="card user-permission-editor">
+        <div class="user-permission-head">
+          <div>
+            <span>${escapeHtml(selected.avatar || '👤')}</span>
+            <div>
+              <strong>${escapeHtml(selected.name || selected.login)}</strong>
+              <em>${escapeHtml(selected.login)} · ${escapeHtml(ROLE_LABELS[selectedRole] || selectedRole)} · ${overrideCount ? `${overrideCount} výjimek` : 'dle role'}</em>
+            </div>
+          </div>
+          <span class="role-badge role-${selectedRole}">${escapeHtml(ROLE_LABELS[selectedRole] || selectedRole)}</span>
+        </div>
+        <div class="user-permission-grid">
+          ${USER_PERMISSION_ACTIONS.map(action => userPermissionRowHtml(selected, action)).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function userPermissionRowHtml(user, action) {
+  const role = effectiveRoleForUser(user);
+  const roleDefault = roleBasePermissionAllowed(role, action);
+  const override = userPermissionOverride(user, action);
+  const effective = userEffectivePermission(user, action);
+  const protectedSelf = user.id === currentUser?.id && role === 'admin' && ['manage_users','app_settings'].includes(action);
+  const state = override === true ? 'allow' : override === false ? 'deny' : 'role';
+  const featureOff = !permissionFeatureEnabledForUser(user, action);
+  return `
+    <div class="user-permission-row ${effective ? 'enabled' : 'disabled'}">
+      <div class="user-permission-name">
+        <strong>${escapeHtml(ROLE_PERMISSION_LABELS[action] || action)}</strong>
+        <span>${escapeHtml(action)} · role: ${roleDefault ? 'povoleno' : 'bez práva'}${featureOff ? ' · funkce vypnutá' : ''}</span>
+      </div>
+      <div class="user-permission-actions">
+        ${userPermissionChoiceHtml(user.id, action, 'role', state, 'Dle role')}
+        ${userPermissionChoiceHtml(user.id, action, 'allow', state, 'Povoleno')}
+        ${userPermissionChoiceHtml(user.id, action, 'deny', state, 'Vypnuto', protectedSelf)}
+      </div>
+    </div>
+  `;
+}
+
+function userPermissionChoiceHtml(uid, action, mode, state, label, disabled = false) {
+  return `<button class="permission-choice ${state === mode ? 'active' : ''}" ${disabled ? 'disabled' : ''}
+    onclick="setUserPermissionOverride('${uid}','${action}','${mode}')">${escapeHtml(label)}</button>`;
+}
+
+function setUserPermissionOverride(uid, action, mode) {
+  if (!can('app_settings')) return;
+  if (!USER_PERMISSION_ACTIONS.includes(action)) return;
+  const user = USERS.find(item => item.id === uid);
+  if (!user) return;
+  const role = effectiveRoleForUser(user);
+  if (user.id === currentUser?.id && role === 'admin' && ['manage_users','app_settings'].includes(action) && mode === 'deny') {
+    showToast('Aktuálnímu adminovi nelze odebrat správu.');
+    return;
+  }
+  if (!APP_SETTINGS.userPermissionOverrides) APP_SETTINGS.userPermissionOverrides = {};
+  if (!APP_SETTINGS.userPermissionOverrides[uid]) APP_SETTINGS.userPermissionOverrides[uid] = {};
+  const before = userPermissionOverride(user, action);
+  if (mode === 'role') {
+    delete APP_SETTINGS.userPermissionOverrides[uid][action];
+  } else {
+    APP_SETTINGS.userPermissionOverrides[uid][action] = mode === 'allow';
+  }
+  if (Object.keys(APP_SETTINGS.userPermissionOverrides[uid]).length === 0) {
+    delete APP_SETTINGS.userPermissionOverrides[uid];
+  }
+  writeAudit(
+    'user.permission_changed',
+    'app_settings',
+    `user-permissions:${uid}`,
+    `${user.name || user.login}: ${ROLE_PERMISSION_LABELS[action] || action} → ${mode === 'role' ? 'dle role' : mode === 'allow' ? 'povoleno' : 'vypnuto'}`,
+    { value: before },
+    { value: mode === 'role' ? undefined : mode === 'allow' },
+  );
+  saveState();
+  buildNav();
+  renderAdmin();
+  showToast('Oprávnění uživatele uloženo');
+}
+
+function renderActiveUserPermissionOverrides() {
+  const active = Object.entries(APP_SETTINGS.userPermissionOverrides || {})
+    .flatMap(([uid, actions]) => Object.entries(actions || {})
+      .filter(([action]) => USER_PERMISSION_ACTIONS.includes(action))
+      .map(([action, value]) => ({ uid, action, value })));
+  return `
+    <div class="card">
+      <div class="card-title">📌 Aktivní výjimky uživatelů</div>
+      ${active.length === 0
+        ? `<div style="font-size:13px;color:var(--text2)">Žádný uživatel teď nemá individuálně změněné oprávnění.</div>`
+        : active.map(item => {
+          const user = USERS.find(u => u.id === item.uid);
+          return `<div class="permission-active-row">
+            <span>${escapeHtml(user?.name || item.uid)} · ${escapeHtml(ROLE_PERMISSION_LABELS[item.action] || item.action)} · <b>${item.value ? 'povoleno' : 'vypnuto'}</b></span>
+            <button class="btn btn-ghost btn-sm" onclick="setUserPermissionOverride('${item.uid}','${item.action}','role')">Dle role</button>
+          </div>`;
+        }).join('')}
     </div>
   `;
 }

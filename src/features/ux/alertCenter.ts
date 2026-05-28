@@ -53,6 +53,34 @@ function orderAllDone(o: any): boolean {
   return sts.length > 0 && sts.every((s: any) => s.status === 'completed' || s.status === 'skipped');
 }
 
+function stationDone(station: any): boolean {
+  return station?.status === 'completed' || station?.status === 'skipped';
+}
+
+function operatorStationIds(user: any): number[] {
+  if (!user || user.role !== 'operator') return [];
+  return Array.isArray(user.stationIds)
+    ? user.stationIds.map((id: unknown) => Number(id)).filter((id: number) => Number.isFinite(id) && id > 0)
+    : [];
+}
+
+function operatorOwnsStation(station: any, user: any, stationIds: number[]): boolean {
+  if (!station || !user) return false;
+  const stationId = Number(station.stId ?? station.stationId ?? station.id);
+  const userLogin = String(user.login || '').toLowerCase();
+  return stationIds.includes(stationId)
+    || (station.workerUserId && station.workerUserId === user.id)
+    || (station.workerLogin && userLogin && String(station.workerLogin).toLowerCase() === userLogin);
+}
+
+function orderNeedsOperatorAttention(order: any, user: any): boolean {
+  if (user?.role !== 'operator') return true;
+  const stationIds = operatorStationIds(user);
+  return (order?.stations || []).some((station: any) =>
+    operatorOwnsStation(station, user, stationIds) && !stationDone(station)
+  );
+}
+
 function orderLastActivityMs(o: any): number {
   let last = 0;
   for (const s of (o.stations || [])) {
@@ -78,9 +106,11 @@ function computeAlerts(): Alert[] {
   const now = Date.now();
   const orders = bridgeOrders();
   const issues = bridgeIssues();
+  const user = bridgeUser();
 
   for (const o of orders) {
     if (orderAllDone(o)) continue;
+    if (!orderNeedsOperatorAttention(o, user)) continue;
 
     if (o.due) {
       const due = new Date(o.due);
@@ -212,7 +242,8 @@ function hookExistingBell() {
 
 function openAlertPanel() {
   document.getElementById('ux-alert-panel')?.remove();
-  const alerts = lastAlerts.length ? lastAlerts : computeAlerts();
+  const alerts = computeAlerts();
+  lastAlerts = alerts;
   const read = loadReadIds();
 
   const groups: Record<string, Alert[]> = {};
