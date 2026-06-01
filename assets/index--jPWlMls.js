@@ -1,0 +1,12145 @@
+(function(){const n=document.createElement("link").relList;if(n&&n.supports&&n.supports("modulepreload"))return;for(const r of document.querySelectorAll('link[rel="modulepreload"]'))o(r);new MutationObserver(r=>{for(const a of r)if(a.type==="childList")for(const s of a.addedNodes)s.tagName==="LINK"&&s.rel==="modulepreload"&&o(s)}).observe(document,{childList:!0,subtree:!0});function t(r){const a={};return r.integrity&&(a.integrity=r.integrity),r.referrerPolicy&&(a.referrerPolicy=r.referrerPolicy),r.crossOrigin==="use-credentials"?a.credentials="include":r.crossOrigin==="anonymous"?a.credentials="omit":a.credentials="same-origin",a}function o(r){if(r.ep)return;r.ep=!0;const a=t(r);fetch(r.href,a)}})();const qn=`<!-- ════════════════════════════════
+     LANDING
+════════════════════════════════ -->
+<div id="landing-screen">
+  <div class="lp-root">
+    <div class="lp-card">
+      <div class="lp-logo">EZOP<span>4</span></div>
+      <div class="lp-tagline">Výrobní systém pro EMS linky</div>
+
+      <div class="lp-features">
+        <div class="lp-feat"><span>⚡</span><span>Fronty práce podle role</span></div>
+        <div class="lp-feat"><span>📊</span><span>KPI a zakázky v reálném čase</span></div>
+        <div class="lp-feat"><span>☁</span><span>Cloud nebo on-premise · PWA</span></div>
+      </div>
+
+      <div class="lp-actions">
+        <button class="lp-btn-primary" type="button" onclick="showLoginScreen()">
+          Přihlásit se
+        </button>
+        <button class="lp-btn-secondary" type="button" onclick="openDemoLogin()">
+          Spustit demo
+        </button>
+      </div>
+
+      <div class="lp-roles">
+        <span class="lp-role">♙ Operátor</span>
+        <span class="lp-role">♟ Mistr</span>
+        <span class="lp-role">▣ TPV</span>
+        <span class="lp-role">▥ Vedení</span>
+        <span class="lp-role">🔧 Admin</span>
+      </div>
+    </div>
+
+    <div class="lp-footer">
+      <span>Supabase · Lupa NET · AI</span>
+      <span>Auditní stopa · Offline PWA</span>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     LOGIN
+════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <button class="login-back" type="button" onclick="showLandingScreen()">← Zpět na úvod</button>
+    <div class="login-logo">⚡</div>
+    <div class="login-title">EZOP 4</div>
+    <div class="login-sub">Mobilní výrobní EZOP</div>
+
+    <div class="login-label">Přihlašovací jméno</div>
+    <input id="login-user" class="login-input" type="text" placeholder="uživatel" autocomplete="username" />
+
+    <div class="login-label">Heslo</div>
+    <input id="login-pass" class="login-input" type="password" placeholder="••••" autocomplete="current-password" />
+
+    <label class="remember-row">
+      <input id="remember-user" type="checkbox" />
+      <span>Zapamatovat uživatele</span>
+    </label>
+
+    <button class="login-btn" onclick="doLogin()">Přihlásit se</button>
+    <button id="passkey-login-btn" class="login-passkey-btn" type="button" onclick="loginWithPasskey()">
+      🔐 Přihlásit biometrií / passkey
+    </button>
+    <div id="passkey-login-hint" class="login-passkey-hint"></div>
+    <div id="login-error" class="login-error"></div>
+  </div>
+</div>
+<!-- ════════════════════════════════
+     APP SHELL
+════════════════════════════════ -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">EZOP<span>4</span></div>
+    <span id="tbar-cloud" class="role-badge" style="font-size:10px"></span>
+    <span id="tbar-name" class="topbar-user"></span>
+    <span id="tbar-role" class="role-badge"></span>
+    <span id="tbar-attendance" class="role-badge" style="font-size:10px;cursor:pointer;display:none" onclick="navigateTo('workspace')"></span>
+    <button id="tbar-notifications" class="notification-btn" style="display:none" title="Upozornění" onclick="openNotificationsModal()">🔔<span id="notification-count"></span></button>
+    <button id="tbar-messenger" class="notification-btn messenger-btn" style="display:none" title="Messenger" onclick="openMessengerModal()">💬<span id="messenger-count"></span></button>
+    <button id="tbar-search" class="logout-btn" style="background:transparent;display:none" title="Hledat (Ctrl+K)" onclick="openGlobalSearch()">🔎</button>
+    <button id="tbar-theme" class="logout-btn theme-toggle-btn" title="Přepnout tmavý/světlý režim" aria-label="Přepnout tmavý/světlý režim" onclick="toggleAppTheme()">🌙</button>
+    <button id="tbar-install" class="logout-btn" style="background:rgba(226,184,32,.15);color:var(--gold);display:none" title="Nainstalovat aplikaci" onclick="triggerPwaInstall()">📥 Instalovat</button>
+    <button class="logout-btn" onclick="doLogout()">Odhlásit</button>
+  </div>
+
+  <!-- Desktop nav -->
+  <div class="navtabs" id="navtabs"></div>
+
+  <!-- Pages -->
+  <div style="padding-bottom:8px">
+    <div class="page" id="page-dashboard"><!-- filled by JS --></div>
+    <div class="page" id="page-orders"><!-- filled by JS --></div>
+    <div class="page" id="page-kanban"><!-- filled by UX (kanban.ts) --></div>
+    <div class="page" id="page-station"><!-- filled by JS --></div>
+    <div class="page" id="page-issues"><!-- filled by JS --></div>
+    <div class="page" id="page-kpi"><!-- filled by JS --></div>
+    <div class="page" id="page-admin"><!-- filled by JS --></div>
+    <div class="page" id="page-workspace"><!-- filled by JS --></div>
+    <div class="page" id="page-profile"><!-- filled by JS --></div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <div class="bottom-nav" id="bottom-nav"></div>
+</div>
+
+<!-- Numpad overlay -->
+<div class="numpad-overlay" id="numpad-overlay">
+  <div class="numpad">
+    <div class="numpad-header">
+      <span class="numpad-title" id="numpad-title">Počet kusů</span>
+      <button class="btn btn-ghost btn-sm" onclick="closeNumpad()">✕ Zavřít</button>
+    </div>
+    <div class="numpad-display" id="numpad-display">0</div>
+    <div class="numpad-grid">
+      <button class="numpad-btn" onclick="numInput('7')">7</button>
+      <button class="numpad-btn" onclick="numInput('8')">8</button>
+      <button class="numpad-btn" onclick="numInput('9')">9</button>
+      <button class="numpad-btn" onclick="numInput('4')">4</button>
+      <button class="numpad-btn" onclick="numInput('5')">5</button>
+      <button class="numpad-btn" onclick="numInput('6')">6</button>
+      <button class="numpad-btn" onclick="numInput('1')">1</button>
+      <button class="numpad-btn" onclick="numInput('2')">2</button>
+      <button class="numpad-btn" onclick="numInput('3')">3</button>
+      <button class="numpad-btn del" onclick="numDelete()">⌫</button>
+      <button class="numpad-btn" onclick="numInput('0')">0</button>
+      <button class="numpad-btn ok" onclick="numConfirm()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-box">
+    <div class="modal-title" id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div class="pcb-corner"></div>`,Fn={admin:"Admin",dispatcher:"Mistr",tpv:"TPV",management:"Vedení",operator:"Operátor"},Vn=[{id:"u1",login:"admin",role:"admin",name:"Administrátor",avatar:"🔧",color:"#ef4444",stationIds:[]},{id:"u2",login:"mistr",role:"dispatcher",name:"Jan Novák",avatar:"👷",color:"#3b82f6",stationIds:[]},{id:"u3",login:"tpv",role:"tpv",name:"Petra Svobodová",avatar:"📐",color:"#a855f7",stationIds:[]},{id:"u4",login:"vedeni",role:"management",name:"Karel Dvořák",avatar:"📊",color:"#22c55e",stationIds:[]},{id:"u5",login:"op1",role:"operator",name:"Marie Horáčková",avatar:"⚙️",color:"#6b7280",stationIds:[1]},{id:"u6",login:"op2",role:"operator",name:"Tomáš Procházka",avatar:"⚙️",color:"#6b7280",stationIds:[2,5,6]},{id:"u7",login:"op3",role:"operator",name:"Jana Kučerová",avatar:"⚙️",color:"#6b7280",stationIds:[3,4,7,8,9]}],Gn={companyName:"HC Electronics a.s.",lockTimeout:8,allowOperatorQty:!1,showKpiOperator:!1,requireNoteOnIssue:!0,notifyOnIssue:!0,darkMode:!0,language:"cs",shiftHours:8,compactAdvancedUi:!0,operatorSimpleMode:!0,operatorDashboardFocusOnly:!0,operatorShowProductionOverview:!1,operatorHideOrderContext:!0,operatorShowOrderIdentifier:!0,operatorShowCustomerContext:!1,operatorShowDueContext:!0,operatorShowTechnologyContext:!0,operatorShowNotesContext:!0,featureProductMemory:!0,featureAiSummary:!0,featureReadiness:!0,featureOrderBlocking:!0,featureScrapManagement:!0,featureAttendance:!0,featureLupaNet:!0,featureMessenger:!0,messengerAllowDeleteOwn:!1,messengerMaxLength:500,rolePermissionOverrides:{},userPermissionOverrides:{},hiddenNavByRole:{operator:["kpi"]},startPagesByRole:{admin:"dashboard",dispatcher:"issues",management:"issues",tpv:"orders",operator:"orders"},appDisplayMode:"standard"},Zn=[{id:1,name:"Sklad",icon:"📦"},{id:2,name:"Automat",icon:"🤖"},{id:3,name:"AOI",icon:"🔍"},{id:4,name:"RTG",icon:"☢️"},{id:5,name:"Montáž THT",icon:"🔩"},{id:6,name:"Pájení vlnou / selektivní",icon:"🌊"},{id:7,name:"Oprava po pájení",icon:"🛠️"},{id:8,name:"Výstupní kontrola",icon:"✅"},{id:9,name:"Balení",icon:"📫"}],Kn=[{id:"pn1",orderId:"o1",stationId:5,visibility:"public",type:"storage",text:"Polotovary uloženy v sušce - budova C, regál 4.",author:"Marie Horáčková",authorRole:"operator",createdAt:new Date(Date.now()-36e5*4).toISOString()},{id:"pn2",orderId:"o2",stationId:2,visibility:"public",type:"material",text:"Zákazník dodal náhradu za R7 (10k -> 12k, ekvivalent). Schváleno TPV.",author:"Petra Svobodová",authorRole:"tpv",createdAt:new Date(Date.now()-36e5*8).toISOString()}],Wn=261104,Qn=[{id:"o1",number:"261100",name:"Řídicí deska VB-300",priority:"urgent",qty:150,customer:"HC Electronics a.s.",due:"2025-05-15",orderDate:"2025-05-01",technology:"bezolovo",productionType:"repeat",stencilNumber:"3/0001",documents:[{name:"BOM_VB300_v3.xlsx",type:"bom",size:48e3},{name:"OSAZ_VB300.pdf",type:"drawing",size:12e4}],stations:[{stId:1,status:"completed",qtyOk:150,qtyRework:0,qtyScrap:0,qtyReceived:150},{stId:2,status:"completed",qtyOk:148,qtyRework:2,qtyScrap:0,qtyReceived:150},{stId:3,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:4,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:5,status:"in_progress",qtyOk:80,qtyRework:5,qtyScrap:1,qtyReceived:148},{stId:6,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:7,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:8,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:9,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0}]},{id:"o2",number:"261101",name:"Napájecí modul PM-24V",priority:"high",qty:300,customer:"TechCorp s.r.o.",due:"2025-05-20",orderDate:"2025-05-02",technology:"bezolovo",productionType:"new",stencilNumber:"3/0002",documents:[{name:"BOM_PM24V.xlsx",type:"bom",size:32e3}],stations:[{stId:1,status:"completed",qtyOk:300,qtyRework:0,qtyScrap:0,qtyReceived:300},{stId:2,status:"in_progress",qtyOk:200,qtyRework:10,qtyScrap:2,qtyReceived:300},{stId:3,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:6,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:8,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:9,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0}]},{id:"o3",number:"261102",name:"Senzorická PCB SR-10",priority:"normal",qty:500,customer:"AutoElektro k.s.",due:"2025-06-01",orderDate:"2025-05-03",technology:"olovo",productionType:"revision",stencilNumber:"3/0003",documents:[],stations:[{stId:1,status:"completed",qtyOk:500,qtyRework:0,qtyScrap:0,qtyReceived:500},{stId:2,status:"completed",qtyOk:495,qtyRework:5,qtyScrap:0,qtyReceived:500},{stId:3,status:"completed",qtyOk:490,qtyRework:10,qtyScrap:5,qtyReceived:495},{stId:5,status:"completed",qtyOk:480,qtyRework:8,qtyScrap:2,qtyReceived:490},{stId:6,status:"issue",qtyOk:200,qtyRework:20,qtyScrap:10,qtyReceived:480},{stId:7,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:8,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:9,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0}]},{id:"o4",number:"261103",name:"Komunikační modul CM-5G",priority:"low",qty:50,customer:"SmartHome a.s.",due:"2025-06-10",orderDate:"2025-05-05",technology:"bezolovo",productionType:"new",stencilNumber:"",documents:[],stations:[{stId:1,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:2,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:5,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:8,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0},{stId:9,status:"waiting",qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0}]}],Yn={users:Vn,roleLabels:Fn,appSettings:Gn,stations:Zn,productionNotes:Kn,nextOrderCode:Wn,orders:Qn},f=e=>Math.max(0,Number(e)||0);function Jn(e){const n=Array.isArray(e.stations)?e.stations:[],t=Math.max(0,...n.map(o=>f(o.qtyOk)));return Math.min(f(e.qty),t)}function en(e,n){const t=f(n.qtyReceived);return t>0?t:f(e.qty)}function Xn(e,n){const t=f(n.qtyOk)+f(n.qtyRework)+f(n.qtyScrap),o=en(e,n);return{sum:t,available:o,exceed:t>o,remaining:o-t}}function et(e,n,t){const o=f(n.qtyOk)+f(n.qtyRework)+f(n.qtyScrap),r=ie(e,n,t);return{sum:o,available:r,exceed:o>r,remaining:r-o}}function nn(e){return f(e.qtyOk)+f(e.qtyRework)+f(e.qtyScrap)}function tn(e){return f(e.qtyOk)+f(e.qtyRework)+f(e.qtyScrap)}function on(e){return f(e.qtyOk)+f(e.qtyRework)}function ie(e,n,t){return!e||!n?0:t<=0?f(e.qty):f(n.qtyReceived)}function nt(e,n,t){const o=ie(e,n,t),r=f(n.qtyOk),a=f(n.qtyRework),s=f(n.qtyScrap),i=r+a+s,d=Math.max(0,o-i);return{processed:i,ok:r,rework:a,scrap:s,available:o,remaining:d,complete:o>0&&d===0,hasInput:o>0}}function tt(e){if(!e||!Array.isArray(e.stations))return!1;let n=!1;return e.stations.forEach((t,o)=>{if(o>0){const s=e.stations?.[o-1];if(s){const i=nn(s),d=f(s.qtyScrap);i>0&&f(t.qtyReceived)<i&&(t.qtyReceived=i,n=!0),d>f(t.qtyScrap)&&(t.qtyScrap=d,n=!0)}}const r=ie(e,t,o);if(t.status==="completed"&&on(t)===0&&r>0){const s=Math.max(0,r-f(t.qtyScrap));(f(t.qtyOk)!==s||f(t.qtyRework)!==0)&&(t.qtyOk=s,t.qtyRework=0,n=!0)}const a=tn(t)-r;if(r>0&&a>0){const s=f(t.qtyOk),i=f(t.qtyRework);t.qtyOk=Math.max(0,s-a);const d=a-(s-t.qtyOk);d>0&&(t.qtyRework=Math.max(0,i-d)),n=!0}}),n}function ot(e){return e.sum===0?"waiting":e.remaining===0?"completed":"partial"}function rt(e){return!e.canOperate||e.blocked?[]:e.claimedByOther?["claimed_by_other"]:e.claimed?e.status==="completed"?["done"]:e.paused?["resume","finish"]:["pause","finish"]:e.managerRole?["claim","finish"]:["claim"]}function at(e){return e.blocked?{label:"Blokováno",tone:"blocked",rank:0}:e.status==="issue"?{label:"Problém",tone:"issue",rank:1}:["in_progress","partial"].includes(String(e.status))?{label:"Rozpracováno",tone:"active",rank:2}:f(e.available)>0||e.firstStation?{label:"Připraveno",tone:"ready",rank:3}:{label:"Čeká na předchozí krok",tone:"waiting",rank:4}}function st(e){return{blocked:"var(--red)",issue:"var(--red)",active:"var(--blue)",ready:"var(--green)",waiting:"var(--amber)"}[e]||"var(--text2)"}const it=Object.freeze(Object.defineProperty({__proto__:null,orderGoodQty:Jn,qtyAvailable:en,qtyValidation:Xn,qtyValidationForStation:et,queueStateColor:st,readyForNextStation:nn,stationFlowSnapshot:nt,stationInputQty:ie,stationNonScrapQty:on,stationProcessedQty:tn,stationQueueState:at,stationWorkActions:rt,statusFromQty:ot,syncOrderStationFlow:tt},Symbol.toStringTag,{value:"Module"})),de="ezop4-audit-log-v1";function rn(e=localStorage){try{const n=JSON.parse(e.getItem(de)||"[]");return Array.isArray(n)?n:[]}catch{return[]}}function an(e,n=localStorage){n.setItem(de,JSON.stringify(e.slice(0,500)))}async function dt(e,n){const t={id:`al${Date.now()}${Math.random().toString(36).slice(2,7)}`,at:new Date().toISOString(),userId:e.user?.id||null,userName:e.user?.name||"Systém",role:e.user?.role||null,action:e.action,entityType:e.entityType,entityId:e.entityId,summary:e.summary,before:e.before,after:e.after},o=[t,...rn()].slice(0,500);if(an(o),n?.from)try{await n.from("audit_logs").insert({user_id:t.userId,user_name:t.userName,role:t.role,action:t.action,entity_type:t.entityType,entity_id:t.entityId,summary:t.summary,before_data:t.before??null,after_data:t.after??null,created_at:t.at})}catch(r){console.warn("Audit cloud write failed:",r)}return t}function lt(e=localStorage){e.removeItem(de)}const ct=Object.freeze(Object.defineProperty({__proto__:null,AUDIT_LOG_KEY:de,clearAuditLog:lt,readAuditLog:rn,recordAudit:dt,writeAuditLog:an},Symbol.toStringTag,{value:"Module"}));function ut(e){return{profiles:(e.USERS||[]).map(n=>({user_id:null,login:n.login,role:n.role,name:n.name,avatar:n.avatar||"👤",color:n.color||"#6b7280",station_ids:n.stationIds||[],active:!0})),orders:e.ORDERS.map(pt),order_documents:e.ORDERS.flatMap(mt),order_stations:e.ORDERS.flatMap(vt),production_notes:e.PROD_NOTES.map(bt),issues:e.ISSUES.map(gt),issue_recipients:e.ISSUES.flatMap(yt),product_memory:Object.entries(e.PRODUCT_MEMORY||{}).map(([n,t])=>({product_key:n,customer:t.customer,name:t.name,station_programs:t.stationPrograms||{},photo_data_url:t.photoDataUrl||null,reusable_notes:t.reusableNotes||[],updated_at:t.updatedAt}))}}function pt(e){return{id:e.id,number:e.number,name:e.name,customer:e.customer,priority:e.priority,qty_ordered:e.qty,due_date:e.due,order_date:e.orderDate,technology:e.technology,production_type:e.productionType,stencil_number:e.stencilNumber,purchase_order_number:e.purchaseOrderNumber||null,product_photo_data_url:e.productPhotoDataUrl||null,readiness:e.readiness||null,block_active:!!e.blocked?.active,block_category:e.blocked?.category||null,block_reason:e.blocked?.reason||null,blocked_by_name:e.blocked?.byName||null,blocked_at:e.blocked?.at||null,unblock_reason:e.blocked?.resolvedReason||null,unblocked_by_name:e.blocked?.resolvedByName||null,unblocked_at:e.blocked?.resolvedAt||null}}function mt(e){return(e.documents||[]).map(n=>({order_id:e.id,name:n.name,type:n.type,size_bytes:n.size}))}function vt(e){return(e.stations||[]).map((n,t)=>({order_id:e.id,station_id:n.stId,sequence_no:t+1,status:n.status,qty_received:n.qtyReceived||0,qty_ok:n.qtyOk||0,qty_rework:n.qtyRework||0,qty_scrap:n.qtyScrap||0,queue_rank:n.queueRank||null,program_name:e.stationPrograms?.[String(n.stId)]||null,worker_user_id:n.workerUserId||null,worker_login:n.workerLogin||null,worker_name:n.workerName||null,worker_role:n.workerRole||null,work_started_at:n.workStartedAt||null,work_paused_at:n.workPausedAt||null,work_pause_reason:n.workPauseReason||null,work_completed_at:n.workCompletedAt||null,work_completed_by_name:n.workCompletedByName||null}))}function bt(e){return{id:e.id,order_id:e.orderId,station_id:e.stationId,target_scope:e.targetScope||"station",target_station_ids:e.stationIds||(e.stationId?[e.stationId]:null),visibility:e.visibility||"public",product_key:e.productKey||null,product_sticky:!!e.productSticky,product_memory_note_id:e.productMemoryNoteId||null,type:e.type,text:e.text,author_name:e.author,author_role:e.authorRole,created_at:e.createdAt}}function gt(e){return{id:e.id,order_id:e.orderId,station_id:e.stationId,severity:e.severity,description:e.description,reported_by_name:e.reportedBy,reported_by_role:e.reportedByRole||null,reported_by_login:e.reportedByLogin||null,target_scope:e.targetScope||"all",target_label:e.targetLabel||null,auto_key:e.autoKey||null,reported_at:e.reportedAt,resolved:!!e.resolved,resolved_by_name:e.resolvedBy||null,resolved_at:e.resolvedAt||null}}function yt(e){return e.targetScope==="all"||!e.targetRoles&&!e.targetUserIds&&!e.targetLogins?[{issue_id:e.id,recipient_type:"all",recipient_value:"*"}]:[...(e.targetRoles||[]).map(n=>({issue_id:e.id,recipient_type:"role",recipient_value:n})),...(e.targetUserIds||[]).map(n=>({issue_id:e.id,recipient_type:"user",recipient_value:n})),...(e.targetLogins||[]).map(n=>({issue_id:e.id,recipient_type:"login",recipient_value:n}))]}function xe(e){return{id:e.user_id,login:e.login,role:e.role,name:e.name,avatar:e.avatar||"👤",color:e.color||"#6b7280",stationIds:Array.isArray(e.station_ids)?e.station_ids:[]}}function sn(e,n="ezop.local"){const t=e.trim().toLowerCase();return t.includes("@")?t:`${t}@${n}`}function ft(e,n="ezop.local"){return{async signIn(t,o){if(!e.auth?.signInWithPassword||!e.from)throw new Error("Supabase klient nepodporuje Auth.");const r=sn(t,n),{data:a,error:s}=await e.auth.signInWithPassword({email:r,password:o});if(s||!a?.user)throw new Error(s?.message||"Přihlášení se nezdařilo.");const{data:i,error:d}=await e.from("profiles").select("user_id,login,role,name,avatar,color,station_ids,active").eq("user_id",a.user.id).maybeSingle();if(d)throw new Error(d.message||"Profil nelze načíst.");if(!i||i.active===!1)throw new Error("Uživatel nemá aktivní profil v tabulce profiles.");return{user:xe(i),accessToken:a.session?.access_token}},async signOut(){const{error:t}=await e.auth?.signOut?.()??{};if(t)throw new Error(t.message||"Odhlášení se nezdařilo.")},async currentSession(){if(!e.auth?.getSession||!e.from)return null;const{data:t,error:o}=await e.auth.getSession();if(o||!t?.session?.user)return null;const{data:r}=await e.from("profiles").select("user_id,login,role,name,avatar,color,station_ids,active").eq("user_id",t.session.user.id).maybeSingle();return r&&r.active!==!1?{user:xe(r),accessToken:t.session.access_token}:null}}}const Ee="ezop4-auth-mode";function kt(e=localStorage){return e.getItem(Ee)==="supabase"?"supabase":"demo"}function ht(e,n=localStorage){n.setItem(Ee,e)}const St=Object.freeze(Object.defineProperty({__proto__:null,EZOP4_AUTH_MODE_KEY:Ee,createSupabaseAuthPort:ft,normalizeLoginForEmail:sn,profileRowToUser:xe,readAuthMode:kt,writeAuthMode:ht},Symbol.toStringTag,{value:"Module"})),Te="ezop4-lupanet-config-v1",ne={enabled:!1,mode:"disabled",direction:"export_progress",apiBaseUrl:"",companyCode:"",orderNumberField:"cislo_zakazky",productCodeField:"kod_vyrobku"},xt=[["orderNumber","cislo_zakazky","Číslo výrobní zakázky"],["purchaseOrderNumber","cislo_objednavky","Číslo objednávky"],["customer","zakaznik","Zákazník"],["productName","nazev_vyrobku","Název výrobku"],["qtyOrdered","objednano_ks","Objednané množství"],["dueDate","termin_dodani","Termín dodání"],["technology","technologie","Technologie"],["stencilNumber","cislo_planzety","Číslo planžety"],["totals.qtyOk","ok_ks","OK kusy"],["totals.qtyRework","oprava_ks","Kusy na opravu"],["totals.qtyScrap","zmetek_ks","Zmetky"]];function Ae(e=localStorage){try{const n=JSON.parse(e.getItem(Te)||"null");return{...ne,...n||{}}}catch{return ne}}function $t(e,n=localStorage){n.setItem(Te,JSON.stringify({...ne,...e}))}function dn(e){return e.stations.reduce((n,t)=>({qtyOk:n.qtyOk+t.qtyOk,qtyRework:n.qtyRework+t.qtyRework,qtyScrap:n.qtyScrap+t.qtyScrap,qtyReceived:Math.max(n.qtyReceived,t.qtyReceived)}),{qtyOk:0,qtyRework:0,qtyScrap:0,qtyReceived:0})}function ln(e,n){return{stationId:e.stId,status:e.status,qtyReceived:e.qtyReceived,qtyOk:e.qtyOk,qtyRework:e.qtyRework,qtyScrap:e.qtyScrap,programName:n.stationPrograms?.[e.stId]}}function cn(e){return{ezopOrderId:e.id,orderNumber:e.number,purchaseOrderNumber:e.purchaseOrderNumber||"",customer:e.customer,productName:e.name,qtyOrdered:e.qty,dueDate:e.due,priority:e.priority,technology:e.technology,productionType:e.productionType,stencilNumber:e.stencilNumber,totals:dn(e),stations:e.stations.map(n=>ln(n,e))}}function It(e,n=Ae()){return{format:"ezop4-lupanet-export",version:1,generatedAt:new Date().toISOString(),config:{mode:n.mode,direction:n.direction,companyCode:n.companyCode,orderNumberField:n.orderNumberField,productCodeField:n.productCodeField},orders:e.ORDERS.map(cn)}}function wt(e=Ae()){const n=e.mode==="api";return[{id:"mode",label:"Režim integrace",ok:e.enabled&&e.mode!=="disabled",detail:e.enabled&&e.mode!=="disabled"?`Připraven režim ${e.mode.toUpperCase()}.`:"Integrace je zatím vypnutá."},{id:"direction",label:"Směr toku dat",ok:!!e.direction,detail:un(e.direction)},{id:"api",label:"API / export cesta",ok:!n||!!e.apiBaseUrl,detail:n?e.apiBaseUrl||"Pro API režim chybí URL Lupa NET konektoru.":"CSV/JSON export nevyžaduje endpoint."},{id:"company",label:"Identifikace firmy",ok:!!e.companyCode,detail:e.companyCode||"Doplnit kód firmy/střediska z Lupa NET."},{id:"mapping",label:"Mapování polí",ok:!!(e.orderNumberField&&e.productCodeField),detail:`${e.orderNumberField} / ${e.productCodeField}`}]}function un(e){return{import_orders:"Lupa NET → EZOP4: zakázky a základní údaje.",export_progress:"EZOP4 → Lupa NET: průběh výroby, počty a stavy.",bidirectional:"Obousměrně: zakázky z Lupa NET, průběh zpět."}[e]}const Ot=Object.freeze(Object.defineProperty({__proto__:null,DEFAULT_LUPA_NET_CONFIG:ne,LUPA_NET_CONFIG_KEY:Te,LUPA_NET_FIELD_MAP:xt,buildLupaNetPackage:It,directionLabel:un,lupaNetReadiness:wt,orderToLupaNet:cn,orderTotals:dn,readLupaNetConfig:Ae,stationToLupaNet:ln,writeLupaNetConfig:$t},Symbol.toStringTag,{value:"Module"}));let Ce=0;const Be=3e3;async function zt(e){const n=Date.now(),t=n-Ce;if(t<Be){const r=Be-t;throw new Error(`Vyčkejte prosím ${Math.ceil(r/1e3)} s před dalším voláním AI.`)}Ce=n;const o=await fetch("/api/ai/order-summary",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(e)});if(!o.ok){const r=await o.text(),a=Et(r);throw console.error(`AI request failed (HTTP ${o.status}):`,r),new Error(a||"AI přehled se nepodařilo vytvořit. Zkuste to prosím znovu.")}return o.json()}function Et(e){try{return JSON.parse(e).error?.message||e}catch{return e}}const Tt=Object.freeze(Object.defineProperty({__proto__:null,summarizeOrder:zt},Symbol.toStringTag,{value:"Module"})),w=window,At=60,pn="ezop4_ux_shift_profile_v1",pe={startHour:6,endHour:22,weekdays:[1,2,3,4,5]};function mn(){try{const e=localStorage.getItem(pn);if(!e)return{...pe};const n=JSON.parse(e),t=Number(n.startHour),o=Number(n.endHour),r=Array.isArray(n.weekdays)?n.weekdays.map(a=>Number(a)).filter(a=>a>=0&&a<=6):null;return isNaN(t)||isNaN(o)||o<=t||!r||r.length===0?{...pe}:{startHour:t,endHour:o,weekdays:r}}catch{return{...pe}}}function He(e){try{localStorage.setItem(pn,JSON.stringify(e))}catch{}}function Pt(e){return e.endHour-e.startHour}function vn(e,n){return n.weekdays.includes(e.getDay())}function _t(e,n){const t=new Date(e);return t.setHours(n.startHour,0,0,0),t}function Nt(e,n){const t=new Date(e);return n.endHour>=24?(t.setHours(0,0,0,0),t.setDate(t.getDate()+1)):t.setHours(n.endHour,0,0,0),t}function me(e,n){const t=new Date(e);t.setDate(t.getDate()+1),t.setHours(n.startHour,0,0,0);let o=0;for(;!vn(t,n)&&o<14;)t.setDate(t.getDate()+1),o++;return t}function Rt(e,n,t){if(n<=0)return new Date(e);if(Pt(t)<=0)return new Date(e.getTime()+n*36e5);let o=new Date(e),r=n,a=0;for(;r>0&&a<365;){if(a++,!vn(o,t)){o=me(o,t);continue}const s=_t(o,t),i=Nt(o,t);if(o<s&&(o=s),o>=i){o=me(o,t);continue}const l=(i.getTime()-o.getTime())/36e5;l>=r?(o=new Date(o.getTime()+r*36e5),r=0):(r-=l,o=me(o,t))}return o}const U=new WeakMap;function Y(){return w.__ezopBridge?.orders?.()||[]}function Lt(){const e=Y();e.length+""+(e[0]?.id||"")+(e[e.length-1]?.id||"")}function Mt(e,n){if(!e||!n)return 0;const t=new Date(e).getTime(),o=new Date(n).getTime();return isNaN(t)||isNaN(o)||o<=t?0:(o-t)/36e5}function Dt(e,n){const t=[];for(const a of n)for(const s of a.stations||[]){if(Number(s.stId)!==Number(e))continue;const i=Mt(s.workStartedAt,s.workCompletedAt),d=(Number(s.qtyOk)||0)+(Number(s.qtyRework)||0);i>0&&d>0&&t.push(d/i)}if(t.length===0)return At;const o=t.slice(-5),r=o.reduce((a,s)=>a+s,0)/o.length;return Math.max(1,r)}function Ct(e,n){const t=e.stations||[];let o=0,r=!1;for(const a of t){if(a.status==="completed"||a.status==="skipped")continue;const s=Number(e.qty)||0,i=Number(a.qtyOk)||0,d=Math.max(0,s-i);if(d===0)continue;const l=Dt(Number(a.stId),n);l>0&&(r=!0),o+=d/l}return{hours:o,hasData:r}}function le(e,n){if(!e)return null;if(Lt(),U.has(e))return U.get(e);const t=n||Y(),o=e.stations||[];if(o.length>0&&o.every(p=>p.status==="completed"||p.status==="skipped")){const p={estimateAt:new Date,diffMs:0,tone:"success",label:"Hotovo",short:"✅ hotovo"};return U.set(e,p),p}const{hours:a,hasData:s}=Ct(e,t);if(!s&&a===0)return U.set(e,null),null;const i=mn(),d=Rt(new Date,a,i);if(!e.due){const p={estimateAt:d,diffMs:0,tone:"muted",label:`Odhad: ${d.toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric"})}`,short:d.toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric"})};return U.set(e,p),p}const l=new Date(e.due);l.setHours(23,59,59,999);const v=d.getTime()-l.getTime(),u=Math.round(v/864e5);let m="success",g,b;const h=d.toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric"});v>864e5?(m="danger",g=`Skluz ${u} d (odhad ${h})`,b=`🔴 skluz ${u} d`):v>-864e5?(m="warning",g=`Hraniční termín (odhad ${h})`,b="🟡 hraničně"):(m="success",g=`V termínu, ${Math.abs(u)} d rezerva (odhad ${h})`,b="🟢 v termínu");const z={estimateAt:d,diffMs:v,tone:m,label:g,short:b};return U.set(e,z),z}function Bt(e){const n=le(e);if(!n)return`<div class="card ux-est-card tone-muted">
+      <div class="ux-est-row">
+        <span class="ux-est-icon">📅</span>
+        <div class="ux-est-text">
+          <b>Odhad dokončení: zatím nelze spočítat</b>
+          <small>Jakmile bude na stanicích dokončen alespoň jeden cyklus, zobrazí se odhad reálného data.</small>
+        </div>
+      </div>
+    </div>`;const t=e.due?`<small>Plán: ${new Date(e.due).toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"long",year:"numeric"})}</small>`:"",o=n.estimateAt.toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"long",year:"numeric"});return`<div class="card ux-est-card tone-${n.tone}">
+    <div class="ux-est-row">
+      <span class="ux-est-icon">📅</span>
+      <div class="ux-est-text">
+        <b>Odhad dokončení: ${o}</b>
+        <span class="ux-est-status">${n.label}</span>
+        ${t}
+      </div>
+    </div>
+  </div>`}function bn(e){const n=le(e);return n?`<span class="ux-est-pill ux-est-${n.tone}" title="${n.label}">${n.short}</span>`:'<span class="ux-est-pill ux-est-muted" title="Odhad nedostupný">📅 —</span>'}function Ht(){const e=document.getElementById("page-orders");if(!e)return;const n=Y();e.querySelectorAll(".app-order-card:not(.app-order-card-simple)").forEach(t=>{if(t.querySelector(".ux-est-pill"))return;const r=(t.getAttribute("onclick")||"").match(/openOrder\('([^']+)'\)/);if(!r)return;const a=n.find(l=>l.id===r[1]);if(!a)return;const s=t.querySelector(".badge-"+(a.priority||"normal"))||t.querySelector('[class^="badge-"]'),i=document.createElement("span");i.innerHTML=bn(a);const d=i.firstChild;d&&(s&&s.parentElement?s.parentElement.insertBefore(d,s.nextSibling):t.appendChild(d))})}function Ut(){let e=0;for(const n of Y()){const t=le(n);t&&(t.tone==="danger"||t.tone==="warning")&&e++}return e}function jt(){if(w.__uxPatchedRenderOrdersEst||typeof w.renderOrders!="function")return;const e=w.renderOrders;w.renderOrders=function(...n){const t=e.apply(this,n);return setTimeout(Ht,0),t},w.__uxPatchedRenderOrdersEst=!0}function qt(){if(w.__uxPatchedDashboardEst||typeof w.renderDashboard!="function")return;const e=w.renderDashboard;w.renderDashboard=function(...n){const t=e.apply(this,n);return setTimeout(()=>{const o=document.getElementById("page-dashboard");if(!o||o.querySelector(".ux-est-dash-tile")||o.querySelector(".dashboard-clean"))return;const r=Ut();if(r===0)return;const a=document.createElement("div");a.className="card ux-est-dash-tile",a.innerHTML=`
+        <div class="ux-est-row">
+          <span class="ux-est-icon">⚠️</span>
+          <div class="ux-est-text">
+            <b>Zakázky v ohrožení: ${r}</b>
+            <span class="ux-est-status">Odhadovaný termín dokončení je hraniční nebo po plánovaném datu.</span>
+            <small>Klikni pro otevření Kanbanu se seznamem.</small>
+          </div>
+        </div>
+      `,a.style.cursor="pointer",a.addEventListener("click",()=>{typeof w.navigateTo=="function"&&w.navigateTo("kanban")});const s=o.querySelector(".dashboard-main-col");if(s)s.appendChild(a);else{const i=o.querySelector(".app-page-hero");i?i.insertAdjacentElement("afterend",a):o.prepend(a)}},10),t},w.__uxPatchedDashboardEst=!0}function Ft(){if(w.__uxPatchedOrderEstimate||typeof w.openOrder!="function")return;const e=w.openOrder;w.openOrder=function(...n){const t=e.apply(this,n);return setTimeout(()=>{const o=document.getElementById("page-station");if(!o||o.querySelector(".ux-est-card")||(w.__ezopBridge?.user?.()||null)?.role==="operator")return;const a=n[0],s=Y().find(l=>l.id===a);if(!s)return;const i=o.querySelector(".ux-tl-card, .order-timeline-card"),d=Bt(s);if(i)i.insertAdjacentHTML("beforebegin",d);else{const l=o.querySelector(".card");l&&l.insertAdjacentHTML("afterend",d)}},10),t},w.__uxPatchedOrderEstimate=!0}function Vt(){Ft(),jt(),qt()}const E=window,Ue=[{id:"blocked",label:"Blokované",icon:"⛔",tone:"danger"},{id:"issue",label:"S problémem",icon:"⚠️",tone:"danger"},{id:"material",label:"Materiál",icon:"📦",tone:"info"},{id:"work",label:"Výroba",icon:"🔩",tone:"info"},{id:"control",label:"Kontrola",icon:"🔍",tone:"warning"},{id:"packing",label:"Balení",icon:"📫",tone:"info"},{id:"done",label:"Hotovo",icon:"✅",tone:"success"},{id:"waiting",label:"Čeká",icon:"⏳",tone:"info"}];function Gt(){return E.__ezopBridge?.orders?.()||[]}function Zt(){return E.__ezopBridge?.stations?.()||[]}function Kt(){return E.__ezopBridge?.issues?.()||[]}function gn(){return E.__ezopBridge?.user?.()||null}const Wt=[{id:"all",label:"Vše",icon:"◯"},{id:"urgent",label:"Urgentní",icon:"⚡"},{id:"late",label:"Po termínu",icon:"⏰"},{id:"today",label:"Dnes",icon:"📅"},{id:"week",label:"Tento týden",icon:"🗓"},{id:"blocked",label:"Blokované",icon:"⛔"},{id:"issue",label:"S problémem",icon:"⚠️"},{id:"mine",label:"Moje",icon:"👤"}];let ve="all";function je(e,n,t){if(!e)return!1;switch(n){case"all":return!0;case"urgent":return e.priority==="urgent"||e.priority==="high";case"late":return Q(e);case"today":{if(!e.due)return!1;const o=new Date(e.due),r=new Date;return o.toDateString()===r.toDateString()}case"week":{if(!e.due)return!1;const o=new Date(e.due),r=new Date,a=(o.getTime()-r.getTime())/864e5;return a>=0&&a<=7}case"blocked":return!!e.blocked;case"issue":return(e.stations||[]).some(o=>o.status==="issue");case"mine":{if(!t)return!1;const o=(t.stationIds||[]).map(a=>Number(a)),r=String(t.login||"").toLowerCase();return(e.stations||[]).some(a=>o.includes(Number(a.stId))||a.workerLogin&&String(a.workerLogin).toLowerCase()===r)}}}function R(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function qe(e){if(!e)return"waiting";if(e.blocked)return"blocked";const n=e.stations||[];if(n.some(a=>a.status==="issue"))return"issue";const o=n.find(a=>a.status==="in_progress")||n.find(a=>a.status==="waiting");if(!o)return n.every(a=>a.status==="completed"||a.status==="skipped")?"done":"waiting";const r=Number(o.stId);return r===1?"material":[3,4,8].includes(r)?"control":r===9?"packing":([2,5,6,7].includes(r),"work")}function Qt(e){const n=e.stations||[];if(!n.length)return 0;const t=n.filter(o=>o.status==="completed"||o.status==="skipped").length;return Math.round(t/n.length*100)}function yn(e){const n=e.stations||[],t=n.find(r=>r.status==="in_progress")||n.find(r=>r.status==="issue")||n.find(r=>r.status==="waiting");if(!t)return"Hotovo";const o=Zt().find(r=>Number(r.id)===Number(t.stId));return o?`${o.icon} ${o.name}`:"Stanoviště"}function fn(e){return Kt().filter(n=>n.orderId===e&&!n.resolved).length}function Yt(e){const n={urgent:{label:"URG",cls:"urgent"},high:{label:"HIGH",cls:"high"},normal:{label:"NORM",cls:"normal"},low:{label:"LOW",cls:"low"}},t=n[e]||n.normal;return`<span class="ux-kb-prio ${t.cls}">${t.label}</span>`}function Jt(e){if(!e.due)return"";const n=new Date(e.due);if(isNaN(n.getTime()))return"";const t=new Date,o=Math.round((n.getTime()-t.getTime())/864e5);let r="ok";o<0?r="late":o<=3&&(r="soon");const a=n.toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric"});return`<span class="ux-kb-due ${r}">📅 ${a}</span>`}function kn(e){if(!e?.due)return 0;const n=new Date(e.due);return isNaN(n.getTime())?0:Math.max(0,Math.round((new Date().getTime()-n.getTime())/864e5))}function Q(e){return kn(e)>0}function Xt(e){const n=Qt(e),t=fn(e.id),o=yn(e);return`<div class="ux-kb-card" data-order-id="${R(e.id)}">
+    <div class="ux-kb-card-head">
+      <span class="ux-kb-num">${R(e.number||"")}</span>
+      ${Yt(e.priority||"normal")}
+    </div>
+    <div class="ux-kb-name">${R(e.name||"")}</div>
+    <div class="ux-kb-customer">${R(e.customer||"")}</div>
+    <div class="ux-kb-station">${R(o)}</div>
+    <div class="ux-kb-meta">
+      ${Jt(e)}
+      ${t?`<span class="ux-kb-issues">⚠️ ${t}</span>`:""}
+      <span class="ux-kb-qty">${e.qty||0} ks</span>
+      ${bn(e)}
+    </div>
+    <div class="ux-kb-progress"><div class="ux-kb-progress-bar" style="width:${n}%"></div></div>
+  </div>`}function eo(){return'<div class="ux-kb-empty">Nic zde</div>'}function Fe(e,n){if(!n)return!1;const t=String(n.role||"");if(["admin","dispatcher","management","tpv"].includes(t))return!0;const o=(n.stationIds||[]).map(r=>Number(r));return(e.stations||[]).some(r=>o.includes(Number(r.stId)))}function te(){const e=document.getElementById("page-kanban");if(!e)return;const n=Gt(),t=gn(),o=n.filter(p=>Fe(p,t)).filter(p=>je(p,ve,t)),r={};Ue.forEach(p=>{r[p.id]=[]}),o.forEach(p=>{const S=qe(p);r[S]?r[S].push(p):r.waiting.push(p)});const a={urgent:0,high:1,normal:2,low:3};Object.keys(r).forEach(p=>{r[p].sort((S,D)=>{const y=a[S.priority]??2,$=a[D.priority]??2;if(y!==$)return y-$;const P=new Date(S.due||"9999-12-31").getTime(),K=new Date(D.due||"9999-12-31").getTime();return P-K})});const s=Ue.filter(p=>p.id==="blocked"||p.id==="issue"?r[p.id].length>0:!0),i=n.filter(p=>Fe(p,t)),d=p=>i.filter(S=>je(S,p,t)).length,l=Wt.map(p=>`<button class="ux-chip ${ve===p.id?"active":""}" data-kb-filter="${p.id}">
+      <span>${p.icon}</span>${p.label}<em>${d(p.id)}</em>
+    </button>`).join(""),v=i.filter(Q),u=i.filter(p=>(p.stations||[]).some(S=>S.status==="issue")),m=i.filter(p=>p.priority==="urgent"||p.priority==="high"),g=i.filter(p=>!["done","waiting"].includes(qe(p))),b=s.map(p=>({...p,count:r[p.id].length})).sort((p,S)=>S.count-p.count)[0],h=o.find(p=>p.blocked)||o.find(p=>(p.stations||[]).some(S=>S.status==="issue"))||o.find(Q)||o.find(p=>p.priority==="urgent"||p.priority==="high")||o[0],z=h?yn(h):"";e.innerHTML=`
+    <div class="ux-kb-header">
+      <div>
+        <div class="app-page-title"><strong>📌 Kanban</strong></div>
+        <div class="app-page-subtitle">${o.length} z ${i.length} zakázek · tok výroby podle aktivního kroku</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="ux-kb-refresh">🔄 Obnovit</button>
+    </div>
+
+    <section class="ux-kb-command">
+      <div class="ux-kb-command-main">
+        <div class="app-shift-label"><span>📌</span><strong>Tok výroby</strong></div>
+        <h2>${b?`${b.icon} ${R(b.label)}`:"Bez toku"}</h2>
+        <p>${b?`${b.count} položek v nejsilnějším sloupci · ${o.length} zobrazených zakázek`:"Pro aktuální filtr nejsou dostupné zakázky."}</p>
+        <div class="ux-kb-command-metrics">
+          <button type="button" data-kb-filter="all"><span>${i.length}</span><strong>Vše</strong></button>
+          <button type="button" data-kb-filter="urgent"><span>${m.length}</span><strong>Urgentní</strong></button>
+          <button type="button" data-kb-filter="issue"><span>${u.length}</span><strong>Problémy</strong></button>
+          <button type="button" data-kb-filter="late"><span>${v.length}</span><strong>Po termínu</strong></button>
+        </div>
+      </div>
+      <div class="ux-kb-command-side">
+        ${h?`
+          <button class="ux-kb-focus-card" type="button" id="ux-kb-focus-open">
+            <span>${h.blocked?"⛔":fn(h.id)?"⚠️":Q(h)?"⏰":"📋"}</span>
+            <div>
+              <strong>${R(h.number||"")} · ${R(h.name||"")}</strong>
+              <em>${R(z)}${Q(h)?` · ${kn(h)} dní po termínu`:""}</em>
+            </div>
+            <b>Otevřít</b>
+          </button>
+        `:'<div class="ux-kb-focus-card ux-kb-focus-empty">Bez zakázky k otevření</div>'}
+        <div class="ux-kb-quality">
+          <div><span>${g.length}</span><em>v toku</em></div>
+          <div><span>${b?.count||0}</span><em>úzké místo</em></div>
+          <div><span>${u.length}</span><em>problémy</em></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ux-quick-filters" id="ux-kb-filters">${l}</div>
+    <div class="ux-kanban">
+      ${s.map(p=>`
+        <div class="ux-kb-col tone-${p.tone}" data-col="${p.id}">
+          <div class="ux-kb-col-head">
+            <span class="ux-kb-col-title">${p.icon} ${p.label}</span>
+            <span class="ux-kb-col-count">${r[p.id].length}</span>
+          </div>
+          <div class="ux-kb-col-body">
+            ${r[p.id].length?r[p.id].map(Xt).join(""):eo()}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `,e.querySelectorAll(".ux-kb-card").forEach(p=>{p.addEventListener("click",()=>{const S=p.dataset.orderId;S&&E.__ezopBridge?.openOrder?.(S)})}),document.getElementById("ux-kb-refresh")?.addEventListener("click",()=>te()),document.getElementById("ux-kb-focus-open")?.addEventListener("click",()=>{h?.id&&E.__ezopBridge?.openOrder?.(h.id)}),e.querySelectorAll("[data-kb-filter]").forEach(p=>{p.addEventListener("click",()=>{ve=p.dataset.kbFilter,te()})})}function no(){if(E.__uxPatchedKanbanNav||typeof E.navigateTo!="function"||typeof E.getNavItems!="function")return;const e=E.navigateTo;E.navigateTo=function(t,o){const r=e.call(this,t,o);return t==="kanban"&&setTimeout(te,0),r};const n=E.getNavItems;E.getNavItems=function(){const t=n.call(this)||[],o=gn(),r=String(o?.role||"");if(["admin","dispatcher","management","tpv"].includes(r)){const a=t.findIndex(d=>d.id==="dashboard"),s=a>=0?a+1:0;t.some(d=>d.id==="kanban")||t.splice(s,0,{id:"kanban",label:"Kanban",icon:"📌"})}return t},E.__uxPatchedKanbanNav=!0}function to(){E.__ezopRenderKanban=te,no()}const k=window,oo={high:{warn:60,crit:120},medium:{warn:240,crit:480},low:{warn:1440,crit:4320}};function j(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function oe(e){if(!e||!e.reportedAt||e.resolved)return null;const n=new Date(e.reportedAt).getTime();if(isNaN(n))return null;const t=Date.now()-n,o=Math.max(0,Math.floor(t/6e4)),r=["high","medium","low"].includes(e.severity)?e.severity:"medium",a=oo[r];let s="success";o>=a.crit?s="danger":o>=a.warn&&(s="warning");let i;if(o<1)i="právě teď";else if(o<60)i=`${o} min`;else if(o<1440){const d=Math.floor(o/60),l=o%60;i=l?`${d} h ${l} min`:`${d} h`}else{const d=Math.floor(o/1440),l=Math.floor(o%1440/60);i=l?`${d} d ${l} h`:`${d} d`}return{ms:t,label:i,tone:s}}const Ve={danger:0,warning:1,success:2};function ro(e){const n=oe(e);return n?`<span class="ux-sla ux-sla-${n.tone}" title="Stáří hlášení">⏱ ${n.label}</span>`:""}function re(){return k.__ezopBridge?.users?.()||[]}function ce(){return k.__ezopBridge?.issues?.()||[]}function ao(e){if(!e.assignedTo)return'<span class="ux-assign ux-assign-empty">↳ Nepřiřazeno</span>';const t=re().find(o=>o.id===e.assignedTo)?.name||e.assignedTo;return`<span class="ux-assign">→ ${j(t)}</span>`}function so(){if(k.__uxPatchedIssueCard||typeof k.issueCardHtml!="function")return;const e=k.issueCardHtml;k.issueCardHtml=function(n,t){const o=e.call(this,n,t);if(!o||n.resolved)return o;const r=ro(n),a=ao(n);return o.replace(/(<span class="badge")/,`${r} <span class="ux-sla-spacer"></span>$1`).replace(/(👤 [^<]+)<span/,`$1<span class="ux-sla-spacer"></span>${a}<span`)},k.__uxPatchedIssueCard=!0}let J=!1;function io(){const e=document.getElementById("page-issues");if(!e||e.querySelector("#ux-issue-asg-filter"))return;const n=e.querySelector(".stat-grid");if(!n)return;const t=k.__ezopBridge?.user?.()||null,o=ce(),r=o.filter(d=>!d.resolved).length,a=t?o.filter(d=>!d.resolved&&d.assignedTo===t.id).length:0,s=o.filter(d=>!d.resolved&&!d.assignedTo).length,i=document.createElement("div");i.id="ux-issue-asg-filter",i.className="ux-quick-filters",i.innerHTML=`
+    <button class="ux-chip ${J?"":"active"}" data-asg="all">
+      <span>📋</span>Všechny otevřené<em>${r}</em>
+    </button>
+    <button class="ux-chip ${J?"active":""}" data-asg="mine">
+      <span>👤</span>Moje přiřazené<em>${a}</em>
+    </button>
+    <button class="ux-chip" data-asg="unassigned">
+      <span>↳</span>Nepřiřazené<em>${s}</em>
+    </button>
+  `,n.insertAdjacentElement("afterend",i),i.querySelectorAll("[data-asg]").forEach(d=>{d.addEventListener("click",()=>{const l=d.dataset.asg;lo(l||"all"),i.querySelectorAll("[data-asg]").forEach(v=>v.classList.toggle("active",v===d)),l==="mine"?J=!0:l==="all"&&(J=!1)})})}function lo(e){const n=document.getElementById("page-issues");if(!n)return;const t=k.__ezopBridge?.user?.()||null,o=ce();n.querySelectorAll('.card[onclick*="openIssueDetail"]').forEach(r=>{const s=(r.getAttribute("onclick")||"").match(/openIssueDetail\('([^']+)'\)/);if(!s)return;const i=o.find(l=>l.id===s[1]);if(!i)return;let d=!0;e==="mine"?d=!!(t&&i.assignedTo===t.id):e==="unassigned"&&(d=!i.assignedTo),r.style.display=d?"":"none"})}function be(e){return(e.getAttribute("onclick")||"").match(/openIssueDetail\('([^']+)'\)/)?.[1]||null}function co(){const e=document.getElementById("page-issues");if(!e)return;const n=ce(),t={};n.forEach(d=>{t[d.id]=d});const o=Array.from(e.querySelectorAll('.card[onclick*="openIssueDetail"]')),r=o.filter(d=>{const l=be(d);return l&&t[l]&&!t[l].resolved});if(r.length<2)return;const a=r[0].parentNode;if(!a)return;r.sort((d,l)=>{const v=t[be(d)||""],u=t[be(l)||""],m=oe(v),g=oe(u),b=m?Ve[m.tone]:99,h=g?Ve[g.tone]:99;return b!==h?b-h:(g?.ms||0)-(m?.ms||0)});const i=o.filter(d=>r.includes(d)).slice(-1)[0]?.nextSibling||null;r.forEach(d=>a.removeChild(d)),r.forEach(d=>a.insertBefore(d,i))}function uo(){if(k.__uxPatchedRenderIssues||typeof k.renderIssues!="function")return;const e=k.renderIssues;k.renderIssues=function(...n){const t=e.apply(this,n);return setTimeout(()=>{io(),co()},0),t},k.__uxPatchedRenderIssues=!0}function hn(e){return ce().find(n=>n.id===e)||null}function po(e,n){const t=hn(e);if(!t)return!1;const o=k.__ezopBridge?.user?.()||null,r=t.assignedTo||null;if(n?(t.assignedTo=n,t.assignedAt=new Date().toISOString(),t.assignedBy=o?.name||o?.login||"systém"):(delete t.assignedTo,delete t.assignedAt,delete t.assignedBy),typeof k.saveState=="function"&&k.saveState(),typeof k.writeAudit=="function")try{const a=n?re().find(s=>s.id===n)?.name||n:"nikdo";k.writeAudit(n?"issue.assigned":"issue.unassigned","issue",e,`Přiřazení problému: ${a}`,{assignedTo:r},{assignedTo:n})}catch{}if(typeof k.showToast=="function"){const a=n?re().find(s=>s.id===n)?.name||"uživateli":null;k.showToast(a?`✅ Přiřazeno: ${a}`:"↩️ Přiřazení zrušeno")}return!0}k.uxAssignIssue=function(e,n){const t=n.value||null;po(e,t),typeof k.renderIssues=="function"&&k.__ezopBridge?.page?.()==="issues"&&k.renderIssues(),typeof k.openIssueDetail=="function"&&k.openIssueDetail(e)};function mo(e){const n=re(),t=n.map(s=>{const i=e.assignedTo===s.id?"selected":"";return`<option value="${j(s.id)}" ${i}>${j(s.name)} · ${j(s.login)}</option>`}).join(""),o=oe(e),r=o?`<div class="ux-assign-meta">⏱ Stáří hlášení: <b class="ux-sla-${o.tone}">${o.label}</b></div>`:"",a=e.assignedTo?`<div class="ux-assign-meta">📌 Přiřazeno: <b>${j(n.find(s=>s.id===e.assignedTo)?.name||e.assignedTo)}</b>${e.assignedAt?` · ${new Date(e.assignedAt).toLocaleString("cs-CZ")}`:""}</div>`:"";return`
+    <div class="ux-issue-assign-section">
+      <div class="ux-issue-assign-title">👥 Přiřazení odpovědné osoby</div>
+      ${r}
+      ${a}
+      <div class="ux-issue-assign-row">
+        <select class="input ux-issue-assign-select" id="ux-issue-assign-select"
+          onchange="uxAssignIssue('${j(e.id)}', this)">
+          <option value="">— Nepřiřazeno —</option>
+          ${t}
+        </select>
+      </div>
+    </div>
+  `}function vo(){if(k.__uxPatchedIssueDetailAssign||typeof k.openIssueDetail!="function")return;const e=k.openIssueDetail;k.openIssueDetail=function(n,...t){const o=e.call(this,n,...t);return setTimeout(()=>{const r=hn(n);if(!r||r.resolved)return;const a=document.getElementById("modal-body");!a||a.querySelector(".ux-issue-assign-section")||a.insertAdjacentHTML("beforeend",mo(r))},0),o},k.__uxPatchedIssueDetailAssign=!0}function bo(){so(),uo(),vo()}const C=window,$e=7,x={bar:"#4f8df9",scrap:"#ef4444",rework:"#f59e0b",ok:"#10b981",waiting:"#94a3b8",inProgress:"#4f8df9",issue:"#ef4444",blocked:"#6b21a8",done:"#10b981",grid:"rgba(127,127,127,.25)",text:"currentColor"};function Pe(){return C.__ezopBridge?.orders?.()||[]}function go(){return C.__ezopBridge?.stations?.()||[]}function yo(){return C.__ezopBridge?.user?.()||null}function fo(){const e=yo();if(!e)return!1;const n=String(e.role||"").toLowerCase();return n==="admin"||n==="dispatcher"||n==="management"||n==="tpv"}function Sn(e){const n=e.getFullYear(),t=String(e.getMonth()+1).padStart(2,"0"),o=String(e.getDate()).padStart(2,"0");return`${n}-${t}-${o}`}function ko(e){const n=[],t=new Date;t.setHours(0,0,0,0);for(let o=e-1;o>=0;o--){const r=new Date(t.getTime()-o*864e5);n.push(Sn(r))}return n}function ho(){const e=Pe(),n=go(),t=Date.now()-14*864e5,o=new Map;for(const a of e)for(const s of a.stations||[]){const i=Number(s.stId);if(!i)continue;const d=s.workStartedAt?new Date(s.workStartedAt).getTime():0,l=s.workCompletedAt?new Date(s.workCompletedAt).getTime():0;if(!d||d<t)continue;const v=Number(s.qtyOk)||0;if(v<=0)continue;let u=0;if(l>d?u=(l-d)/36e5:s.status==="in_progress"&&(u=(Date.now()-d)/36e5),u<=.01)continue;const m=o.get(i)||{okQty:0,hours:0,samples:0};m.okQty+=v,m.hours+=u,m.samples+=1,o.set(i,m)}const r=[];for(const[a,s]of o){if(s.samples===0)continue;const i=n.find(d=>Number(d.id)===a);r.push({stId:a,name:i?.name||`Stanice ${a}`,icon:i?.icon||"",pph:Math.round(s.okQty/s.hours),okQty:s.okQty,sampleCount:s.samples})}return r.sort((a,s)=>s.pph-a.pph),r.slice(0,8)}function So(){const e=Pe(),n=ko($e),t=new Map;for(const o of n)t.set(o,{ok:0,scrap:0,rework:0});for(const o of e)for(const r of o.stations||[]){const s=(r.workCompletedAt?new Date(r.workCompletedAt):null)||(r.workStartedAt?new Date(r.workStartedAt):null);if(!s||isNaN(s.getTime()))continue;const i=Sn(s),d=t.get(i);d&&(d.ok+=Number(r.qtyOk)||0,d.scrap+=Number(r.qtyScrap)||0,d.rework+=Number(r.qtyRework||r.qtyRepair)||0)}return n.map(o=>{const a=new Date(o+"T00:00:00").toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric"}),s=t.get(o);return{key:o,label:a,ok:s.ok,scrap:s.scrap,rework:s.rework}})}function xo(){const e=Pe();let n=0,t=0,o=0,r=0,a=0;for(const i of e){if(i.blocked){a++;continue}const d=i.stations||[];if(d.some(v=>v.status==="issue")){r++;continue}if(d.length>0&&d.every(v=>v.status==="completed"||v.status==="skipped")){n++;continue}if(d.some(v=>v.status==="in_progress"||v.status==="progress")){t++;continue}o++}return[{id:"done",label:"Hotovo",count:n,color:x.done},{id:"inProgress",label:"Výroba",count:t,color:x.inProgress},{id:"waiting",label:"Čeká",count:o,color:x.waiting},{id:"issue",label:"Problém",count:r,color:x.issue},{id:"blocked",label:"Blokováno",count:a,color:x.blocked}].filter(i=>i.count>0)}function L(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}function $o(e){if(e.length===0)return'<div class="ux-kpi-empty">Žádná dokončená práce za posledních 14 dní.</div>';const l=Math.max(...e.map(b=>b.pph),1),v=336/e.length,u=Math.max(10,Math.min(40,v*.7)),m=e.map((b,h)=>{const z=12+v*h+(v-u)/2,p=b.pph/l*142,S=154-p;return`
+      <g>
+        <rect x="${z}" y="${S}" width="${u}" height="${p}" rx="3" fill="${x.bar}">
+          <title>${L(b.icon)} ${L(b.name)}: ${b.pph} ks/h (${b.okQty} ks)</title>
+        </rect>
+        <text x="${z+u/2}" y="${S-4}" font-size="10" text-anchor="middle" fill="${x.text}">${b.pph}</text>
+        <text x="${z+u/2}" y="168" font-size="11" text-anchor="middle" fill="${x.text}">${L(b.icon)}</text>
+        <text x="${z+u/2}" y="182" font-size="9" text-anchor="middle" fill="${x.text}" opacity=".75">${L(b.name.slice(0,9))}</text>
+      </g>
+    `}).join("");return`<svg viewBox="0 0 360 200" class="ux-kpi-svg" role="img" aria-label="Průchodnost stanic">
+    ${[.25,.5,.75].map(b=>{const h=154-142*b;return`<line x1="12" y1="${h}" x2="348" y2="${h}" stroke="${x.grid}" stroke-dasharray="2 3"/>`}).join("")}
+    ${m}
+  </svg>`}function Io(e){const l=Math.max(...e.map(y=>y.ok),1),v=Math.max(...e.map(y=>y.scrap+y.rework),1),u=Math.max(l,v*4,4),m=y=>28+320*y/Math.max(1,e.length-1),g=y=>164-150*y/u,b=e.map((y,$)=>`${$===0?"M":"L"}${m($).toFixed(1)},${g(y.ok).toFixed(1)}`).join(" "),h=e.map((y,$)=>`${$===0?"M":"L"}${m($).toFixed(1)},${g(y.scrap).toFixed(1)}`).join(" "),z=e.map((y,$)=>`${$===0?"M":"L"}${m($).toFixed(1)},${g(y.rework).toFixed(1)}`).join(" "),p=[.25,.5,.75,1].map(y=>{const $=164-150*y,P=Math.round(u*y);return`
+      <line x1="28" y1="${$}" x2="348" y2="${$}" stroke="${x.grid}" stroke-dasharray="2 3"/>
+      <text x="24" y="${$+3}" font-size="9" text-anchor="end" fill="${x.text}" opacity=".7">${P}</text>
+    `}).join(""),S=e.map((y,$)=>`
+    <text x="${m($)}" y="178" font-size="9" text-anchor="middle" fill="${x.text}" opacity=".75">${L(y.label)}</text>
+  `).join(""),D=(y,$)=>e.map((P,K)=>`<circle cx="${m(K)}" cy="${g($(P))}" r="2.5" fill="${y}"><title>${P.label}: ${$(P)}</title></circle>`).join("");return`<svg viewBox="0 0 360 200" class="ux-kpi-svg" role="img" aria-label="Trend kvality 7 dní">
+    ${p}
+    <path d="${b}" fill="none" stroke="${x.ok}" stroke-width="2"/>
+    <path d="${z}" fill="none" stroke="${x.rework}" stroke-width="1.8"/>
+    <path d="${h}" fill="none" stroke="${x.scrap}" stroke-width="1.8"/>
+    ${D(x.ok,y=>y.ok)}
+    ${D(x.rework,y=>y.rework)}
+    ${D(x.scrap,y=>y.scrap)}
+    ${S}
+  </svg>`}function wo(e){const i=e.reduce((u,m)=>u+m.count,0);if(i===0)return'<div class="ux-kpi-empty">Žádné zakázky.</div>';let d=-Math.PI/2;const l=e.map(u=>{const m=u.count/i*Math.PI*2,g=d+m,b=120+Math.cos(d)*70,h=100+Math.sin(d)*70,z=120+Math.cos(g)*70,p=100+Math.sin(g)*70,S=120+Math.cos(g)*42,D=100+Math.sin(g)*42,y=120+Math.cos(d)*42,$=100+Math.sin(d)*42,P=m>Math.PI?1:0,K=`M${b},${h} A70,70 0 ${P} 1 ${z},${p} L${S},${D} A42,42 0 ${P} 0 ${y},${$} Z`;return d=g,`<path d="${K}" fill="${u.color}"><title>${L(u.label)}: ${u.count} (${Math.round(u.count/i*100)}%)</title></path>`}).join(""),v=e.map(u=>`
+    <div class="ux-kpi-legend-item">
+      <span class="ux-kpi-dot" style="background:${u.color}"></span>
+      <span class="ux-kpi-legend-label">${L(u.label)}</span>
+      <strong>${u.count}</strong>
+    </div>
+  `).join("");return`<div class="ux-kpi-donut-wrap">
+    <svg viewBox="0 0 240 200" class="ux-kpi-svg" role="img" aria-label="Stavy zakázek">
+      ${l}
+      <text x="120" y="96" font-size="22" text-anchor="middle" fill="${x.text}" font-weight="700">${i}</text>
+      <text x="120" y="114" font-size="10" text-anchor="middle" fill="${x.text}" opacity=".7">zakázek</text>
+    </svg>
+    <div class="ux-kpi-legend">${v}</div>
+  </div>`}function Oo(){const e=ho(),n=So(),t=xo(),o=n.reduce((u,m)=>u+m.ok,0),r=n.reduce((u,m)=>u+m.scrap,0),a=n.reduce((u,m)=>u+m.rework,0),s=o+r>0?r/(o+r)*100:0,d=`<span class="ux-kpi-mini ux-kpi-${s>5?"danger":s>2?"warning":"success"}">${s.toFixed(1)} % zmetkovitost</span>`,l=e[0],v=l?`<span class="ux-kpi-mini ux-kpi-info">Top: ${L(l.icon)} ${L(l.name)} · ${l.pph} ks/h</span>`:"";return`
+    <section class="ux-kpi-panel">
+      <div class="ux-kpi-head">
+        <div>
+          <div class="card-title">📊 KPI grafy</div>
+          <div class="app-muted">Posledních ${$e} dnů · ${o} OK · ${a} oprav · ${r} zmetků</div>
+        </div>
+        <div class="ux-kpi-badges">${d}${v}</div>
+      </div>
+      <div class="ux-kpi-grid">
+        <div class="card ux-kpi-card">
+          <div class="ux-kpi-card-head">
+            <span>Průchodnost stanic</span>
+            <small>ks/h · top 8 · posledních 14 dnů</small>
+          </div>
+          ${$o(e)}
+        </div>
+        <div class="card ux-kpi-card">
+          <div class="ux-kpi-card-head">
+            <span>Trend kvality</span>
+            <small>denní součty za posledních ${$e} dnů</small>
+          </div>
+          ${Io(n)}
+          <div class="ux-kpi-legend ux-kpi-legend-row">
+            <div class="ux-kpi-legend-item"><span class="ux-kpi-dot" style="background:${x.ok}"></span>OK</div>
+            <div class="ux-kpi-legend-item"><span class="ux-kpi-dot" style="background:${x.rework}"></span>Oprava</div>
+            <div class="ux-kpi-legend-item"><span class="ux-kpi-dot" style="background:${x.scrap}"></span>Zmetek</div>
+          </div>
+        </div>
+        <div class="card ux-kpi-card">
+          <div class="ux-kpi-card-head">
+            <span>Stavy zakázek</span>
+            <small>distribuce právě teď</small>
+          </div>
+          ${wo(t)}
+        </div>
+      </div>
+    </section>
+  `}function zo(){const e=document.getElementById("page-kpi");if(!e||e.querySelector(".dashboard-clean")||!fo()||e.querySelector(".ux-kpi-panel"))return;const n=Oo(),t=e.querySelector(".kpi-layout"),o=document.createElement("div");o.innerHTML=n.trim();const r=o.firstElementChild;r&&(t?t.insertAdjacentElement("afterend",r):e.appendChild(r))}function Eo(){if(C.__uxPatchedKpiCharts||typeof C.renderKpi!="function")return;const e=C.renderKpi;C.renderKpi=function(...n){const t=e.apply(this,n);return setTimeout(zo,20),t},C.__uxPatchedKpiCharts=!0}function To(){Eo()}const I=window,xn="ezop4_ux_alerts_read_v1",Ao=6e4,Po=24;function _e(){return I.__ezopBridge||null}function _o(){return _e()?.orders?.()||[]}function No(){return _e()?.issues?.()||[]}function $n(){return _e()?.user?.()||null}function ee(){try{const e=localStorage.getItem(xn);if(!e)return new Set;const n=JSON.parse(e);return new Set(Array.isArray(n)?n:[])}catch{return new Set}}function Ge(e){try{localStorage.setItem(xn,JSON.stringify(Array.from(e).slice(-500)))}catch{}}function Ro(e){const n=e.stations||[];return n.length>0&&n.every(t=>t.status==="completed"||t.status==="skipped")}function Lo(e){return e?.status==="completed"||e?.status==="skipped"}function Mo(e){return!e||e.role!=="operator"?[]:Array.isArray(e.stationIds)?e.stationIds.map(n=>Number(n)).filter(n=>Number.isFinite(n)&&n>0):[]}function Do(e,n,t){if(!e||!n)return!1;const o=Number(e.stId??e.stationId??e.id),r=String(n.login||"").toLowerCase();return t.includes(o)||e.workerUserId&&e.workerUserId===n.id||e.workerLogin&&r&&String(e.workerLogin).toLowerCase()===r}function Co(e,n){if(n?.role!=="operator")return!0;const t=Mo(n);return(e?.stations||[]).some(o=>Do(o,n,t)&&!Lo(o))}function Ze(e){let n=0;for(const t of e.stations||[]){const o=t.workCompletedAt?new Date(t.workCompletedAt).getTime():0,r=t.workStartedAt?new Date(t.workStartedAt).getTime():0,a=t.workPausedAt?new Date(t.workPausedAt).getTime():0;n=Math.max(n,o,r,a)}return!n&&e.createdAt&&(n=new Date(e.createdAt).getTime()),n}function Bo(e){const n=Math.round(e/6e4);if(n<60)return`${n} min`;const t=Math.round(n/60);return t<48?`${t} h`:`${Math.round(t/24)} d`}function In(){const e=[],n=Date.now(),t=_o(),o=No(),r=$n();for(const a of t){if(Ro(a)||!Co(a,r))continue;if(a.due){const l=new Date(a.due);l.setHours(23,59,59,999),l.getTime()<n&&e.push({id:`overdue:${a.id}`,severity:"danger",icon:"⏰",title:`Po termínu: ${a.number||a.id}`,detail:`${a.name||""} · měla být hotová ${l.toLocaleDateString("cs-CZ")}`,orderId:a.id,at:l.getTime()})}if(a.blocked&&e.push({id:`blocked:${a.id}`,severity:"warning",icon:"⛔",title:`Blokovaná zakázka: ${a.number||a.id}`,detail:`${a.name||""}${a.blockedReason?" · "+a.blockedReason:""}`,orderId:a.id,at:Ze(a)||n}),!(a.stations||[]).some(l=>l.status==="in_progress"||l.status==="progress")&&!a.blocked){const l=Ze(a);(l?(n-l)/36e5:0)>=Po&&e.push({id:`stuck:${a.id}:${Math.floor(l/36e5)}`,severity:"warning",icon:"💤",title:`Zaseknutá: ${a.number||a.id}`,detail:`${a.name||""} · žádný posun ${Bo(n-l)}`,orderId:a.id,at:l})}const d=le(a,t);d&&d.tone==="danger"&&e.push({id:`risk:${a.id}:${Math.floor(d.estimateAt.getTime()/36e5)}`,severity:"warning",icon:"📅",title:`V ohrožení: ${a.number||a.id}`,detail:d.label,orderId:a.id,at:d.estimateAt.getTime()})}for(const a of o){if(a.resolved||String(a.severity).toLowerCase()!=="high")continue;const s=a.reportedAt?new Date(a.reportedAt).getTime():n,i=t.find(d=>d.id===a.orderId);e.push({id:`issue:${a.id}`,severity:"danger",icon:"⚠️",title:`Vážný problém${i?`: ${i.number}`:""}`,detail:(a.description||"").slice(0,80)||"Bez popisu",orderId:a.orderId,issueId:a.id,at:s})}return e.sort((a,s)=>{const i=d=>d==="danger"?0:d==="warning"?1:2;return i(a.severity)!==i(s.severity)?i(a.severity)-i(s.severity):s.at-a.at}),e}function Ie(){if(!$n())return;const e=In(),n=ee(),t=e.filter(i=>!n.has(i.id)),o=t.length,r=t.some(i=>i.severity==="danger"),a=document.getElementById("tbar-notifications"),s=document.getElementById("notification-count");!a||!s||(a.style.display="",a.classList.toggle("has-unread",o>0),a.classList.toggle("ux-bell-danger",r),a.classList.toggle("ux-bell-warn",!r&&o>0),s.textContent=o>0?String(Math.min(99,o)):"")}function Ho(){I.__uxAlertBellHooked||typeof I.openNotificationsModal=="function"&&(I.__uxOrigOpenNotificationsModal=I.openNotificationsModal,I.openNotificationsModal=function(...e){Uo()},I.__uxAlertBellHooked=!0)}function Uo(){document.getElementById("ux-alert-panel")?.remove();const e=In(),n=ee(),t={};for(const v of e)(t[v.severity]||=[]).push(v);const o=["danger","warning","info"],r={danger:"Vyžaduje pozornost",warning:"Sledovat",info:"Informativní"},a=o.map(v=>{const u=t[v];return!u||u.length===0?"":`<div class="ux-alert-section">
+      <div class="ux-alert-section-title">${r[v]} <em>${u.length}</em></div>
+      ${u.map(m=>jo(m,n.has(m.id))).join("")}
+    </div>`}).join(""),s=I.PROD_NOTES||[],i=s.length>0?`<div class="ux-alert-legacy">
+        <button class="ux-btn" id="ux-alert-open-legacy">
+          📝 Výrobní zprávy (${s.length})
+        </button>
+      </div>`:"",d=document.createElement("div");d.id="ux-alert-panel",d.className="ux-alert-panel",d.innerHTML=`
+    <div class="ux-alert-panel-head">
+      <div>
+        <strong>🔔 Upozornění</strong>
+        <small>${e.length} celkem · auto-refresh 60 s</small>
+      </div>
+      <div class="ux-alert-panel-actions">
+        <button class="ux-btn" id="ux-alert-mark-all">Přečíst vše</button>
+        <button class="ux-btn" id="ux-alert-close">✕</button>
+      </div>
+    </div>
+    <div class="ux-alert-panel-body">
+      ${e.length===0?'<div class="ux-alert-empty">😌 Žádná otevřená upozornění. Hezký den!</div>':a}
+      ${i}
+    </div>
+  `,document.body.appendChild(d);const l=()=>d.remove();d.querySelector("#ux-alert-close")?.addEventListener("click",l),d.querySelector("#ux-alert-mark-all")?.addEventListener("click",()=>{const v=ee();e.forEach(u=>v.add(u.id)),Ge(v),l(),Ie()}),d.querySelector("#ux-alert-open-legacy")?.addEventListener("click",()=>{l(),I.__uxOrigOpenNotificationsModal&&I.__uxOrigOpenNotificationsModal("all")}),d.querySelectorAll("[data-alert-id]").forEach(v=>{v.addEventListener("click",()=>{const u=v.dataset.alertId,m=e.find(b=>b.id===u);if(!m)return;const g=ee();g.add(m.id),Ge(g),m.issueId&&typeof I.openIssueDetail=="function"?(l(),I.openIssueDetail(m.issueId)):m.orderId&&typeof I.openOrder=="function"?(l(),I.openOrder(m.orderId)):v.classList.add("read"),Ie()})}),setTimeout(()=>{const v=u=>{const m=u.target;!d.contains(m)&&m?.id!=="tbar-notifications"&&(l(),document.removeEventListener("click",v))};document.addEventListener("click",v)},50)}function jo(e,n){return`<button type="button" class="ux-alert-row tone-${e.severity} ${n?"read":""}" data-alert-id="${e.id}">
+    <span class="ux-alert-row-icon">${e.icon}</span>
+    <div class="ux-alert-row-body">
+      <div class="ux-alert-row-title">${Ke(e.title)}</div>
+      <div class="ux-alert-row-detail">${Ke(e.detail)}</div>
+    </div>
+    ${n?"":'<span class="ux-alert-dot"></span>'}
+  </button>`}function Ke(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}let ge;function qo(){if(I.__uxAlertInstalled)return;I.__uxAlertInstalled=!0;const e=()=>{Ho(),Ie()};if(e(),ge&&window.clearInterval(ge),ge=window.setInterval(e,Ao),typeof I.navigateTo=="function"&&!I.__uxAlertNavHook){const n=I.navigateTo;I.navigateTo=function(...t){const o=n.apply(this,t);return setTimeout(e,100),o},I.__uxAlertNavHook=!0}}const _=window,Fo=14;function Vo(){return _.__ezopBridge?.orders?.()||[]}function Go(){return _.__ezopBridge?.stations?.()||[]}function Zo(){return _.__ezopBridge?.user?.()||null}function Ko(){const e=Zo();if(!e)return!1;const n=String(e.role||"").toLowerCase();return n==="admin"||n==="dispatcher"||n==="management"||n==="tpv"}function Wo(){const e=Vo(),n=Go(),t=Date.now()-Fo*864e5,o=new Map,r=s=>(o.has(s)||o.set(s,{waiting:0,inProgress:0,issues:0,cycleHoursSum:0,cycleHoursSamples:0}),o.get(s));for(const s of e)for(const i of s.stations||[]){const d=Number(i.stId);if(!d)continue;const l=r(d);i.status==="waiting"&&l.waiting++,(i.status==="in_progress"||i.status==="progress")&&l.inProgress++,i.status==="issue"&&l.issues++;const v=i.workStartedAt?new Date(i.workStartedAt).getTime():0,u=i.workCompletedAt?new Date(i.workCompletedAt).getTime():0;v>=t&&u>v&&(l.cycleHoursSum+=(u-v)/36e5,l.cycleHoursSamples++)}const a=[];for(const[s,i]of o){const d=n.find(g=>Number(g.id)===s),l=i.cycleHoursSamples>0?i.cycleHoursSum/i.cycleHoursSamples:0,v=i.waiting+i.inProgress+i.issues,u=(i.waiting*1+i.inProgress*.5+i.issues*2)*Math.max(1,l||1),m=[];i.waiting>=3&&m.push(`${i.waiting} čeká ve frontě`),i.issues>0&&m.push(`${i.issues} ${i.issues===1?"zakázka s problémem":"zakázek s problémem"}`),l>0&&i.cycleHoursSamples>=2&&m.push(`průměr ${l.toFixed(1)} h na zakázku`),i.inProgress>=2&&m.push(`${i.inProgress} aktivních současně`),a.push({stId:s,name:d?.name||`Stanice ${s}`,icon:d?.icon||"",waiting:i.waiting,inProgress:i.inProgress,issues:i.issues,avgCycleHours:l,totalActive:v,score:u,reasons:m})}return a.sort((s,i)=>i.score-s.score),a}function W(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}function Qo(){const n=Wo().filter(i=>i.totalActive>0||i.avgCycleHours>0);if(n.length===0)return"";const t=n[0],o=n.slice(1,4),r=t.reasons.length?t.reasons.join(" · "):"standardní zátěž",a=t.issues>0?"danger":t.waiting>=3?"warning":"info",s=o.map(i=>`
+    <div class="ux-bn-row">
+      <span class="ux-bn-row-name">${W(i.icon)} ${W(i.name)}</span>
+      <span class="ux-bn-row-stats">
+        ${i.waiting>0?`<em>${i.waiting} čeká</em>`:""}
+        ${i.inProgress>0?`<em>${i.inProgress} běží</em>`:""}
+        ${i.issues>0?`<em class="danger">${i.issues} problém</em>`:""}
+      </span>
+    </div>
+  `).join("");return`<section class="card ux-bn-card tone-${a}">
+    <div class="ux-bn-head">
+      <div>
+        <div class="card-title">🚦 Přetížená část výroby</div>
+        <div class="app-muted">Místo, kde se teď hromadí nejvíc práce</div>
+      </div>
+    </div>
+    <div class="ux-bn-top">
+      <div class="ux-bn-top-icon">${W(t.icon)}</div>
+      <div class="ux-bn-top-text">
+        <div class="ux-bn-top-name">${W(t.name)}</div>
+        <div class="ux-bn-top-reasons">${W(r)}</div>
+      </div>
+      <div class="ux-bn-top-counters">
+        <div title="Čeká"><b>${t.waiting}</b><span>čeká</span></div>
+        <div title="Aktivní"><b>${t.inProgress}</b><span>běží</span></div>
+        ${t.issues>0?`<div class="danger" title="Problémy"><b>${t.issues}</b><span>problém</span></div>`:""}
+      </div>
+    </div>
+    ${s?`<div class="ux-bn-others">
+      <div class="ux-bn-others-title">Další zatížené stanice</div>
+      ${s}
+    </div>`:""}
+  </section>`}function Yo(){const e=document.getElementById("page-dashboard");if(!e||e.querySelector(".dashboard-clean")||!Ko()||e.querySelector(".ux-bn-card"))return;const n=Qo();if(!n)return;const t=document.createElement("div");t.innerHTML=n.trim();const o=t.firstElementChild;if(!o)return;const r=e.querySelector(".dashboard-main-col");if(r)r.appendChild(o);else{const a=e.querySelector(".ux-kpi-panel")||e.querySelector(".app-cockpit")||e.querySelector(".app-page-hero")||e.firstElementChild;!a||!a.parentElement?e.appendChild(o):a.parentElement.insertBefore(o,a)}o.addEventListener("click",()=>{typeof _.navigateTo=="function"&&_.navigateTo("queue")}),o.style.cursor="pointer"}function Jo(){if(_.__uxPatchedDashboardBn||typeof _.renderDashboard!="function")return;const e=_.renderDashboard;_.renderDashboard=function(...n){const t=e.apply(this,n);return setTimeout(Yo,15),t},_.__uxPatchedDashboardBn=!0}function Xo(){Jo()}const H=window,wn=30;function er(){return H.__ezopBridge?.issues?.()||[]}function nr(){return H.__ezopBridge?.stations?.()||[]}function tr(){const e=er(),n=nr(),t=Date.now()-wn*864e5,o=new Map;for(const a of e){const s=a.reportedAt?new Date(a.reportedAt).getTime():0;if(s&&s<t)continue;const d=String(a.stationId??"")||"unknown",l=o.get(d)||{count:0,unresolved:0};l.count++,a.resolved||l.unresolved++,o.set(d,l)}const r=[];for(const[a,s]of o){const i=n.find(d=>String(d.id)===a);r.push({key:a,label:i?.name||(a==="unknown"?"Bez stanice":`Stanice ${a}`),icon:i?.icon||"•",count:s.count,unresolved:s.unresolved})}return r.sort((a,s)=>s.count-a.count),r.slice(0,6)}function ye(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}function or(){const e=tr(),n=e.reduce((a,s)=>a+s.count,0);if(n===0)return"";const t=e[0],o=Math.round(t.count/n*100),r=e.slice(0,4).map(a=>{const s=Math.round(a.count/n*100);return`
+      <div class="ux-issue-summary-row">
+        <span>${ye(a.icon)}</span>
+        <b>${ye(a.label)}</b>
+        <em>${a.unresolved} otevřené / ${a.count} celkem</em>
+        <i style="width:${s}%"></i>
+      </div>`}).join("");return`<details class="advanced-panel ux-issue-summary-panel">
+    <summary>
+      <span>Souhrn problémů</span>
+      <span class="advanced-panel-subtitle">${n} za ${wn} dnů · nejvíc ${ye(t.label)} (${o} %)</span>
+    </summary>
+    <div class="advanced-panel-body">
+      <div class="ux-issue-summary-card">
+        <div class="ux-issue-summary-head">
+          <strong>Kde se problémy hromadí</strong>
+          <small>Stručný přehled podle stanovišť. Detailní řešení je níže v seznamu problémů.</small>
+        </div>
+        <div class="ux-issue-summary-list">${r}</div>
+      </div>
+    </div>
+  </details>`}function rr(){const e=document.getElementById("page-issues");if(!e||e.querySelector(".ux-pareto-card"))return;const n=or();if(!n)return;const t=document.createElement("div");t.innerHTML=n.trim();const o=t.firstElementChild;if(!o)return;const r=e.querySelector(".stat-grid");r?r.insertAdjacentElement("afterend",o):e.prepend(o)}function ar(){if(H.__uxPatchedIssuesPareto||typeof H.renderIssues!="function")return;const e=H.renderIssues;H.renderIssues=function(...n){const t=e.apply(this,n);return setTimeout(rr,20),t},H.__uxPatchedIssuesPareto=!0}function sr(){ar()}const T=window;function ir(){if(T.__uxPatchedWorkspaceLabel||typeof T.renderWorkspace!="function")return;const e=T.renderWorkspace;T.renderWorkspace=function(...n){const t=e.apply(this,n);return setTimeout(()=>{const o=document.getElementById("page-workspace");if(!o)return;o.querySelectorAll("*").forEach(a=>{a.children.length===0&&a.textContent?.includes("Můj prostor")&&(a.textContent=a.textContent.replace("Můj prostor","Moje práce"))});const r=o.querySelector('[style*="font-size:16px"]');r&&r.parentElement&&!r.parentElement.classList.contains("ux-ws-head")&&(r.parentElement.classList.add("ux-ws-head"),r.textContent?.includes("📒")&&(r.textContent=r.textContent.replace("📒 Můj prostor","🗂 Moje práce").replace("📒","🗂"))),o.querySelectorAll('[style*="display:flex"][style*="gap:6px"]').forEach(a=>{a.classList.contains("ux-ws-tabs")||a.classList.add("ux-ws-tabs")}),o.querySelectorAll(".btn-ghost").forEach(a=>{a.textContent?.includes("Export")&&a.classList.add("ux-ws-export")})},10),t},T.__uxPatchedWorkspaceLabel=!0}function dr(){if(T.__uxPatchedNavWs||typeof T.buildNav!="function")return;const e=T.buildNav;T.buildNav=function(...n){const t=e.apply(this,n);return document.querySelectorAll(".navtab, .bottom-nav-btn").forEach(o=>{o.textContent?.includes("Můj prostor")&&(o.innerHTML=o.innerHTML.replace("Můj prostor","Moje práce"))}),t},T.__uxPatchedNavWs=!0}function lr(){if(T.__uxPatchedNavItemsWs||typeof T.getNavItems!="function")return;const e=T.getNavItems;T.getNavItems=function(...n){const t=e.apply(this,n);return Array.isArray(t)?t.map(o=>o&&o.id==="workspace"?{...o,label:"Moje práce",icon:"🗂"}:o):t},T.__uxPatchedNavItemsWs=!0}function cr(){ir(),dr(),lr()}const c=window,V="ux-issue-photo-input",On="ux-issue-photo-preview",Ne="ux-issue-photo-data",ur=1024,pr=.78;function mr(e){return new Promise((n,t)=>{const o=new FileReader;o.onload=r=>{const a=new Image;a.onload=()=>{const s=Math.min(1,ur/a.width),i=Math.round(a.width*s),d=Math.round(a.height*s),l=document.createElement("canvas");l.width=i,l.height=d;const v=l.getContext("2d");if(!v){t(new Error("Canvas not supported"));return}v.drawImage(a,0,0,i,d),n(l.toDataURL("image/jpeg",pr))},a.onerror=()=>t(new Error("Image load failed")),a.src=String(r.target?.result||"")},o.onerror=()=>t(new Error("File read failed")),o.readAsDataURL(e)})}function vr(){return`
+    <div class="ux-photo-section" style="margin-top:14px">
+      <div class="input-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:6px">
+        📷 Foto k problému (nepovinné)
+      </div>
+      <input type="hidden" id="${Ne}">
+      <input type="file" accept="image/*" capture="environment" id="${V}" style="display:none">
+      <div id="${On}" class="ux-photo-pad">
+        <button type="button" class="ux-photo-trigger" onclick="document.getElementById('${V}').click()">
+          <span class="ux-photo-icon">📷</span>
+          <span>Vyfotit nebo vybrat fotku</span>
+        </button>
+      </div>
+    </div>
+  `}function br(){const e=document.getElementById(V);e&&e.addEventListener("change",async()=>{const n=e.files?.[0];if(!n)return;const t=document.getElementById(On);t&&(t.innerHTML='<div class="ux-photo-loading">Zpracovávám fotku…</div>');try{const o=await mr(n),r=document.getElementById(Ne);r&&(r.value=o),t&&(t.innerHTML=`
+          <img src="${o}" alt="Foto problému" class="ux-photo-img">
+          <div class="ux-photo-actions">
+            <button type="button" class="ux-btn" onclick="document.getElementById('${V}').click()">📷 Vyměnit</button>
+            <button type="button" class="ux-btn danger" id="ux-photo-remove">✕ Odebrat</button>
+          </div>
+        `,document.getElementById("ux-photo-remove")?.addEventListener("click",()=>{r&&(r.value=""),e.value="",t.innerHTML=`
+            <button type="button" class="ux-photo-trigger" onclick="document.getElementById('${V}').click()">
+              <span class="ux-photo-icon">📷</span>
+              <span>Vyfotit nebo vybrat fotku</span>
+            </button>
+          `}))}catch(o){t&&(t.innerHTML=`<div class="ux-photo-error">Fotku se nepodařilo zpracovat: ${o.message}</div>`)}})}function gr(){if(typeof c.reportIssueModal=="function"&&!c.__uxPatchedReportIssue){const e=c.reportIssueModal;c.reportIssueModal=function(...n){const t=e.apply(this,n);return setTimeout(()=>{const o=document.getElementById("modal-body");!o||document.getElementById(V)||(o.insertAdjacentHTML("beforeend",vr()),br())},0),t},c.__uxPatchedReportIssue=!0}if(typeof c.submitIssue=="function"&&!c.__uxPatchedSubmitIssue){const e=c.submitIssue;c.submitIssue=function(...n){const o=document.getElementById(Ne)?.value||"",r=e.apply(this,n);if(o)try{const a=c.__ezopBridge?.issues?.();a&&a[0]&&(a[0].photo=o,typeof c.saveState=="function"&&c.saveState())}catch{}return r},c.__uxPatchedSubmitIssue=!0}if(typeof c.openIssueDetail=="function"&&!c.__uxPatchedOpenIssue){const e=c.openIssueDetail;c.openIssueDetail=function(n,...t){const o=e.call(this,n,...t);return setTimeout(()=>{try{const a=(c.__ezopBridge?.issues?.()||[]).find(d=>d.id===n);if(!a?.photo)return;const s=document.getElementById("modal-body");if(!s||s.querySelector(".ux-issue-photo"))return;const i=document.createElement("div");i.className="ux-issue-photo",i.innerHTML=`
+            <div class="input-label" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin:14px 0 6px">📷 Foto</div>
+            <img src="${a.photo}" alt="Foto problému" class="ux-photo-img" style="cursor:zoom-in" id="ux-issue-photo-img">
+          `,s.appendChild(i),document.getElementById("ux-issue-photo-img")?.addEventListener("click",()=>yr(a.photo))}catch{}},0),o},c.__uxPatchedOpenIssue=!0}}function yr(e){const n=document.createElement("div");n.className="ux-photo-lightbox",n.innerHTML=`<img src="${e}" alt="Foto"><button class="ux-photo-lightbox-close" aria-label="Zavřít">✕</button>`,document.body.appendChild(n);const t=()=>n.remove();n.addEventListener("click",r=>{r.target===n&&t()}),n.querySelector(".ux-photo-lightbox-close")?.addEventListener("click",t);const o=r=>{r.key==="Escape"&&(t(),document.removeEventListener("keydown",o))};document.addEventListener("keydown",o)}function fr(){if(c.__uxPatchedTopbarUser||typeof c.refreshTopbarUser!="function")return;const e=c.refreshTopbarUser;c.refreshTopbarUser=function(...n){e.apply(this,n);const t=document.getElementById("tbar-name"),o=document.getElementById("tbar-role");if(!t||!o)return;const r=(t.textContent||"").toLowerCase().trim(),a=(o.textContent||"").toLowerCase().trim(),s=r.includes(a)||a.includes(r)||r===a;o.style.display=s?"none":""},c.__uxPatchedTopbarUser=!0}const kr=[{id:"all",label:"Vše",icon:"◯"},{id:"urgent",label:"Urgentní",icon:"⚡"},{id:"today",label:"Dnes",icon:"📅"},{id:"week",label:"Tento týden",icon:"🗓"},{id:"blocked",label:"Blokované",icon:"⛔"},{id:"issue",label:"S problémem",icon:"⚠️"},{id:"mine",label:"Moje",icon:"👤"}];let ae="all";function zn(e,n,t){if(!e)return!1;switch(n){case"all":return!0;case"urgent":return e.priority==="urgent"||e.priority==="high";case"today":{if(!e.due)return!1;const o=new Date(e.due),r=new Date;return o.toDateString()===r.toDateString()}case"week":{if(!e.due)return!1;const o=new Date(e.due),r=new Date,a=(o.getTime()-r.getTime())/(1e3*60*60*24);return a>=0&&a<=7}case"blocked":return!!e.blocked;case"issue":return(e.stations||[]).some(o=>o.status==="issue");case"mine":{if(!t)return!1;const o=(t.stationIds||[]).map(a=>Number(a)),r=String(t.login||"").toLowerCase();return(e.stations||[]).some(a=>o.includes(Number(a.stId))||a.workerLogin&&String(a.workerLogin).toLowerCase()===r)}}}function hr(e){try{const n=c.__ezopBridge?.orders?.()||[],t=c.__ezopBridge?.user?.()||null;return n.filter(o=>zn(o,e,t)).length}catch{return 0}}function Sr(e){e.innerHTML=kr.map(n=>{const t=hr(n.id);return`<button class="ux-chip ${ae===n.id?"active":""}" data-qf="${n.id}">
+      <span>${n.icon}</span>${n.label}
+      <em>${t}</em>
+    </button>`}).join(""),e.querySelectorAll("[data-qf]").forEach(n=>{n.addEventListener("click",()=>{ae=n.dataset.qf,xr(),e.querySelectorAll("[data-qf]").forEach(t=>t.classList.toggle("active",t===n))})})}function xr(){try{const e=document.getElementById("ord-list");if(!e)return;const n=c.__ezopBridge?.orders?.()||[],t=c.__ezopBridge?.user?.()||null;if(ae==="all"){typeof c.renderOrders=="function"&&((c.__uxRenderOrdersOriginal||c.renderOrders)(),En());return}const r=n.filter(a=>zn(a,ae,t)).map(a=>$r(a)).join("");e.innerHTML=r||'<div class="card" style="text-align:center;color:var(--text2);padding:30px">Nic neodpovídá tomuto filtru.</div>'}catch{}}function $r(e){if(typeof c.ordersListHtml=="function")try{return c.ordersListHtml([e])}catch{}const n=(e.stations||[]).filter(r=>r.status==="completed").length,t=(e.stations||[]).length||1,o=Math.round(n/t*100);return`<div class="card" style="padding:14px;margin-bottom:8px;cursor:pointer" onclick="openOrder('${e.id}')">
+    <strong>${e.number}</strong> — ${e.name||""}
+    <div style="font-size:12px;color:var(--text2);margin-top:4px">${e.customer||""} · ${o}%</div>
+  </div>`}function En(){const e=document.getElementById("page-orders");if(!e)return;const n=c.__ezopBridge?.user?.()||null,t=c.__ezopBridge?.settings?.()||{};if(n?.role==="operator"&&t.operatorSimpleMode!==!1){e.querySelector("#ux-order-filters")?.remove();return}const o=e.querySelector(".app-filter-card");if(!o)return;let r=e.querySelector("#ux-order-filters");r||(r=document.createElement("div"),r.id="ux-order-filters",r.className="ux-quick-filters",o.insertAdjacentElement("afterend",r)),Sr(r)}function Ir(){if(typeof c.renderOrders!="function"||c.__uxPatchedRenderOrders)return;const e=c.renderOrders;c.__uxRenderOrdersOriginal=e,c.renderOrders=function(...n){const t=e.apply(this,n);return setTimeout(En,0),t},c.__uxPatchedRenderOrders=!0}function wr(){const e=document.getElementById("page-orders");if(!e)return;const n=e.querySelector(".app-order-detail, .app-page-hero");if(!n||e.querySelector("#ux-print-order"))return;const t=document.createElement("button");t.id="ux-print-order",t.className="btn btn-ghost btn-sm",t.textContent="🖨 Tisk",t.style.marginLeft="8px",t.addEventListener("click",()=>window.print()),(e.querySelector(".app-list-toolbar")||n).appendChild(t)}function Or(){if(typeof c.openOrder!="function"||c.__uxPatchedOpenOrder)return;const e=c.openOrder;c.openOrder=function(...n){const t=e.apply(this,n);return setTimeout(()=>{wr(),Tn()},0),t},c.__uxPatchedOpenOrder=!0}const fe=6;function q(e){return String(e??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function We(e){const n=e.icon||"",t=String(e.title||"").toLowerCase();return n==="🧾"?"audit":n==="🧩"||n==="📝"||t.startsWith("připravenost")||t.startsWith("poznámka")?"note":t.includes("problém")?"issue":"prod"}function we(e){if(!e)return"no-date";const n=new Date(e);if(isNaN(n.getTime()))return"no-date";const t=n.getFullYear(),o=String(n.getMonth()+1).padStart(2,"0"),r=String(n.getDate()).padStart(2,"0");return`${t}-${o}-${r}`}function zr(e){if(e==="no-date")return"<b>Bez data</b>";const n=new Date,t=we(n.toISOString()),o=new Date(n.getTime()-864e5),r=we(o.toISOString()),s=new Date(e+"T00:00:00").toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"long",year:"numeric"});return e===t?`<b>Dnes</b> · ${s}`:e===r?`<b>Včera</b> · ${s}`:s}function Er(e){if(!e)return"—";const n=new Date(e);return isNaN(n.getTime())?"—":n.toLocaleTimeString("cs-CZ",{hour:"2-digit",minute:"2-digit"})}const Tr={all:{label:"Vše",icon:"◯"},prod:{label:"Výroba",icon:"⚙️"},issue:{label:"Problémy",icon:"⚠️"},note:{label:"Poznámky",icon:"📝"},audit:{label:"Audit",icon:"🧾"}};function Ar(e){if(!e||typeof c.orderTimelineItems!="function")return"";const n=c.orderTimelineItems(e)||[],t=n.length;if(t===0)return`<div class="card ux-tl-card">
+      <div class="ux-tl-head"><div class="card-title">🕒 Historie zakázky</div></div>
+      <div class="ux-tl-empty">Zatím není z čeho složit historii zakázky.</div>
+    </div>`;const o={all:t,prod:0,issue:0,note:0,audit:0};n.forEach(u=>{o[We(u)]++});const r=[],a={};let s=0;n.forEach(u=>{const m=We(u),g=u.tone||"info",b=we(u.at);b in a||(a[b]=r.length,r.push({key:b,rows:[]}));const h=s>=fe?"ux-tl-hidden":"";s++;const z=Er(u.at),p=u.actor?`<span class="ux-tl-who">👤 ${q(u.actor)}</span>`:"",S=u.role?`<span class="ux-tl-role">${q(u.role)}</span>`:"";r[a[b]].rows.push(`
+      <div class="ux-tl-row tone-${g} ${h}" data-cat="${m}">
+        <div class="ux-tl-time">${z}</div>
+        <div class="ux-tl-marker">${u.icon||"•"}</div>
+        <div class="ux-tl-content">
+          <div class="ux-tl-title">${q(u.title||"")}</div>
+          <div class="ux-tl-body-text">${q(u.body||"")}</div>
+          <div class="ux-tl-meta">${p}${S}</div>
+        </div>
+      </div>
+    `)});const i=r.map(u=>`
+    <div class="ux-tl-day">
+      <div class="ux-tl-day-label">${zr(u.key)}</div>
+      ${u.rows.join("")}
+    </div>
+  `).join(""),d=["all","prod","issue","note","audit"].map(u=>{const m=Tr[u];return`<button class="ux-tl-filter ${u==="all"?"active":""}" data-tl-cat="${u}">
+      <span>${m.icon}</span>${m.label}<em>${o[u]}</em>
+    </button>`}).join(""),l=typeof c.can=="function"&&c.can("app_settings")?`<button class="btn btn-ghost btn-sm" onclick="switchAdminTab('audit');navigateTo('admin')">Otevřít audit</button>`:"",v=t>fe?`<button class="ux-tl-more" data-tl-more="0">▼ Zobrazit starší (${t-fe})</button>`:"";return`<div class="card ux-tl-card">
+    <div class="ux-tl-head">
+      <div>
+        <div class="card-title">🕒 Historie zakázky</div>
+        <div class="app-muted">${t} událostí · od nejnovější</div>
+      </div>
+      ${l}
+    </div>
+    <div class="ux-tl-filters">${d}</div>
+    <div class="ux-tl-body" data-active="all">${i}</div>
+    ${v}
+  </div>`}function Tn(){const e=document.querySelector(".ux-tl-card");if(!e||e.dataset.uxBound==="1")return;e.dataset.uxBound="1";const n=e.querySelector(".ux-tl-body");e.querySelectorAll("[data-tl-cat]").forEach(o=>{o.addEventListener("click",()=>{const r=o.dataset.tlCat||"all";n&&(n.dataset.active=r),e.querySelectorAll("[data-tl-cat]").forEach(a=>a.classList.toggle("active",a===o))})});const t=e.querySelector("[data-tl-more]");t&&t.addEventListener("click",()=>{if(t.dataset.tlMore==="1"){e.classList.remove("ux-tl-show-all"),t.dataset.tlMore="0";const r=e.querySelectorAll(".ux-tl-hidden").length;t.textContent=`▼ Zobrazit starší (${r})`,e.scrollIntoView({behavior:"smooth",block:"nearest"})}else e.classList.add("ux-tl-show-all"),t.dataset.tlMore="1",t.textContent="▲ Sbalit starší"})}function Pr(){c.__uxPatchedTimeline||typeof c.orderTimelineCardHtml!="function"||typeof c.orderTimelineItems!="function"||(c.orderTimelineCardHtml=function(e){if((c.__ezopBridge?.user?.()?.role||"").toLowerCase()==="operator"||c.APP_SETTINGS?.showOrderTimeline===!1)return"";try{return _r(e)}catch{return""}},c.__uxPatchedTimeline=!0,c.uxOpenOrderHistory=function(e){try{const t=(c.__ezopBridge?.orders?.()||[]).find(r=>r.id===e);if(!t||typeof c.openModal!="function")return;const o=Ar(t);c.openModal("🕒 Historie zakázky",o,[{cls:"btn-primary",action:"closeModal()",label:"Zavřít"}]),document.getElementById("modal-box")?.classList.add("ux-tl-modal"),setTimeout(()=>{Tn();const r=document.getElementById("modal-overlay");if(r&&!r.__uxTlCleanup){r.__uxTlCleanup=!0;const a=()=>{r.classList.contains("visible")||document.getElementById("modal-box")?.classList.remove("ux-tl-modal")};new MutationObserver(a).observe(r,{attributes:!0,attributeFilter:["class"]})}},30)}catch{}})}function _r(e){const n=(typeof c.orderTimelineItems=="function"?c.orderTimelineItems(e):[])||[],t=n.length,o=n[0]?.at?new Date(n[0].at):null,r=o?`Naposledy ${o.toLocaleDateString("cs-CZ",{day:"numeric",month:"numeric"})} ${o.toLocaleTimeString("cs-CZ",{hour:"2-digit",minute:"2-digit"})}`:"Zatím žádné události",a=t===0?"bez záznamů":`${t} ${t===1?"událost":t<5?"události":"událostí"}`;return`<div class="card ux-tl-trigger" onclick="uxOpenOrderHistory('${q(e.id)}')" role="button" tabindex="0">
+    <div class="ux-tl-trigger-icon">🕒</div>
+    <div class="ux-tl-trigger-text">
+      <b>Historie zakázky</b>
+      <span>${a} · ${q(r)}</span>
+    </div>
+    <div class="ux-tl-trigger-arrow">›</div>
+  </div>`}function Nr(){const e=document.getElementById("page-dashboard");e&&e.querySelectorAll(".card").forEach(n=>{n.dataset.uxHiddenWs!=="1"&&n.textContent?.includes("Můj prostor")&&(n.dataset.uxHiddenWs="1",n.style.display="none")})}function Rr(){if(c.__uxPatchedHideWsWidget||typeof c.renderDashboard!="function")return;const e=c.renderDashboard;c.renderDashboard=function(...n){const t=e.apply(this,n);return setTimeout(Nr,5),t},c.__uxPatchedHideWsWidget=!0}function Lr(){let e=0;const n=()=>{e++,gr(),Ir(),Or(),Pr(),Rr(),fr(),to(),bo(),Vt(),To(),qo(),Xo(),sr(),cr(),!(c.__uxPatchedReportIssue&&c.__uxPatchedSubmitIssue&&c.__uxPatchedOpenIssue&&c.__uxPatchedRenderOrders&&c.__uxPatchedOpenOrder&&c.__uxPatchedTimeline&&c.__uxPatchedKanbanNav&&c.__uxPatchedIssueCard&&c.__uxPatchedRenderIssues&&c.__uxPatchedIssueDetailAssign&&c.__uxPatchedOrderEstimate&&c.__uxPatchedRenderOrdersEst&&c.__uxPatchedDashboardEst&&c.__uxPatchedDashboardKpi&&c.__uxPatchedTopbarUser&&c.__uxPatchedHideWsWidget&&c.__uxAlertInstalled&&c.__uxPatchedDashboardBn&&c.__uxPatchedIssuesPareto&&c.__uxPatchedWorkspaceLabel&&c.__uxPatchedNavItemsWs||e>40)&&setTimeout(n,100)};n()}const An="ezop4_ux_v1",Qe="ezop4_ux_last_version",Pn="ezop4_ux_recap_v1",Ye="ezop4_ux_feedback_v1",ke={themeMode:"auto",bigMode:!1,quietMode:!1,feedbackCount:0},O=window;function G(){try{const e=localStorage.getItem(An);if(!e)return{...ke};const n=JSON.parse(e);return{...ke,...n}}catch{return{...ke}}}function Oe(e){const t={...G(),...e};try{localStorage.setItem(An,JSON.stringify(t))}catch{}return t}function ue(){return O.__ezopBridge||null}function A(e,n){try{const t=O.EZOP4_AUDIT,o=M();t&&typeof t.recordAudit=="function"&&t.recordAudit({user:o?{id:o.id||"",name:o.name||o.login||"",role:o.role||"operator"}:null,action:e,entityType:"ux",entityId:Re()||"app",summary:n?JSON.stringify(n).slice(0,200):e})}catch{}}function M(){const e=ue();return e&&typeof e.user=="function"&&e.user()||null}function Re(){const e=ue();return e&&typeof e.page=="function"&&e.page()||""}function B(e){if(typeof O.showToast=="function")try{O.showToast(e,{skipSave:!0});return}catch{}Un(e,null)}function Mr(){const e=new Date().getHours();return e>=18||e<6}function se(e=G()){const n=document.documentElement,t=e.themeMode==="night"||e.themeMode==="auto"&&Mr();n.classList.toggle("ux-night",t),n.classList.toggle("ux-big",e.bigMode),n.classList.toggle("ux-quiet",e.quietMode)}let Je;function Dr(){Je||(Je=window.setInterval(()=>{const e=G();e.themeMode==="auto"&&se(e)},6e4))}function Z(e){N();const n=document.createElement("div");n.className="ux-panel-overlay show",n.id="ux-panel-overlay",n.innerHTML=`
+    <div class="ux-panel" role="dialog" aria-modal="true">
+      <div class="ux-panel-head">
+        <h2>${e.title}${e.subtitle?`<small>${e.subtitle}</small>`:""}</h2>
+        <button class="ux-panel-close" aria-label="Zavřít" data-ux-close>✕</button>
+      </div>
+      <div class="ux-panel-body">${e.body}</div>
+      ${e.foot?`<div class="ux-panel-foot">${e.foot}</div>`:""}
+    </div>
+  `,document.body.appendChild(n),n.addEventListener("click",t=>{t.target===n&&N();const o=t.target;o&&o.hasAttribute("data-ux-close")&&N()}),e.onMount&&e.onMount(n)}function N(){document.getElementById("ux-panel-overlay")?.remove()}const Cr=["Ne","Po","Út","St","Čt","Pá","So"],Le=[{id:"one",label:"Jedna směna (6–14, Po–Pá)",profile:{startHour:6,endHour:14,weekdays:[1,2,3,4,5]}},{id:"two",label:"Dvě směny (6–22, Po–Pá)",profile:{startHour:6,endHour:22,weekdays:[1,2,3,4,5]}},{id:"three",label:"Třísměnný provoz (0–24, Po–Pá)",profile:{startHour:0,endHour:24,weekdays:[1,2,3,4,5]}},{id:"cont",label:"Nepřetržitý provoz (24/7)",profile:{startHour:0,endHour:24,weekdays:[0,1,2,3,4,5,6]}}];function Br(e){const n=(t,o)=>t.startHour===o.startHour&&t.endHour===o.endHour&&t.weekdays.length===o.weekdays.length&&t.weekdays.every(r=>o.weekdays.includes(r));for(const t of Le)if(n(e,t.profile))return t.id;return""}function _n(){const e=mn(),n=Br(e),t=Le.map(r=>`<option value="${r.id}" ${r.id===n?"selected":""}>${r.label}</option>`).join("")+`<option value="custom" ${n?"":"selected"}>Vlastní…</option>`,o=[1,2,3,4,5,6,0].map(r=>`<button type="button" class="ux-chip ${e.weekdays.includes(r)?"active":""}" data-ux-wd="${r}">${Cr[r]}</button>`).join("");return`
+    <select id="ux-shift-preset" class="ux-select">${t}</select>
+    <div id="ux-shift-custom" class="ux-shift-custom" style="margin-top:10px;${n?"display:none":""}">
+      <div class="ux-toggle-row" style="gap:8px">
+        <label style="display:flex;flex-direction:column;font-size:11px;color:var(--text2)">
+          Od (h)
+          <input type="number" id="ux-shift-start" min="0" max="23" value="${e.startHour}" class="ux-input" style="width:70px">
+        </label>
+        <label style="display:flex;flex-direction:column;font-size:11px;color:var(--text2)">
+          Do (h)
+          <input type="number" id="ux-shift-end" min="1" max="24" value="${e.endHour}" class="ux-input" style="width:70px">
+        </label>
+      </div>
+      <div class="ux-quick-filters" id="ux-shift-weekdays" style="margin-top:8px">${o}</div>
+    </div>
+    <p style="color:var(--text3);font-size:11px;margin-top:8px;">
+      Predikované termíny dokončení se spočítají s ohledem na zvolenou pracovní dobu (přeskakují noci a víkendy).
+    </p>
+  `}function Hr(e){const n=e.querySelector("#ux-shift-start"),t=e.querySelector("#ux-shift-end"),o=e.querySelectorAll("#ux-shift-weekdays .ux-chip.active"),r=Math.max(0,Math.min(23,Number(n?.value)||6)),a=Math.max(1,Math.min(24,Number(t?.value)||22)),s=a>r?a:r+1,i=Array.from(o).map(d=>Number(d.dataset.uxWd)).filter(d=>!isNaN(d));return{startHour:r,endHour:s,weekdays:i.length?i:[1,2,3,4,5]}}function Nn(e){const n=e.querySelector("#ux-shift-preset"),t=e.querySelector("#ux-shift-custom");if(!n||!t)return;const o=()=>{const r=Hr(e);He(r),A("ux:shift-profile",{startHour:r.startHour,endHour:r.endHour})};n.addEventListener("change",()=>{const r=Le.find(a=>a.id===n.value);if(r){He(r.profile);const a=n.closest(".ux-section");a&&(a.innerHTML="<h3>Pracovní doba (pro odhad termínů)</h3>"+_n(),Nn(a)),A("ux:shift-profile",{preset:r.id})}else t.style.display=""}),e.querySelectorAll("#ux-shift-weekdays .ux-chip").forEach(r=>{r.addEventListener("click",()=>{r.classList.toggle("active"),o()})}),e.querySelectorAll("#ux-shift-start, #ux-shift-end").forEach(r=>{r.addEventListener("change",o)})}function Ur(){const e=G();Z({title:"Vzhled a komfort",subtitle:"Nastavení pro tvé zařízení — neukládá se do účtu",body:`
+      <div class="ux-section">
+        <h3>Režim zobrazení</h3>
+        <div class="ux-segmented" id="ux-theme-seg">
+          ${(t=>t.map(o=>`<button data-ux-theme="${o.id}" class="${e.themeMode===o.id?"active":""}">${o.label}</button>`).join(""))([{id:"auto",label:"Auto (podle hodiny)"},{id:"normal",label:"Standardní"},{id:"night",label:"Noční"}])}
+        </div>
+        <p style="color:var(--text3);font-size:11px;margin-top:8px;">
+          Auto: 18:00–06:00 noční režim, jinak standardní. Vhodné pro noční směny v hale.
+        </p>
+      </div>
+      <div class="ux-section">
+        <h3>Velký režim</h3>
+        <div class="ux-toggle-row">
+          <span>Velká písmena a tlačítka<small>Pro práci v rukavicích nebo ve špatném světle</small></span>
+          <div class="ux-switch ${e.bigMode?"on":""}" data-ux-toggle="bigMode"></div>
+        </div>
+      </div>
+      <div class="ux-section">
+        <h3>Tichý režim</h3>
+        <div class="ux-toggle-row">
+          <span>Vypnout animace a glow<small>Pro starší zařízení a soustředěnou práci</small></span>
+          <div class="ux-switch ${e.quietMode?"on":""}" data-ux-toggle="quietMode"></div>
+        </div>
+      </div>
+      <div class="ux-section">
+        <h3>Pracovní doba (pro odhad termínů)</h3>
+        ${_n()}
+      </div>
+      ${M()?.role==="admin"?`
+      <div class="ux-section">
+        <h3>Historie zakázky (admin · pro všechny uživatele)</h3>
+        <div class="ux-toggle-row">
+          <span>Zobrazit timeline zakázky<small>Pro operátora je vždy skryto. Tento přepínač skryje historii i pro mistry, TPV a vedení. Nastavení se synchronizuje přes cloud.</small></span>
+          <div class="ux-switch ${O.APP_SETTINGS?.showOrderTimeline===!1?"":"on"}" id="ux-toggle-timeline"></div>
+        </div>
+      </div>`:""}
+      <div class="ux-section">
+        <h3>Tisk</h3>
+        <button class="ux-btn" id="ux-print-btn">🖨 Vytisknout aktuální stránku</button>
+      </div>
+    `,foot:'<button class="ux-btn primary" data-ux-close>Hotovo</button>',onMount:t=>{Nn(t);const o=t.querySelector("#ux-toggle-timeline");o?.addEventListener("click",()=>{O.APP_SETTINGS||(O.APP_SETTINGS={});const r=O.APP_SETTINGS.showOrderTimeline===!1;O.APP_SETTINGS.showOrderTimeline=r,o.classList.toggle("on",r);try{typeof O.saveState=="function"&&O.saveState()}catch{}A("ux:toggle-timeline",{value:r}),B(r?"Historie zakázky zapnuta pro všechny":"Historie zakázky skryta pro všechny")}),t.querySelectorAll("#ux-theme-seg button").forEach(r=>{r.addEventListener("click",()=>{const a=r.dataset.uxTheme,s=Oe({themeMode:a});se(s),t.querySelectorAll("#ux-theme-seg button").forEach(i=>i.classList.remove("active")),r.classList.add("active"),A("ux:theme",{mode:a})})}),t.querySelectorAll("[data-ux-toggle]").forEach(r=>{r.addEventListener("click",()=>{const a=r.dataset.uxToggle,i=!G()[a],d=Oe({[a]:i});se(d),r.classList.toggle("on",i),A("ux:toggle",{key:a,value:i})})}),t.querySelector("#ux-print-btn")?.addEventListener("click",()=>window.print())}})}function Rn(){const e=new Date().getHours();return e<10?"Dobré ráno":e<14?"Dobrý den":e<18?"Dobré odpoledne":"Dobrý večer"}function Ln(){const e=new Date().getHours();return e>=6&&e<14?"Ranní směna":e>=14&&e<22?"Odpolední směna":"Noční směna"}function Mn(){const e=ue(),n=M(),t={queueCount:0,activeOrders:0,blockedOrders:0,issuesMine:0,stations:[],todayQty:0};if(!e||!n)return t;const o=(n.stationIds||[]).map(d=>Number(d)).filter(d=>!isNaN(d)),r=e.stations()||[],a=e.orders()||[],s=e.issues()||[],i=String(n.login||"").toLowerCase();t.stations=r.filter(d=>o.includes(Number(d?.id))).map(d=>`${d?.icon||""} ${d?.name||d?.id||""}`.trim()).filter(Boolean);for(const d of a){const l=d?.stations||[];let v=!1,u=!1;for(const m of l){const g=Number(m?.stId);(o.includes(g)||m?.workerLogin&&i&&String(m.workerLogin).toLowerCase()===i)&&(v=!0,(m.status==="in_progress"||m.status==="progress")&&(u=!0),t.todayQty+=Number(m?.qtyOk||0))}v&&(t.queueCount++,u&&t.activeOrders++,d.blocked&&t.blockedOrders++)}return t.issuesMine=s.filter(d=>!d.resolved&&(d.assignedToLogin&&i&&String(d.assignedToLogin).toLowerCase()===i||d.reportedBy&&i&&String(d.reportedBy).toLowerCase()===i||d.createdByLogin&&i&&String(d.createdByLogin).toLowerCase()===i)).length,t}function jr(){const e=M();if(!e){B("Nejprve se přihlas");return}const n=Mn(),t=n.stations.length?n.stations.join(", "):"zatím nepřiřazeno";Z({title:"Můj den",subtitle:`${Ln()} · ${new Date().toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"long"})}`,body:`
+      <div class="ux-greet">${Rn()}, <em>${e.name||e.login||""}</em>.</div>
+      <div class="ux-sub">Tvoje stanoviště: <b style="color:var(--text)">${t}</b></div>
+
+      <div class="ux-tiles">
+        <div class="ux-tile"><b>${n.queueCount}</b><span>Ve frontě</span><em>Zakázky v tvém stanovišti</em></div>
+        <div class="ux-tile green"><b>${n.todayQty}</b><span>OK dnes</span><em>Součet ze tvých stanovišť</em></div>
+        <div class="ux-tile ${n.activeOrders>0?"amber":""}"><b>${n.activeOrders}</b><span>Rozpracované</span></div>
+        <div class="ux-tile ${n.blockedOrders>0?"red":""}"><b>${n.blockedOrders}</b><span>Blokované</span></div>
+      </div>
+
+      <div class="ux-section">
+        <h3>Otevřené problémy</h3>
+        ${n.issuesMine>0?`<p style="color:var(--text2);font-size:13px;">Máš ${n.issuesMine} otevřených problémů.</p>`:'<p style="color:var(--text2);font-size:13px;">Nemáš otevřené problémy — paráda.</p>'}
+      </div>
+
+      <div class="ux-actions">
+        <button class="ux-btn primary" data-go="workspace">Otevřít moji frontu</button>
+        <button class="ux-btn" data-go="issues">Problémy</button>
+        <button class="ux-btn teal" id="ux-recap-from-myday">Předat směnu</button>
+      </div>
+    `,foot:'<button class="ux-btn" data-ux-close>Zavřít</button>',onMount:o=>{o.querySelectorAll("[data-go]").forEach(r=>{r.addEventListener("click",()=>{N(),typeof O.navigateTo=="function"&&O.navigateTo(r.dataset.go)})}),o.querySelector("#ux-recap-from-myday")?.addEventListener("click",()=>{N(),Bn()})}}),A("ux:my-day-opened")}function Dn(){const e=ue(),n={activeOrders:0,blockedOrders:0,openIssues:0,operators:0,todayOk:0,todayScrap:0,todayRepair:0,bottleneck:""};if(!e)return n;const t=e.orders()||[],o=e.issues()||[],r=e.stations()||[],a=new Set;for(const l of t){const v=l?.stations||[];let u=!1;for(const m of v)n.todayOk+=Number(m?.qtyOk||0),n.todayRepair+=Number(m?.qtyRework||m?.qtyRepair||0),n.todayScrap+=Number(m?.qtyScrap||0),(m?.status==="in_progress"||m?.status==="progress")&&(u=!0),m?.status!=="completed"&&m?.status,m?.workerLogin&&a.add(String(m.workerLogin).toLowerCase());v.length,u&&n.activeOrders++,l?.blocked&&n.blockedOrders++}n.openIssues=o.filter(l=>!l.resolved).length,n.operators=a.size;const s=new Map;for(const l of t)if(l)for(const v of l.stations||[]){const u=Number(v?.stId);u&&(v?.status==="completed"||v?.status==="skipped"||s.set(u,(s.get(u)||0)+1))}let i=0,d=0;for(const[l,v]of s)v>d&&(i=l,d=v);if(i){const l=r.find(v=>Number(v?.id)===i);n.bottleneck=`${l?.icon?l.icon+" ":""}${l?.name||i} (${d} zakázek)`}return n}function qr(){const e=M(),n=Dn(),t=new Date().toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"long"}),o=[];n.blockedOrders>0&&o.push(`<li>${n.blockedOrders} blokovaných zakázek<small>vyžaduje rozhodnutí</small></li>`),n.openIssues>2&&o.push(`<li>${n.openIssues} otevřených problémů<small>nad běžnou hladinou</small></li>`),n.bottleneck&&o.push(`<li>Nejvíc zatížené: ${n.bottleneck}<small>kandidát na bottleneck</small></li>`),n.todayScrap>n.todayOk*.05&&n.todayOk>0&&o.push(`<li>Zmetkovitost ${(n.todayScrap/n.todayOk*100).toFixed(1)} %<small>vyšší než 5 %</small></li>`),Z({title:"Ranní briefing",subtitle:t,body:`
+      <div class="ux-greet">${Rn()}${e?.name?`, <em>${e.name}</em>`:""}.</div>
+      <div class="ux-sub">Stav výroby právě teď</div>
+
+      <div class="ux-tiles">
+        <div class="ux-tile"><b>${n.activeOrders}</b><span>Aktivní zakázky</span></div>
+        <div class="ux-tile ${n.blockedOrders>0?"red":""}"><b>${n.blockedOrders}</b><span>Blokované</span></div>
+        <div class="ux-tile green"><b>${n.todayOk}</b><span>OK kusů</span></div>
+        <div class="ux-tile ${n.todayScrap>0?"red":""}"><b>${n.todayScrap}</b><span>Zmetků</span></div>
+        <div class="ux-tile amber"><b>${n.todayRepair}</b><span>K opravě</span></div>
+        <div class="ux-tile"><b>${n.operators}</b><span>Lidí na stanovištích</span></div>
+      </div>
+
+      <div class="ux-section">
+        <h3>Co tě dnes může bolet</h3>
+        ${o.length?`<ul class="ux-list">${o.join("")}</ul>`:'<div class="ux-list empty">Žádná rizika nad běžnou hladinou — krásný start dne.</div>'}
+      </div>
+
+      <div class="ux-actions">
+        <button class="ux-btn primary" data-go="dashboard">Přehled</button>
+        <button class="ux-btn" data-go="kpi">KPI detail</button>
+        <button class="ux-btn" data-go="issues">Problémy</button>
+      </div>
+    `,foot:`
+      <button class="ux-btn" id="ux-briefing-print">🖨 Vytisknout</button>
+      <button class="ux-btn primary" data-ux-close>Hotovo</button>
+    `,onMount:r=>{r.querySelectorAll("[data-go]").forEach(a=>{a.addEventListener("click",()=>{N(),typeof O.navigateTo=="function"&&O.navigateTo(a.dataset.go)})}),r.querySelector("#ux-briefing-print")?.addEventListener("click",()=>window.print())}}),A("ux:briefing-opened")}function Cn(){try{const e=localStorage.getItem(Pn);return e?JSON.parse(e):[]}catch{return[]}}function Fr(e){const n=Cn();for(n.unshift(e);n.length>50;)n.pop();try{localStorage.setItem(Pn,JSON.stringify(n))}catch{}}function Bn(){const e=M(),n=e?.role==="operator"?Mn():null,t=n?null:Dn(),o=Cn().slice(0,3),r=n?n.todayQty:t?.todayOk||0,a=t?.todayScrap||0;Z({title:"Předání směny",subtitle:`${Ln()} · ${new Date().toLocaleString("cs-CZ",{dateStyle:"short",timeStyle:"short"})}`,body:`
+      <div class="ux-greet">Souhrn směny</div>
+      <div class="ux-sub">${e?.name||e?.login||"Operátor"} · ${n?n.stations.join(", ")||"—":"Vedení"}</div>
+
+      <div class="ux-tiles">
+        <div class="ux-tile green"><b>${r}</b><span>OK</span></div>
+        ${t?`<div class="ux-tile red"><b>${a}</b><span>Zmetků</span></div>`:""}
+        ${n?`<div class="ux-tile"><b>${n.activeOrders}</b><span>Rozpracované</span></div>`:""}
+        <div class="ux-tile"><b>${n?n.issuesMine:t?.openIssues||0}</b><span>Otevřené problémy</span></div>
+      </div>
+
+      <div class="ux-section">
+        <h3>Jak to dnes šlo?</h3>
+        <div class="ux-rate" id="ux-rate">
+          <button data-mood="😀" title="Skvělé">😀</button>
+          <button data-mood="🙂" title="Dobré">🙂</button>
+          <button data-mood="😐" title="Šlo to">😐</button>
+          <button data-mood="🙁" title="Těžké">🙁</button>
+        </div>
+      </div>
+
+      <div class="ux-section">
+        <h3>Poznámka pro další směnu</h3>
+        <div class="ux-field">
+          <textarea id="ux-recap-note" placeholder="Co se podařilo, co předáváš, co je třeba dořešit…"></textarea>
+        </div>
+      </div>
+
+      ${o.length?`
+      <div class="ux-section">
+        <h3>Poslední předání</h3>
+        <ul class="ux-list">
+          ${o.map(s=>`<li>
+            <div>
+              <b>${s.mood} ${s.userName||s.userLogin||""}</b><br>
+              <small>${new Date(s.at).toLocaleString("cs-CZ",{dateStyle:"short",timeStyle:"short"})} · OK ${s.todayOk}</small>
+            </div>
+            <small style="max-width:55%;text-align:right;">${(s.note||"").slice(0,60)}${(s.note||"").length>60?"…":""}</small>
+          </li>`).join("")}
+        </ul>
+      </div>`:""}
+    `,foot:`
+      <button class="ux-btn" data-ux-close>Zrušit</button>
+      <button class="ux-btn primary" id="ux-recap-save">Uložit a předat</button>
+    `,onMount:s=>{let i="🙂";s.querySelectorAll("#ux-rate button").forEach(d=>{d.addEventListener("click",()=>{s.querySelectorAll("#ux-rate button").forEach(l=>l.classList.remove("active")),d.classList.add("active"),i=d.dataset.mood})}),s.querySelector('#ux-rate button[data-mood="🙂"]')?.classList.add("active"),s.querySelector("#ux-recap-save")?.addEventListener("click",()=>{const d=(s.querySelector("#ux-recap-note")?.value||"").trim(),l={at:new Date().toISOString(),userLogin:e?.login,userName:e?.name,mood:i,note:d,todayOk:r,todayScrap:a};Fr(l),A("ux:shift-recap",{mood:i,hasNote:!!d}),N(),B("Směna předána. Díky!")})}})}function Vr(e){try{const n=localStorage.getItem(Ye),t=n?JSON.parse(n):[];for(t.unshift(e);t.length>100;)t.pop();localStorage.setItem(Ye,JSON.stringify(t))}catch{}}function Hn(){const e=M();Z({title:"Zpětná vazba",subtitle:"Co ti tu vadí nebo chybí? Píšeš to nám.",body:`
+      <div class="ux-section">
+        <h3>Jak se ti dnes pracuje?</h3>
+        <div class="ux-rate" id="ux-fb-rate">
+          <button data-mood="🙂">🙂</button>
+          <button data-mood="😐">😐</button>
+          <button data-mood="🙁">🙁</button>
+        </div>
+      </div>
+      <div class="ux-section">
+        <h3>Tvoje zpráva</h3>
+        <div class="ux-field">
+          <textarea id="ux-fb-text" placeholder="Co bys zlepšil(a)? Co tě dnes zdrželo?"></textarea>
+        </div>
+      </div>
+      <p style="color:var(--text3);font-size:11px;">Zpětná vazba se ukládá lokálně do prohlížeče a do auditu. Žádná identifikace mimo tvé přihlášení.</p>
+    `,foot:`
+      <button class="ux-btn" data-ux-close>Zrušit</button>
+      <button class="ux-btn primary" id="ux-fb-send">Odeslat</button>
+    `,onMount:n=>{let t="🙂";n.querySelectorAll("#ux-fb-rate button").forEach(o=>{o.addEventListener("click",()=>{n.querySelectorAll("#ux-fb-rate button").forEach(r=>r.classList.remove("active")),o.classList.add("active"),t=o.dataset.mood})}),n.querySelector('#ux-fb-rate button[data-mood="🙂"]')?.classList.add("active"),n.querySelector("#ux-fb-send")?.addEventListener("click",()=>{const o=(n.querySelector("#ux-fb-text")?.value||"").trim();if(!o&&t==="🙂"){B("Napiš pár slov, ať víme, co zlepšit");return}const r={at:new Date().toISOString(),userLogin:e?.login,userName:e?.name,role:e?.role,page:Re(),mood:t,text:o};Vr(r),Oe({feedbackCount:(G().feedbackCount||0)+1}),A("ux:feedback",{mood:t,page:r.page}),N(),B("Díky za zpětnou vazbu!")})}})}const Gr={dashboard:{title:"Přehled",body:`
+      <p>Hlavní obrazovka s aktuálním stavem výroby.</p>
+      <h3>Co tu najdeš</h3>
+      <ul>
+        <li>KPI dlaždice s denními počty</li>
+        <li>Aktuální zakázky a rozpracovaná práce</li>
+        <li>Poslední problémy a alerty</li>
+      </ul>
+      <h3>Klávesy</h3>
+      <p><kbd>Ctrl</kbd>+<kbd>K</kbd> rychlé hledání · <kbd>F1</kbd> nápověda · <kbd>?</kbd> nápověda</p>
+    `},orders:{title:"Zakázky",body:`
+      <p>Seznam všech výrobních zakázek.</p>
+      <ul>
+        <li>Kliknutím na řádek otevřeš detail zakázky</li>
+        <li>Filtry nad tabulkou zúží výběr</li>
+        <li>Tlačítko + (vpravo dole) vytvoří novou zakázku</li>
+      </ul>
+    `},station:{title:"Stanoviště",body:`
+      <p>Detail jednoho stanoviště a jeho fronty práce.</p>
+      <ul>
+        <li>Převzetí kusu → start práce → zápis počtů</li>
+        <li>Nahlášení problému přes ⚠ tlačítko</li>
+        <li>Předání kusu na další stanoviště</li>
+      </ul>
+    `},issues:{title:"Problémy",body:`
+      <p>Otevřené a vyřešené problémy z výroby.</p>
+      <ul>
+        <li>Filtr podle stavu, stanoviště a zakázky</li>
+        <li>Otevři problém pro detail a řešení</li>
+      </ul>
+    `},kpi:{title:"KPI",body:`
+      <p>Klíčové ukazatele výkonu.</p>
+      <ul>
+        <li>Výkon, včasnost, kvalita</li>
+        <li>Trendy a srovnání období</li>
+        <li>Exporty pro vedení</li>
+      </ul>
+    `},admin:{title:"Administrace",body:`
+      <p>Správa uživatelů, stanovišť a integrací.</p>
+      <ul>
+        <li>Uživatelé a role</li>
+        <li>Audit log</li>
+        <li>Lupa NET, Supabase, AI</li>
+      </ul>
+    `},workspace:{title:"Moje práce",body:`
+      <p>Co máš teď na práci ty.</p>
+      <ul>
+        <li>Tvoje stanoviště</li>
+        <li>Aktuální kus a fronta</li>
+        <li>Předání směny</li>
+      </ul>
+    `},profile:{title:"Můj profil",body:`
+      <p>Tvoje účet, heslo, nastavení.</p>
+    `}};function ze(){F();const e=Re(),n=Gr[e]||{title:"Nápověda",body:"<p>Pro tuto obrazovku zatím nemáme detailní nápovědu. Použij FAB vpravo dole pro nastavení a zpětnou vazbu.</p>"},t=document.createElement("div");t.className="ux-help-overlay show",t.id="ux-help-overlay",t.innerHTML=`
+    <div class="ux-help-box" role="dialog" aria-modal="true">
+      <h2>${n.title}</h2>
+      ${n.body}
+      <h3>Klávesové zkratky</h3>
+      <ul>
+        <li><kbd>F1</kbd> nebo <kbd>?</kbd> — tato nápověda</li>
+        <li><kbd>Ctrl</kbd>+<kbd>K</kbd> — globální hledání</li>
+        <li><kbd>Esc</kbd> — zavřít okno</li>
+      </ul>
+      <div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">
+        <button class="ux-btn" id="ux-help-feedback">Mám zpětnou vazbu</button>
+        <button class="ux-btn primary" data-ux-help-close>Rozumím</button>
+      </div>
+    </div>
+  `,document.body.appendChild(t),t.addEventListener("click",o=>{o.target===t&&F(),o.target?.hasAttribute("data-ux-help-close")&&F()}),t.querySelector("#ux-help-feedback")?.addEventListener("click",()=>{F(),Hn()}),A("ux:help-opened",{page:e})}function F(){document.getElementById("ux-help-overlay")?.remove()}const X={version:"0.2.0-ux",items:["Velký režim a noční režim (auto podle hodiny) — najdeš v FAB vpravo dole.","Můj den / Ranní briefing — rychlý souhrn pro tvou roli.","Předání směny s poznámkou a náladou.",'F1 nebo „?" otevře kontextovou nápovědu kdekoliv v aplikaci.',"Zpětná vazba jedním kliknutím — ikona 💬 v FAB.","Tichý režim pro starší zařízení a tisk přátelské zobrazení."]};function Zr(e=!1){const n=localStorage.getItem(Qe);!e&&n===X.version||setTimeout(()=>{N();const t=document.createElement("div");t.className="ux-panel-overlay show",t.innerHTML=`
+      <div class="ux-panel ux-news-box" role="dialog">
+        <div class="ux-panel-head">
+          <h2>Co je nového<small>Verze ${X.version}</small></h2>
+          <button class="ux-panel-close" data-ux-news-close>✕</button>
+        </div>
+        <div class="ux-panel-body">
+          <span class="ux-news-version">UX vylepšení</span>
+          <p style="color:var(--text2);font-size:13px;margin-bottom:14px;">
+            Aplikace má pár nových funkcí, které ti ulehčí každý den. Tady jsou ty hlavní:
+          </p>
+          <ul class="ux-list">
+            ${X.items.map(o=>`<li><span>${o}</span></li>`).join("")}
+          </ul>
+        </div>
+        <div class="ux-panel-foot">
+          <button class="ux-btn primary" data-ux-news-close>Beru na vědomí</button>
+        </div>
+      </div>
+    `,document.body.appendChild(t),t.addEventListener("click",o=>{const r=o.target;if(o.target===t||r?.hasAttribute("data-ux-news-close")){try{localStorage.setItem(Qe,X.version)}catch{}t.remove()}})},1500)}const he={operator:{title:"Operátor",what:["Vidí jen svou frontu práce","Převzetí kusu → start → zápis počtů → předání","Zadání OK / oprava / zmetek","Rychlé nahlášení problému","Skenování QR / kódu zakázky a produktu","Předání směny s poznámkou"],cant:["Měnit role a uživatele","Editovat nastavení integrací","Vidět KPI vedení"]},tpv:{title:"TPV",what:["Nastavení postupů a pracovních tras","BOM a materiály","Parametry, kontroly, kritéria","AI souhrn zakázky","Změnové řízení s auditní stopou"],cant:["Spravovat uživatele a role","Měnit přístupy ke stanovištím"]},dispatcher:{title:"Dispečer / mistr",what:["Přehled front a vytíženosti","Blokace a priority zakázek","Přesuny mezi stanovišti","Řešení problémů s týmem","Poznámky k výrobku a procesu"],cant:["Spravovat globální nastavení Supabase / Auth"]},management:{title:"Vedení",what:["KPI v reálném čase","Výkon, včasnost, kvalita","Trendy problémů a zmetkovitosti","Vytížení linek a lidí","Exporty do Lupa NET","Ranní briefing s riziky"],cant:["Spravovat uživatele a role (čte je)","Editovat výrobní data přímo"]},admin:{title:"Admin",what:["Plná správa uživatelů, rolí, stanovišť","Audit log","Nastavení integrací (Supabase, Lupa NET, AI)","Vyzkoušet jako… (tento přehled)"],cant:[]}};function Kr(){const e=M();if(!e||e.role!=="admin"){B("Tento přehled je dostupný jen pro admina");return}const n=Object.keys(he);Z({title:"Vyzkoušet jako…",subtitle:"Co která role vidí a co může. Jen čtení.",body:`
+      <div class="ux-section">
+        <h3>Vyber roli</h3>
+        <div class="ux-segmented" id="ux-imp-seg">
+          ${n.map((t,o)=>`<button data-role="${t}" class="${o===0?"active":""}">${he[t].title}</button>`).join("")}
+        </div>
+      </div>
+      <div id="ux-imp-detail"></div>
+    `,foot:'<button class="ux-btn primary" data-ux-close>Zavřít</button>',onMount:t=>{const o=t.querySelector("#ux-imp-detail"),r=a=>{const s=he[a];!s||!o||(o.innerHTML=`
+          <div class="ux-section">
+            <h3>${s.title} — co může</h3>
+            <ul class="ux-list">${s.what.map(i=>`<li>✓ ${i}</li>`).join("")}</ul>
+          </div>
+          ${s.cant.length?`
+          <div class="ux-section">
+            <h3>Co nemůže</h3>
+            <ul class="ux-list">${s.cant.map(i=>`<li>✕ ${i}</li>`).join("")}</ul>
+          </div>`:""}
+        `)};t.querySelectorAll("#ux-imp-seg button").forEach((a,s)=>{a.addEventListener("click",()=>{t.querySelectorAll("#ux-imp-seg button").forEach(i=>i.classList.remove("active")),a.classList.add("active"),r(a.dataset.role||"")}),s===0&&r(a.dataset.role||"")})}}),A("ux:impersonate-view")}let Se;function Un(e,n,t=5e3){document.getElementById("ux-undo-toast")?.remove(),Se&&clearTimeout(Se);const o=document.createElement("div");o.className="ux-undo-toast",o.id="ux-undo-toast",o.innerHTML=`
+    <div class="ux-undo-msg">${e}</div>
+    ${n?"<button data-ux-undo>↶ Zpět</button>":""}
+    <div class="ux-undo-bar" style="width:100%;"></div>
+  `,document.body.appendChild(o),requestAnimationFrame(()=>o.classList.add("show"));const r=o.querySelector(".ux-undo-bar");r&&(r.style.transition=`width ${t}ms linear`,requestAnimationFrame(()=>{r.style.width="0%"})),n&&o.querySelector("[data-ux-undo]")?.addEventListener("click",()=>{try{n()}catch{}o.classList.remove("show"),setTimeout(()=>o.remove(),200),A("ux:undo-used")}),Se=window.setTimeout(()=>{o.classList.remove("show"),setTimeout(()=>o.remove(),200)},t)}function Wr(){document.getElementById("ux-fab")?.remove()}function Qr(){new MutationObserver(()=>{document.querySelectorAll("[data-empty-boost]:not([data-empty-boosted])").forEach(n=>{n.dataset.emptyBoosted="1";const t=n.dataset.emptyIcon||"○",o=n.dataset.emptyTitle||"Zatím tu nic není",r=n.dataset.emptySub||"",a=n.dataset.emptyAction||"",s=n.dataset.emptyActionLabel||"";n.innerHTML=`
+        <div class="ux-empty">
+          <div class="ux-empty-icon">${t}</div>
+          <div class="ux-empty-title">${o}</div>
+          ${r?`<div class="ux-empty-sub">${r}</div>`:""}
+          ${a&&s?`<button class="ux-btn primary" onclick="${a}">${s}</button>`:""}
+        </div>
+      `})}).observe(document.body,{childList:!0,subtree:!0})}function Yr(){window.addEventListener("error",e=>{const n=(e.message||"").toLowerCase();n.includes("script error")||(n.includes("network")||n.includes("failed to fetch"))&&B("Aplikace nemá spojení — zkus to za chvíli.")}),window.addEventListener("unhandledrejection",e=>{const n=String(e?.reason||"").toLowerCase();(n.includes("supabase")||n.includes("network")||n.includes("fetch"))&&B("Cloud nedostupný — pracuji v lokálním režimu.")})}function Jr(){document.addEventListener("keydown",e=>{const n=(()=>{const t=e.target;if(!t)return!1;const o=t.tagName?.toLowerCase();return o==="input"||o==="textarea"||o==="select"||t.isContentEditable})();if(e.key==="F1"){e.preventDefault(),document.getElementById("ux-help-overlay")?F():ze();return}if(e.key==="?"&&!n){e.preventDefault(),ze();return}if(e.key==="Escape"){if(document.getElementById("ux-help-overlay")){F();return}if(document.getElementById("ux-panel-overlay")){N();return}}})}let Xe="";function Xr(){const e=()=>{const n=M(),t=n?`${n.login||""}|${n.role||""}`:"";t!==Xe&&(Xe=t,Wr())};setInterval(e,1500),e()}function ea(){const e=()=>{se(),Dr(),Jr(),Qr(),Yr(),Lr(),Xr(),O.EZOP4_UX={openMyDay:jr,openBriefing:qr,openRecap:Bn,openFeedback:Hn,openHelp:ze,openSettings:Ur,openImpersonate:Kr,undoToast:Un,showWhatsNew:()=>Zr(!0)}};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",e,{once:!0}):queueMicrotask(e)}const na=`// Legacy-compatible runtime extracted from the original VyrobaIS index.html.
+// Keep behavior stable here, then migrate feature by feature into typed modules.
+// ── PWA: SERVICE WORKER ───────────────────────────────
+const IS_LOCAL_DEV_ORIGIN = ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    if (IS_LOCAL_DEV_ORIGIN) {
+      navigator.serviceWorker.getRegistrations?.()
+        .then(registrations => registrations.forEach(registration => registration.unregister()))
+        .catch(err => console.warn('SW unregister failed:', err));
+      return;
+    }
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW reg failed:', err));
+  });
+}
+
+// PWA install prompt support
+let _pwaInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  // Show install button if user is already logged in
+  setTimeout(() => {
+    if (typeof refreshInstallButton === 'function') refreshInstallButton();
+  }, 500);
+});
+window.addEventListener('appinstalled', () => {
+  _pwaInstallPrompt = null;
+  if (typeof refreshInstallButton === 'function') refreshInstallButton();
+  if (typeof showToast === 'function') showToast('✅ Aplikace nainstalována');
+});
+
+function refreshInstallButton() {
+  const btn = document.getElementById('tbar-install');
+  if (!btn) return;
+  btn.style.display = _pwaInstallPrompt ? '' : 'none';
+}
+
+async function triggerPwaInstall() {
+  if (!_pwaInstallPrompt) {
+    showToast('ℹ️ Instalaci spusť z menu prohlížeče');
+    return;
+  }
+  _pwaInstallPrompt.prompt();
+  try {
+    const { outcome } = await _pwaInstallPrompt.userChoice;
+    if (outcome === 'accepted') showToast('📥 Instalace spuštěna…');
+  } catch { /* ignore */ }
+  _pwaInstallPrompt = null;
+  refreshInstallButton();
+}
+
+// ── SUPABASE CONFIG ───────────────────────────────────
+// Konfiguraci nastavte v Admin → ☁️ Cloud (URL + anon key)
+// Když je prázdné, aplikace běží jen s localStorage v prohlížeči.
+const DEFAULT_SUPABASE_URL = 'https://fiiaiooxwegrdtlpwqey.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'sb_publishable_cT376Yp4F0nnbBeGLbu71Q_6mMLlVFN';
+const SUPABASE_URL = localStorage.getItem('vyrobais_supabase_url') || DEFAULT_SUPABASE_URL;
+const SUPABASE_KEY = localStorage.getItem('vyrobais_supabase_key') || DEFAULT_SUPABASE_KEY;
+const DEFAULTS = window.EZOP_DEFAULTS || {};
+
+function cloneDefault(key) {
+  return JSON.parse(JSON.stringify(DEFAULTS[key] ?? null));
+}
+
+let db = null;
+if (SUPABASE_URL && SUPABASE_KEY && window.supabase) {
+  try {
+    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('✅ Supabase připojen:', SUPABASE_URL);
+  } catch (e) { console.warn('Supabase init failed:', e); }
+}
+
+function ezop4AuthMode() {
+  return window.EZOP4_AUTH?.readAuthMode?.() || 'demo';
+}
+
+function setEzop4AuthMode(mode) {
+  window.EZOP4_AUTH?.writeAuthMode?.(mode === 'supabase' ? 'supabase' : 'demo');
+}
+
+const EZOP4_DEMO_FALLBACK_KEY = 'ezop4-demo-fallback-enabled';
+
+function demoFallbackAllowed() {
+  try { return localStorage.getItem(EZOP4_DEMO_FALLBACK_KEY) === '1'; }
+  catch { return false; }
+}
+
+function setDemoFallbackAllowed(enabled) {
+  try {
+    if (enabled) localStorage.setItem(EZOP4_DEMO_FALLBACK_KEY, '1');
+    else localStorage.removeItem(EZOP4_DEMO_FALLBACK_KEY);
+  } catch {
+    // Nouzovy fallback je jen lokalni volba v tomto prohlizeci.
+  }
+}
+
+// ── PERSISTENCE: localStorage + Supabase ──────────────
+const LS_KEY = 'vyrobais_state_v1';
+const CLOUD_ROW_ID = 'main';
+const SECURITY_VERSION = 2;
+
+function userProfilesForStorage() {
+  return USERS.map(({ password, ...profile }) => ({ ...profile }));
+}
+
+function localState() {
+  return {
+    ORDERS, ISSUES, PROD_NOTES,
+    USERS: userProfilesForStorage(),
+    APP_SETTINGS, NEXT_ORDER_CODE, LOGIN_LOGS, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, DIRECT_MESSAGES,
+    securityVersion: SECURITY_VERSION,
+  };
+}
+
+function cloudState() {
+  return {
+    ORDERS, ISSUES, PROD_NOTES,
+    APP_SETTINGS, NEXT_ORDER_CODE, PRODUCT_MEMORY, USER_WORKSPACE, ANNOUNCEMENTS, SHIFT_HANDOVERS, DIRECT_MESSAGES,
+    securityVersion: SECURITY_VERSION,
+    securityNote: 'Cloud state intentionally excludes user profiles, credentials and login logs.',
+  };
+}
+
+function currentState() {
+  return localState();
+}
+
+function applyState(s, options = {}) {
+  if (!s) return;
+  if (Array.isArray(s.ORDERS))     ORDERS     = s.ORDERS;
+  if (Array.isArray(s.ISSUES))     ISSUES     = s.ISSUES;
+  if (Array.isArray(s.PROD_NOTES)) PROD_NOTES = s.PROD_NOTES;
+  if (options.includeUsers && Array.isArray(s.USERS) && s.USERS.length) mergeUserProfiles(s.USERS);
+  if (options.includeLogs && Array.isArray(s.LOGIN_LOGS)) LOGIN_LOGS = s.LOGIN_LOGS;
+  if (s.PRODUCT_MEMORY && typeof s.PRODUCT_MEMORY === 'object') PRODUCT_MEMORY = s.PRODUCT_MEMORY;
+  if (s.USER_WORKSPACE && typeof s.USER_WORKSPACE === 'object') USER_WORKSPACE = s.USER_WORKSPACE;
+  if (Array.isArray(s.ANNOUNCEMENTS)) ANNOUNCEMENTS = s.ANNOUNCEMENTS;
+  if (Array.isArray(s.SHIFT_HANDOVERS)) SHIFT_HANDOVERS = s.SHIFT_HANDOVERS;
+  if (Array.isArray(s.DIRECT_MESSAGES)) DIRECT_MESSAGES = s.DIRECT_MESSAGES;
+  if (s.APP_SETTINGS) APP_SETTINGS = { ...APP_SETTINGS, ...s.APP_SETTINGS };
+  if (s.NEXT_ORDER_CODE) NEXT_ORDER_CODE = s.NEXT_ORDER_CODE;
+  normalizeAppData();
+}
+
+function saveState() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(currentState())); }
+  catch (e) { console.warn('LS save failed:', e); }
+  markLocalMutation();
+  cloudPush();
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function resetState() {
+  if (!confirm('Opravdu vymazat všechna lokální data a vrátit demo?')) return;
+  localStorage.removeItem(LS_KEY);
+  localStorage.removeItem(USER_CREDENTIALS_KEY);
+  localStorage.removeItem(LOGIN_GUARD_KEY);
+  localStorage.removeItem(PASSKEYS_KEY);
+  location.reload();
+}
+
+// Cloud sync: jeden řádek s JSONB blobem (jednoduché, postačí pro malou dílnu)
+let cloudPushTimer;
+let localMutationIgnorePullUntil = 0;
+
+function markLocalMutation() {
+  localMutationIgnorePullUntil = Date.now() + 2500;
+}
+
+function cloudPush() {
+  if (!db) return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(async () => {
+    try {
+      await db.from('app_state')
+        .upsert({ id: CLOUD_ROW_ID, data: cloudState(), updated_at: new Date().toISOString() });
+    } catch (e) { console.warn('Cloud push failed:', e); }
+  }, 800);
+}
+
+async function cloudPull() {
+  if (!db) return false;
+  try {
+    const { data, error } = await db.from('app_state')
+      .select('data, updated_at').eq('id', CLOUD_ROW_ID).maybeSingle();
+    if (error) { console.warn('Cloud pull error:', error); return false; }
+    if (data?.data) { applyState(data.data, { includeUsers: false, includeLogs: false }); return true; }
+  } catch (e) { console.warn('Cloud pull failed:', e); }
+  return false;
+}
+
+// Realtime: refresh při změně z jiného zařízení
+function startCloudRealtime() {
+  if (!db) return;
+  db.channel('app_state_ch')
+    .on('postgres_changes', { event:'*', schema:'public', table:'app_state' }, async () => {
+      if (Date.now() < localMutationIgnorePullUntil) return;
+      const ok = await cloudPull();
+      if (ok) {
+        showToast('🔄 Data synchronizována', { skipSave: true });
+        refreshCurrentView();
+      }
+    })
+    .subscribe();
+}
+
+// ── USERS ──────────────────────────────────────────────
+let USERS = cloneDefault('users') || [];
+const ROLE_LABELS = cloneDefault('roleLabels') || {};
+const BUILTIN_USER_ROLES = Object.fromEntries(USERS.map(u => [normalizeLogin(u.login), u.role]));
+const DEFAULT_DEMO_PASSWORD = '1234';
+const USER_CREDENTIALS_KEY = 'vyrobais-creds-v2';
+const PASSWORD_HASH_PREFIX = 'sha256$';
+
+let USER_PASSWORDS = loadUserPasswords();
+let USER_WORKSPACE = {};
+let ANNOUNCEMENTS = [];
+let SHIFT_HANDOVERS = [];
+let DIRECT_MESSAGES = [];
+let lastUserActivityAt = Date.now();
+let inactivityMonitorStarted = false;
+
+function normalizeLogin(login) {
+  return String(login || '').trim().toLowerCase();
+}
+
+function normalizeLoginLookup(value) {
+  return normalizeLogin(value)
+    .normalize('NFD')
+    .replace(/[\\u0300-\\u036f]/g, '')
+    .replace(/\\s+/g, ' ');
+}
+
+function resolveLoginUser(login) {
+  const key = normalizeLoginLookup(login);
+  return USERS.find(user => normalizeLoginLookup(user.login) === key) ||
+    USERS.find(user => BUILTIN_USER_ROLES[normalizeLogin(user.login)] && normalizeLoginLookup(user.name) === key) ||
+    USERS.find(user => normalizeLoginLookup(user.name) === key);
+}
+
+function defaultStationIdsForUser(login, role) {
+  if (role !== 'operator') return [];
+  const key = normalizeLogin(login);
+  if (key === 'op1') return [1];
+  if (key === 'op2') return [2,5,6];
+  if (key === 'op3') return [3,4,7,8,9];
+  return [];
+}
+
+function normalizedStationIds(value, login = '', role = '') {
+  const ids = Array.isArray(value) ? value : defaultStationIdsForUser(login, role);
+  return [...new Set(ids.map(Number).filter(id => Number.isFinite(id) && id > 0))].sort((a,b) => a-b);
+}
+
+function loadUserPasswords() {
+  try {
+    const raw = localStorage.getItem(USER_CREDENTIALS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveUserPasswords() {
+  try { localStorage.setItem(USER_CREDENTIALS_KEY, JSON.stringify(USER_PASSWORDS)); }
+  catch { /* Demo umi bezet i bez localStorage. */ }
+}
+
+function passwordDigestHex(buffer) {
+  return [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashLocalPassword(login, password) {
+  if (!window.crypto?.subtle || !window.TextEncoder) return '';
+  const key = normalizeLogin(login);
+  const material = new TextEncoder().encode(\`ezop4-local-password:\${key}:\${String(password)}\`);
+  const digest = await crypto.subtle.digest('SHA-256', material);
+  return PASSWORD_HASH_PREFIX + passwordDigestHex(digest);
+}
+
+function isHashedLocalPassword(value) {
+  return String(value || '').startsWith(PASSWORD_HASH_PREFIX);
+}
+
+async function setUserPassword(login, password) {
+  const key = normalizeLogin(login);
+  if (!key || !password) return;
+  USER_PASSWORDS[key] = await hashLocalPassword(key, password) || String(password);
+  saveUserPasswords();
+}
+
+async function verifyLocalPassword(user, password) {
+  const login = normalizeLogin(user?.login);
+  const stored = USER_PASSWORDS[login];
+  if (!stored) return String(password) === DEFAULT_DEMO_PASSWORD;
+  if (isHashedLocalPassword(stored)) {
+    const hashed = await hashLocalPassword(login, password);
+    return Boolean(hashed && hashed === stored);
+  }
+  if (stored === String(password)) {
+    await setUserPassword(login, password);
+    return true;
+  }
+  return false;
+}
+
+function localPasswordPolicyError(password, { allowDemoPassword = false } = {}) {
+  const value = String(password || '');
+  if (!value) return 'Vyplňte heslo.';
+  if (!allowDemoPassword && value === DEFAULT_DEMO_PASSWORD) return 'Heslo 1234 je jen pro vestavěné demo účty. Zvolte jiné dočasné heslo.';
+  if (!allowDemoPassword && value.length < 8) return 'Heslo musí mít alespoň 8 znaků.';
+  return '';
+}
+
+function migrateCredentialsFromState(state) {
+  if (!Array.isArray(state?.USERS)) return;
+  let changed = false;
+  state.USERS.forEach(u => {
+    const login = normalizeLogin(u?.login);
+    if (login && u.password && !USER_PASSWORDS[login]) {
+      USER_PASSWORDS[login] = String(u.password);
+      changed = true;
+    }
+    if (u && 'password' in u) delete u.password;
+  });
+  if (changed) saveUserPasswords();
+}
+
+function sanitizeUserProfile(u) {
+  const login = normalizeLogin(u?.login);
+  if (!login) return null;
+  const role = ROLE_LABELS[u.role] ? u.role : 'operator';
+  return {
+    id: String(u.id || ('u' + Date.now())),
+    login,
+    role,
+    name: String(u.name || login),
+    avatar: String(u.avatar || '👤'),
+    color: String(u.color || '#6b7280'),
+    stationIds: normalizedStationIds(u.stationIds, login, role),
+  };
+}
+
+function mergeUserProfiles(profiles) {
+  profiles.map(sanitizeUserProfile).filter(Boolean).forEach(profile => {
+    const lockedRole = BUILTIN_USER_ROLES[profile.login];
+    if (lockedRole) profile.role = lockedRole;
+    const existing = USERS.find(u => u.id === profile.id || normalizeLogin(u.login) === profile.login);
+    if (existing) Object.assign(existing, profile);
+    else USERS.push(profile);
+  });
+}
+
+function isManagerRole(role = currentUser?.role) {
+  return ['admin','dispatcher','management','tpv'].includes(role);
+}
+
+function canResolveIssues(role = currentUser?.role) {
+  return isManagerRole(role);
+}
+
+function userStationIds(user = currentUser) {
+  if (!user) return [];
+  return normalizedStationIds(user.stationIds, user.login, user.role);
+}
+
+function userCanAccessStation(stationId, user = currentUser) {
+  if (!user) return false;
+  if (isManagerRole(user.role)) return true;
+  return userStationIds(user).includes(Number(stationId));
+}
+
+function accessibleStations(user = currentUser) {
+  if (!user) return [];
+  if (isManagerRole(user.role)) return STATIONS;
+  const allowed = userStationIds(user);
+  return STATIONS.filter(st => allowed.includes(st.id));
+}
+
+function stationAccessLabel(user = currentUser) {
+  if (!user) return '-';
+  if (isManagerRole(user.role)) return 'všechna stanoviště';
+  const names = accessibleStations(user).map(st => \`\${st.icon} \${st.name}\`);
+  return names.length ? names.join(', ') : 'bez přiřazeného stanoviště';
+}
+
+function featureEnabled(key) {
+  return APP_SETTINGS?.[key] !== false;
+}
+
+function compactAdvancedUi() {
+  return APP_SETTINGS?.compactAdvancedUi !== false;
+}
+
+function operatorSimpleMode() {
+  return currentUser?.role === 'operator' && APP_SETTINGS?.operatorSimpleMode !== false;
+}
+
+function operatorDashboardFocusOnly() {
+  return currentUser?.role === 'operator' && APP_SETTINGS?.operatorDashboardFocusOnly !== false;
+}
+
+function operatorShowProductionOverview() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowProductionOverview === true;
+}
+
+function operatorHideOrderContext() {
+  return currentUser?.role === 'operator' && APP_SETTINGS?.operatorHideOrderContext !== false;
+}
+
+function operatorShowOrderIdentifier() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowOrderIdentifier !== false;
+}
+
+function operatorShowCustomerContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowCustomerContext === true;
+}
+
+function operatorShowDueContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowDueContext !== false;
+}
+
+function operatorShowTechnologyContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowTechnologyContext !== false;
+}
+
+function operatorShowNotesContext() {
+  return currentUser?.role !== 'operator' || APP_SETTINGS?.operatorShowNotesContext !== false;
+}
+
+function advancedPanelHtml(title, body, options = {}) {
+  const content = String(body || '').trim();
+  if (!content) return '';
+  if (!compactAdvancedUi() || options.forceOpen) return content;
+  const subtitle = options.subtitle ? \`<span class="advanced-panel-subtitle">\${escapeHtml(options.subtitle)}</span>\` : '';
+  return \`<details class="advanced-panel">
+    <summary>
+      <span>\${title}</span>
+      \${subtitle}
+    </summary>
+    <div class="advanced-panel-body">\${content}</div>
+  </details>\`;
+}
+
+function sessionLockTimeoutMs() {
+  const hours = Number(APP_SETTINGS?.lockTimeout);
+  if (!Number.isFinite(hours) || hours <= 0) return 0;
+  return hours * 60 * 60 * 1000;
+}
+
+function markUserActivity() {
+  if (currentUser) lastUserActivityAt = Date.now();
+}
+
+function startInactivityMonitor() {
+  if (inactivityMonitorStarted) return;
+  inactivityMonitorStarted = true;
+  ['pointerdown','keydown','touchstart','scroll'].forEach(eventName => {
+    document.addEventListener(eventName, markUserActivity, { passive: true });
+  });
+  setInterval(checkSessionLockTimeout, 60000);
+}
+
+function checkSessionLockTimeout() {
+  if (!currentUser) return;
+  const timeoutMs = sessionLockTimeoutMs();
+  if (!timeoutMs) return;
+  if (Date.now() - lastUserActivityAt < timeoutMs) return;
+  const lockedUser = currentUser;
+  writeAudit(
+    'auth.session_locked',
+    'user',
+    lockedUser.id,
+    \`Relace uzamčena po \${APP_SETTINGS.lockTimeout} h neaktivity\`,
+    { lastActivityAt: new Date(lastUserActivityAt).toISOString() },
+    { lockedAt: new Date().toISOString() },
+  );
+  showToast('🔐 Relace byla uzamčena po neaktivitě', { skipSave: true });
+  doLogout({ skipCheckoutPrompt: true });
+}
+
+function orderVisibleToCurrentUser(order) {
+  if (!order) return false;
+  if (isManagerRole()) return true;
+  return (order.stations || []).some(st => userCanAccessStation(st.stId));
+}
+
+function visibleOrders() {
+  return ORDERS.filter(orderVisibleToCurrentUser);
+}
+
+function canOperateStation(station) {
+  if (!station || !currentUser) return false;
+  if (isManagerRole()) return true;
+  return currentUser.role === 'operator' && userCanAccessStation(station.stId);
+}
+
+function stationClaimedByOther(station) {
+  if (!station?.workerUserId && !station?.workerLogin) return false;
+  if (station.workerUserId && station.workerUserId === currentUser?.id) return false;
+  if (station.workerLogin && normalizeLogin(station.workerLogin) === normalizeLogin(currentUser?.login)) return false;
+  return !isManagerRole();
+}
+
+function stationClaimedByCurrent(station) {
+  if (isManagerRole()) return true;
+  if (!station) return false;
+  if (station.workerUserId && station.workerUserId === currentUser?.id) return true;
+  return Boolean(station.workerLogin && normalizeLogin(station.workerLogin) === normalizeLogin(currentUser?.login));
+}
+
+function canOperateStationNow(station, order = selectedOrder) {
+  if (!canOperateStation(station)) return false;
+  if (isOrderBlocked(order)) return false;
+  if (stationClaimedByOther(station)) return false;
+  if (!stationClaimedByCurrent(station)) return false;
+  return true;
+}
+
+const STATION_STATUS = {
+  waiting:     { label:'Příprava',          badge:'badge-waiting',  action:'reset', icon:'🧰' },
+  in_progress: { label:'Rozpracováno',      badge:'badge-progress', action:'start', icon:'▶' },
+  partial:     { label:'Částečně hotovo',   badge:'badge-progress', action:'start', icon:'◐' },
+  completed:   { label:'Hotovo',            badge:'badge-done',     action:'done',  icon:'✅' },
+  issue:       { label:'Problém',           badge:'badge-issue',    action:'issue', icon:'⚠️' },
+  skipped:     { label:'Přeskočeno',        badge:'badge-skipped',  action:'reset', icon:'↷' },
+};
+
+function stationStatusMeta(status) {
+  return STATION_STATUS[status] || STATION_STATUS.waiting;
+}
+
+function orderGoodQty(order) {
+  return window.EZOP_FLOW?.orderGoodQty(order) ?? 0;
+}
+
+function positiveQty(value) {
+  return Math.max(0, Number(value) || 0);
+}
+
+function stationProcessedQty(station) {
+  return window.EZOP_FLOW?.stationProcessedQty(station)
+    ?? (positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework) + positiveQty(station?.qtyScrap));
+}
+
+function stationReadyQty(station) {
+  return stationProcessedQty(station);
+}
+
+function stationNonScrapQty(station) {
+  return window.EZOP_FLOW?.stationNonScrapQty(station)
+    ?? (positiveQty(station?.qtyOk) + positiveQty(station?.qtyRework));
+}
+
+function stationInputQty(order, station, index) {
+  return window.EZOP_FLOW?.stationInputQty(order, station, index) ?? 0;
+}
+
+function stationProgressForDisplay(order, station, index) {
+  const available = stationInputQty(order, station, index) || positiveQty(order?.qty);
+  const rawProcessed = stationProcessedQty(station);
+  const processed = available > 0 ? Math.min(rawProcessed, available) : rawProcessed;
+  return {
+    available,
+    processed,
+    rawProcessed,
+    remaining: Math.max(0, available - processed),
+    overLimit: available > 0 && rawProcessed > available,
+  };
+}
+
+function syncOrderStationFlow(order) {
+  return window.EZOP_FLOW?.syncOrderStationFlow(order) ?? false;
+}
+
+function stationCardQtyHtml(order, station, index) {
+  const processed = stationProcessedQty(station);
+  const received = stationInputQty(order, station, index);
+  const hasQty = processed > 0 || received > 0;
+  if (!hasQty) return '<div style="font-size:11px;color:var(--text3)">Zatím bez kusů</div>';
+
+  return \`<div style="display:flex;gap:12px;font-size:11px;flex-wrap:wrap">
+    \${received > 0 && index > 0 ? \`<span style="color:var(--text2)">Přišlo: \${received}</span>\` : ''}
+    <span style="color:var(--green)">OK: \${positiveQty(station.qtyOk)}</span>
+    <span style="color:var(--amber)">Oprava: \${positiveQty(station.qtyRework)}</span>
+    <span style="color:var(--red)">Zmetek: \${positiveQty(station.qtyScrap)}</span>
+  </div>\`;
+}
+
+function priorityRank(priority) {
+  return { urgent: 0, high: 1, normal: 2, low: 3 }[priority] ?? 2;
+}
+
+function dueTime(order) {
+  const time = new Date(order?.due || '').getTime();
+  return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER;
+}
+
+function isOrderBlocked(order) {
+  return !!order?.blocked?.active;
+}
+
+function orderBlockReason(order) {
+  return String(order?.blocked?.reason || '').trim();
+}
+
+const BLOCK_CATEGORIES = {
+  material:      { label:'Materiál',     icon:'📦' },
+  documentation: { label:'Dokumentace',  icon:'📄' },
+  program:       { label:'Program',      icon:'🧠' },
+  customer:      { label:'Zákazník',     icon:'🤝' },
+  quality:       { label:'Kvalita',      icon:'✅' },
+  other:         { label:'Jiné',         icon:'⛔' },
+};
+
+function blockCategoryMeta(category) {
+  return BLOCK_CATEGORIES[category] || BLOCK_CATEGORIES.other;
+}
+
+function blockCategoryLabel(category) {
+  const meta = blockCategoryMeta(category);
+  return \`\${meta.icon} \${meta.label}\`;
+}
+
+function orderBlockedBadgeHtml(order) {
+  if (!isOrderBlocked(order)) return '';
+  const label = blockCategoryLabel(order?.blocked?.category);
+  return \`<span class="badge badge-issue" title="\${escapeHtml(orderBlockReason(order))}">\${escapeHtml(label)}</span>\`;
+}
+
+const READINESS_ITEMS = {
+  documentation: { label:'Dokumentace', icon:'📄', blockCategory:'documentation', note:'Výrobní podklady, BOM, výkresy.' },
+  material:      { label:'Materiál',    icon:'📦', blockCategory:'material',      note:'Materiál HC i zákazníka.' },
+  stencil:       { label:'Planžeta',    icon:'🎯', blockCategory:'program',       note:'Planžeta nebo přípravek pro výrobu.' },
+  program:       { label:'Program',     icon:'🧠', blockCategory:'program',       note:'Program automatu nebo zařízení.' },
+  customer:      { label:'Zákazník',    icon:'🤝', blockCategory:'customer',      note:'Schválení změn a dohody.' },
+  quality:       { label:'Kvalita',     icon:'✅', blockCategory:'quality',       note:'Kontrolní podmínky a výstup.' },
+};
+
+const READINESS_STATUS = {
+  ok:      { label:'Připraveno', color:'var(--green)', icon:'🟢', rank:2 },
+  partial: { label:'Částečně',   color:'var(--amber)', icon:'🟡', rank:1 },
+  blocked: { label:'Blokace',    color:'var(--red)',   icon:'🔴', rank:0 },
+};
+
+function normalizeReadinessStatus(value) {
+  return READINESS_STATUS[value] ? value : 'partial';
+}
+
+function orderHasStationName(order, pattern) {
+  return (order?.stations || []).some(station => {
+    const stationInfo = STATIONS.find(st => Number(st.id) === Number(station.stId));
+    return pattern.test(stationInfo?.name || '');
+  });
+}
+
+function warehouseStationEntry(order) {
+  return (order?.stations || []).map((station, index) => {
+    const stationInfo = STATIONS.find(st => Number(st.id) === Number(station.stId));
+    return { station, stationInfo, index };
+  }).find(({ station, stationInfo }) =>
+    Number(station?.stId) === 1 || /sklad/i.test(stationInfo?.name || '')
+  ) || null;
+}
+
+function warehouseMaterialConfirmed(order) {
+  const entry = warehouseStationEntry(order);
+  if (!entry) return false;
+  const available = stationInputQty(order, entry.station, entry.index);
+  const processed = stationProcessedQty(entry.station);
+  return entry.station.status === 'completed' || (available > 0 && processed >= available);
+}
+
+function hasStationProgramForOrder(order) {
+  return Object.values(order?.stationPrograms || {}).some(value => String(value || '').trim());
+}
+
+function defaultReadinessForOrder(order) {
+  const hasDocs = (order?.documents || []).length > 0;
+  const needsProgram = orderHasStationName(order, /automat|aoi|rtg|vlna|selektiv/i);
+  const hasProgram = !needsProgram || hasStationProgramForOrder(order);
+  const materialReady = warehouseMaterialConfirmed(order);
+  return {
+    documentation: {
+      status: hasDocs ? 'ok' : 'partial',
+      note: hasDocs ? 'Dokumentace je připojená.' : 'Doplnit nebo ověřit výrobní dokumentaci.',
+    },
+    material: {
+      status: materialReady ? 'ok' : 'partial',
+      note: materialReady ? 'Sklad potvrdil připravenost materiálu.' : 'Sklad musí potvrdit připravenost materiálu.',
+    },
+    stencil: {
+      status: order?.stencilNumber ? 'ok' : 'partial',
+      note: order?.stencilNumber ? \`Planžeta \${order.stencilNumber}\` : 'Doplnit číslo planžety nebo přípravku.',
+    },
+    program: {
+      status: hasProgram ? 'ok' : 'partial',
+      note: hasProgram ? 'Program je vyplněný nebo není potřeba.' : 'Doplnit program pro strojní pracoviště.',
+    },
+    customer: {
+      status: 'ok',
+      note: 'Bez otevřeného čekání na zákazníka.',
+    },
+    quality: {
+      status: 'ok',
+      note: 'Bez otevřené kvalitativní blokace.',
+    },
+  };
+}
+
+function normalizeOrderReadiness(order) {
+  const defaults = defaultReadinessForOrder(order);
+  const existing = order?.readiness && typeof order.readiness === 'object' ? order.readiness : {};
+  return Object.fromEntries(Object.keys(READINESS_ITEMS).map(key => {
+    const current = existing[key] && typeof existing[key] === 'object' ? existing[key] : {};
+    return [key, {
+      status: normalizeReadinessStatus(current.status || defaults[key].status),
+      note: String(current.note ?? defaults[key].note ?? ''),
+      updatedByName: String(current.updatedByName || ''),
+      updatedAt: current.updatedAt || '',
+    }];
+  }));
+}
+
+function syncMaterialReadinessFromWarehouse(order, options = {}) {
+  if (!order || !Array.isArray(order.stations) || !warehouseMaterialConfirmed(order)) return false;
+  order.readiness = normalizeOrderReadiness(order);
+
+  const current = order.readiness.material || {};
+  const defaultMaterialNote = defaultReadinessForOrder({ ...order, readiness: {} }).material.note;
+  const defaultWaitingNote = 'Sklad musí potvrdit připravenost materiálu.';
+  const hasCustomNote = Boolean(current.note && ![defaultMaterialNote, defaultWaitingNote].includes(current.note));
+  const next = {
+    ...current,
+    status: 'ok',
+    note: hasCustomNote ? current.note : 'Sklad potvrdil připravenost materiálu.',
+    updatedByName: options.updatedByName ?? current.updatedByName ?? '',
+    updatedAt: options.updatedAt ?? current.updatedAt ?? '',
+  };
+
+  if (!next.updatedByName && options.fallbackUpdatedByName) next.updatedByName = options.fallbackUpdatedByName;
+  if (!next.updatedAt && options.touch !== false) next.updatedAt = new Date().toISOString();
+
+  const changed = JSON.stringify(current) !== JSON.stringify(next);
+  if (changed) order.readiness.material = next;
+  return changed;
+}
+
+function readinessEffectiveStatus(order, key) {
+  if (key === 'material') syncMaterialReadinessFromWarehouse(order, { touch: false });
+  const item = READINESS_ITEMS[key];
+  if (isOrderBlocked(order) && item?.blockCategory === order?.blocked?.category) return 'blocked';
+  return normalizeReadinessStatus(order?.readiness?.[key]?.status);
+}
+
+function readinessSummary(order) {
+  const readiness = normalizeOrderReadiness(order);
+  order.readiness = readiness;
+  syncMaterialReadinessFromWarehouse(order, { touch: false });
+  const keys = Object.keys(READINESS_ITEMS);
+  const statuses = keys.map(key => readinessEffectiveStatus(order, key));
+  const okCount = statuses.filter(status => status === 'ok').length;
+  const status = isOrderBlocked(order) || statuses.includes('blocked')
+    ? 'blocked'
+    : statuses.includes('partial') ? 'partial' : 'ok';
+  return { status, okCount, total: keys.length };
+}
+
+function orderReadinessBadgeHtml(order) {
+  const summary = readinessSummary(order);
+  const meta = READINESS_STATUS[summary.status] || READINESS_STATUS.partial;
+  return \`<span class="badge" style="background:\${meta.color}22;color:\${meta.color}" title="Připravenost zakázky: \${summary.okCount}/\${summary.total}">\${meta.icon} \${summary.okCount}/\${summary.total}</span>\`;
+}
+
+const READINESS_ORDER_FILTERS = {
+  wait_material: { label:'📦 Čeká na materiál', keys:['material'] },
+  wait_docs:     { label:'📄 Čeká na dokumentaci', keys:['documentation'] },
+  wait_program:  { label:'🧠 Čeká na program/planžetu', keys:['program','stencil'] },
+};
+
+function orderMatchesReadinessFilter(order, filter) {
+  const meta = READINESS_ORDER_FILTERS[filter];
+  if (!meta || orderIsClosed(order)) return false;
+  return meta.keys.some(key => ['partial','blocked'].includes(readinessEffectiveStatus(order, key)));
+}
+
+function readinessRiskCounts(orders) {
+  return Object.fromEntries(Object.entries(READINESS_ORDER_FILTERS).map(([filter, meta]) => [
+    filter,
+    {
+      ...meta,
+      count: orders.filter(order => orderMatchesReadinessFilter(order, filter)).length,
+    },
+  ]));
+}
+
+function orderReadinessCardHtml(order) {
+  const summary = readinessSummary(order);
+  const summaryMeta = READINESS_STATUS[summary.status] || READINESS_STATUS.partial;
+  return \`<div class="card" style="border-left:4px solid \${summaryMeta.color}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">🚦 Připravenost zakázky</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">\${summaryMeta.icon} \${summaryMeta.label} · \${summary.okCount}/\${summary.total} bodů připraveno</div>
+      </div>
+      \${can('block_order') ? \`<button class="btn btn-ghost btn-sm" onclick="editOrderReadinessModal('\${order.id}')">✏️ Upravit</button>\` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">
+      \${Object.entries(READINESS_ITEMS).map(([key, item]) => {
+        const status = readinessEffectiveStatus(order, key);
+        const meta = READINESS_STATUS[status] || READINESS_STATUS.partial;
+        const readiness = order.readiness?.[key] || {};
+        const blockedByOrder = isOrderBlocked(order) && item.blockCategory === order?.blocked?.category;
+        const note = blockedByOrder ? orderBlockReason(order) : readiness.note || item.note;
+        return \`<div style="background:var(--card2);border:1px solid \${meta.color}66;border-radius:10px;padding:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+            <div style="font-size:13px;font-weight:900;color:var(--text)">\${item.icon} \${item.label}</div>
+            <span style="font-size:11px;font-weight:900;color:\${meta.color}">\${meta.icon} \${meta.label}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.35">\${escapeHtml(note || item.note)}</div>
+          \${readiness.updatedByName ? \`<div style="font-size:10px;color:var(--text3);margin-top:6px">\${escapeHtml(readiness.updatedByName)} · \${formatDateTime(readiness.updatedAt)}</div>\` : ''}
+        </div>\`;
+      }).join('')}
+    </div>
+  </div>\`;
+}
+
+function editOrderReadinessModal(orderId) {
+  if (!can('block_order')) {
+    showToast('🚫 Připravenost může měnit TPV, mistr, vedení nebo admin.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  order.readiness = normalizeOrderReadiness(order);
+  openModal('🚦 Připravenost zakázky', \`
+    <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:12px">
+      Nastavte, co zakázce chybí před výrobou. Pokud je zakázka blokovaná typem materiál/dokumentace/program/zákazník/kvalita, odpovídající bod se v přehledu zobrazí červeně.
+    </div>
+    \${Object.entries(READINESS_ITEMS).map(([key, item]) => {
+      const readiness = order.readiness[key] || {};
+      return \`<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:9px">
+        <div style="font-size:13px;font-weight:900;color:var(--text);margin-bottom:8px">\${item.icon} \${item.label}</div>
+        <div style="display:grid;grid-template-columns:150px 1fr;gap:8px">
+          <select class="input" id="or-\${key}-status">
+            \${Object.entries(READINESS_STATUS).map(([status, meta]) => \`
+              <option value="\${status}" \${normalizeReadinessStatus(readiness.status) === status ? 'selected' : ''}>\${meta.icon} \${meta.label}</option>
+            \`).join('')}
+          </select>
+          <input class="input" id="or-\${key}-note" value="\${escapeHtml(readiness.note || '')}" placeholder="\${escapeHtml(item.note)}">
+        </div>
+      </div>\`;
+    }).join('')}
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Uložit', action:\`saveOrderReadiness('\${order.id}')\`, cls:'btn-primary' },
+  ]);
+}
+
+function saveOrderReadiness(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order || !can('block_order')) return;
+  const before = cloneForAudit(order.readiness || {});
+  const now = new Date().toISOString();
+  order.readiness = Object.fromEntries(Object.keys(READINESS_ITEMS).map(key => {
+    const status = normalizeReadinessStatus(document.getElementById(\`or-\${key}-status\`)?.value);
+    const note = document.getElementById(\`or-\${key}-note\`)?.value.trim() || '';
+    return [key, {
+      status,
+      note,
+      updatedByName: currentUser?.name || '',
+      updatedAt: now,
+    }];
+  }));
+  writeAudit(
+    'order.readiness.updated',
+    'order',
+    order.id,
+    \`\${order.number} · připravenost zakázky upravena\`,
+    before,
+    cloneForAudit(order.readiness),
+  );
+  saveState();
+  closeModal();
+  showToast('✅ Připravenost uložena', { skipSave: true });
+  if (detailView?.type === 'order' && selectedOrder?.id === order.id) openOrder(order.id);
+  else refreshCurrentView();
+}
+
+function activeStationIndex(order) {
+  if (!order?.stations?.length) return -1;
+  const active = order.stations.findIndex(s => !['completed','skipped'].includes(s.status));
+  return active >= 0 ? active : order.stations.length - 1;
+}
+
+function stationQueueState(order, station, index) {
+  const state = window.EZOP_FLOW?.stationQueueState({
+    blocked: isOrderBlocked(order),
+    status: station.status,
+    available: stationInputQty(order, station, index),
+    firstStation: index === 0,
+  }) || { label: 'Čeká na předchozí krok', tone: 'waiting', rank: 4 };
+  return {
+    ...state,
+    color: window.EZOP_FLOW?.queueStateColor(state.tone) || 'var(--text2)',
+  };
+}
+
+function workQueueItems(stationId = '') {
+  const selectedId = Number(stationId) || 0;
+  const rows = [];
+  visibleOrders().forEach(order => {
+    syncOrderStationFlow(order);
+    (order.stations || []).forEach((station, index) => {
+      if (selectedId && Number(station.stId) !== selectedId) return;
+      if (!userCanAccessStation(station.stId)) return;
+      if (!selectedId && index !== activeStationIndex(order)) return;
+      if (['completed','skipped'].includes(station.status) && !isOrderBlocked(order)) return;
+      const stInfo = STATIONS.find(st => st.id === Number(station.stId));
+      const queueState = stationQueueState(order, station, index);
+      rows.push({ order, station, index, stInfo, queueState });
+    });
+  });
+  return rows.sort((a, b) =>
+    a.queueState.rank - b.queueState.rank ||
+    queueRankValue(a.station) - queueRankValue(b.station) ||
+    priorityRank(a.order.priority) - priorityRank(b.order.priority) ||
+    dueTime(a.order) - dueTime(b.order) ||
+    String(a.order.number).localeCompare(String(b.order.number))
+  );
+}
+
+function queueRankValue(station) {
+  const rank = Number(station?.queueRank) || 0;
+  return rank > 0 ? rank : Number.MAX_SAFE_INTEGER;
+}
+
+function orderStationById(orderId, stId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  const station = order?.stations?.find(s => Number(s.stId) === Number(stId));
+  return { order, station };
+}
+
+function applyStationQueueOrder(stId, orderIds) {
+  const rankByOrder = new Map(orderIds.map((orderId, index) => [String(orderId), index + 1]));
+  ORDERS.forEach(order => {
+    const station = order.stations?.find(s => Number(s.stId) === Number(stId));
+    if (!station) return;
+    const rank = rankByOrder.get(String(order.id));
+    if (rank) station.queueRank = rank;
+  });
+}
+
+function saveStationQueueOrder(stId, orderIds, summary = 'pořadí fronty upraveno') {
+  if (!can('manage_order_stations')) {
+    showToast('🚫 Pořadí fronty může měnit jen mistr, vedení nebo admin.');
+    return false;
+  }
+  const before = workQueueItems(stId).map(item => ({
+    orderId: item.order.id,
+    orderNumber: item.order.number,
+    queueRank: queueRankValue(item.station),
+  }));
+  applyStationQueueOrder(stId, orderIds);
+  const after = workQueueItems(stId).map(item => ({
+    orderId: item.order.id,
+    orderNumber: item.order.number,
+    queueRank: queueRankValue(item.station),
+  }));
+  const stInfo = STATIONS.find(st => Number(st.id) === Number(stId));
+  writeAudit(
+    'queue.reordered',
+    'station_queue',
+    String(stId),
+    \`\${stInfo?.name || stId}: \${summary}\`,
+    before,
+    after,
+  );
+  saveState();
+  renderWorkQueue();
+  showToast('✅ Pořadí fronty uloženo', { skipSave: true });
+  return true;
+}
+
+function moveQueueItem(orderId, stId, direction) {
+  const stationId = Number(stId);
+  const items = workQueueItems(stationId).filter(item => Number(item.station.stId) === stationId);
+  const ids = items.map(item => item.order.id);
+  const index = ids.indexOf(orderId);
+  const target = index + Number(direction);
+  if (index < 0 || target < 0 || target >= ids.length) return;
+  const [id] = ids.splice(index, 1);
+  ids.splice(target, 0, id);
+  saveStationQueueOrder(stationId, ids, \`zakázka \${items[index]?.order.number || orderId} posunuta ve frontě\`);
+}
+
+let queueDragSource = null;
+
+function queueDragStart(event, orderId, stId) {
+  if (!can('manage_order_stations') || !queueStationFilter) return;
+  queueDragSource = { orderId, stId: Number(stId) };
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', \`\${orderId}:\${stId}\`);
+}
+
+function queueDragOver(event) {
+  if (!queueDragSource || !queueStationFilter) return;
+  event.preventDefault();
+}
+
+function queueDrop(event, targetOrderId, targetStId) {
+  event.preventDefault();
+  if (!queueDragSource || !can('manage_order_stations') || !queueStationFilter) return;
+  const stationId = Number(targetStId);
+  if (Number(queueDragSource.stId) !== stationId) {
+    showToast('⚠️ Pořadí lze měnit jen ve stejné frontě stanoviště.');
+    queueDragSource = null;
+    return;
+  }
+  const ids = workQueueItems(stationId)
+    .filter(item => Number(item.station.stId) === stationId)
+    .map(item => item.order.id);
+  const from = ids.indexOf(queueDragSource.orderId);
+  const to = ids.indexOf(targetOrderId);
+  if (from < 0 || to < 0 || from === to) {
+    queueDragSource = null;
+    return;
+  }
+  const [id] = ids.splice(from, 1);
+  ids.splice(to, 0, id);
+  const sourceNumber = ORDERS.find(o => o.id === queueDragSource.orderId)?.number || queueDragSource.orderId;
+  saveStationQueueOrder(stationId, ids, \`zakázka \${sourceNumber} přesunuta přetažením\`);
+  queueDragSource = null;
+}
+
+function openQueueForStation(stId) {
+  queueStationFilter = String(stId || '');
+  queueSearch = '';
+  navigateTo('queue');
+}
+
+function orderIsClosed(order) {
+  const stations = order?.stations || [];
+  return stations.length > 0 && stations.every(station => ['completed','skipped'].includes(station.status));
+}
+
+function dateOnlyTime(value) {
+  if (!value) return Number.NaN;
+  const text = String(value).slice(0, 10);
+  const match = text.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match.map(Number);
+    return new Date(year, month - 1, day).getTime();
+  }
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : Number.NaN;
+}
+
+function todayStartTime() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.getTime();
+}
+
+function isOrderOverdue(order) {
+  const due = dateOnlyTime(order?.due);
+  return Number.isFinite(due) && due < todayStartTime() && !orderIsClosed(order);
+}
+
+function orderDaysLate(order) {
+  const due = dateOnlyTime(order?.due);
+  if (!Number.isFinite(due)) return 0;
+  return Math.max(0, Math.floor((todayStartTime() - due) / 86400000));
+}
+
+function stationLoadSummaries() {
+  return STATIONS.map(station => {
+    const items = workQueueItems(station.id).filter(item => Number(item.station.stId) === Number(station.id));
+    const active = items.filter(item => !['completed','skipped'].includes(item.station.status) || isOrderBlocked(item.order));
+    const urgent = active.filter(item => item.order.priority === 'urgent').length;
+    const overdue = active.filter(item => isOrderOverdue(item.order)).length;
+    const blocked = active.filter(item => isOrderBlocked(item.order)).length;
+    const inProgress = active.filter(item => ['in_progress','partial','issue'].includes(item.station.status)).length;
+    const score = active.length + urgent + (overdue * 2) + (blocked * 2) + inProgress;
+    const level = blocked || overdue || active.length >= 5
+      ? 'overload'
+      : active.length >= 3 || urgent >= 2 ? 'busy' : 'ok';
+    return { station, items: active, count: active.length, urgent, overdue, blocked, inProgress, score, level };
+  })
+    .filter(summary => summary.count > 0)
+    .sort((a, b) => b.score - a.score || b.count - a.count || a.station.id - b.station.id);
+}
+
+function stationLoadColor(level) {
+  if (level === 'overload') return 'var(--red)';
+  if (level === 'busy') return 'var(--amber)';
+  return 'var(--green)';
+}
+
+function dashboardPlanningRiskHtml(orders, context = null) {
+  if (!isManagerRole()) return '';
+  const overdueOrders = orders.filter(isOrderOverdue)
+    .sort((a, b) => dateOnlyTime(a.due) - dateOnlyTime(b.due) || priorityRank(a.priority) - priorityRank(b.priority));
+  const blockedOrders = orders.filter(isOrderBlocked);
+  const loads = context?.loads || stationLoadSummaries();
+  const riskyLoads = loads.filter(load => load.level !== 'ok').slice(0, 4);
+  const readinessRisks = readinessRiskCounts(orders);
+  const readinessRiskTotal = Object.values(readinessRisks).reduce((sum, item) => sum + item.count, 0);
+  const calm = overdueOrders.length === 0 && blockedOrders.length === 0 && riskyLoads.length === 0 && readinessRiskTotal === 0;
+
+  return \`<div class="card" style="border-left:4px solid \${calm ? 'var(--green)' : 'var(--amber)'}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">🧭 Rizika směny pro mistra</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">
+          Fronty linek, zpoždění a blokace z aktuálních zakázek.
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Fronty</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer" onclick="showOrdersFiltered('overdue')">
+        <div style="font-size:20px;font-weight:900;color:\${overdueOrders.length ? 'var(--red)' : 'var(--green)'}">\${overdueOrders.length}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Po termínu</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer" onclick="showOrdersFiltered('blocked')">
+        <div style="font-size:20px;font-weight:900;color:\${blockedOrders.length ? 'var(--red)' : 'var(--green)'}">\${blockedOrders.length}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Blokace</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer" onclick="navigateTo('queue')">
+        <div style="font-size:20px;font-weight:900;color:\${riskyLoads.length ? 'var(--amber)' : 'var(--green)'}">\${riskyLoads.length}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Přetížení</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Stojí na přípravě</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px">
+        \${Object.entries(readinessRisks).map(([filter, item]) => \`
+          <div style="background:var(--card2);border:1px solid \${item.count ? 'rgba(245,158,11,.45)' : 'var(--border)'};border-radius:10px;padding:9px;cursor:pointer"
+            onclick="showOrdersFiltered('\${filter}')">
+            <div style="font-size:18px;font-weight:900;color:\${item.count ? 'var(--amber)' : 'var(--green)'}">\${item.count}</div>
+            <div style="font-size:10px;color:var(--text2);font-weight:800;line-height:1.25">\${item.label}</div>
+          </div>
+        \`).join('')}
+      </div>
+    </div>
+
+    \${calm ? \`<div style="font-size:13px;color:var(--green);font-weight:800;text-align:center;padding:10px">✅ Bez zjevného rizika směny</div>\` : \`
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Přetížená pracoviště</div>
+          \${riskyLoads.length ? riskyLoads.map(load => {
+            const color = stationLoadColor(load.level);
+            const pct = Math.min(100, 22 + load.count * 14 + load.overdue * 10 + load.blocked * 10);
+            return \`<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:9px;margin-bottom:7px;cursor:pointer" onclick="openQueueForStation('\${load.station.id}')">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+                <div style="font-size:13px;font-weight:900;color:var(--text)">\${load.station.icon} \${escapeHtml(load.station.name)}</div>
+                <div style="font-size:11px;color:\${color};font-weight:900">\${load.count} ve frontě</div>
+              </div>
+              <div class="progress-bar" style="height:7px"><div class="progress-fill" style="width:\${pct}%;background:\${color}"></div></div>
+              <div style="font-size:10px;color:var(--text2);margin-top:5px">🔥 \${load.urgent} urgent · ⏰ \${load.overdue} po termínu · ⛔ \${load.blocked} blok.</div>
+            </div>\`;
+          }).join('') : \`<div style="font-size:12px;color:var(--text2);padding:10px 0">Žádné pracoviště není nad limitem.</div>\`}
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Zakázky po termínu</div>
+          \${overdueOrders.length ? overdueOrders.slice(0, 4).map(order => \`
+            <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:9px;margin-bottom:7px;cursor:pointer" onclick="openOrder('\${order.id}')">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <div style="font-size:13px;font-weight:900;color:var(--gold);font-family:'SF Mono',Menlo,monospace">\${escapeHtml(order.number)}</div>
+                <span class="badge badge-\${order.priority}">\${priorityLabel(order.priority)}</span>
+              </div>
+              <div style="font-size:12px;color:var(--text);font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escapeHtml(order.name)}</div>
+              <div style="font-size:10px;color:var(--red);margin-top:3px">Termín \${formatDate(order.due)} · \${orderDaysLate(order)} dní po termínu</div>
+            </div>
+          \`).join('') : \`<div style="font-size:12px;color:var(--text2);padding:10px 0">Žádná otevřená zakázka není po termínu.</div>\`}
+          \${overdueOrders.length > 4 ? \`<button class="btn btn-ghost btn-sm" style="width:100%;margin-top:4px" onclick="showOrdersFiltered('overdue')">Zobrazit všech \${overdueOrders.length}</button>\` : ''}
+        </div>
+      </div>
+    \`}
+  </div>\`;
+}
+
+function stationWorkerLabel(station) {
+  if (!station?.workerName && !station?.workerLogin) return 'Bez převzetí';
+  return station.workerName || station.workerLogin;
+}
+
+function stationWorkBadgeHtml(station) {
+  if (!station?.workerName && !station?.workerLogin) {
+    return \`<span class="badge" style="background:rgba(148,163,184,.14);color:var(--text2)">nepřevzato</span>\`;
+  }
+  const paused = Boolean(station.workPausedAt);
+  return \`<span class="badge" style="background:\${paused ? 'rgba(245,158,11,.16)' : 'rgba(34,197,94,.14)'};color:\${paused ? 'var(--amber)' : 'var(--green)'}">
+    \${paused ? '⏸ Pozastaveno' : '👤 ' + escapeHtml(stationWorkerLabel(station))}
+  </span>\`;
+}
+
+function setSelectedStation(orderId, stId) {
+  selectedOrder = ORDERS.find(o => o.id === orderId);
+  selectedStation = selectedOrder?.stations.find(s => Number(s.stId) === Number(stId));
+  return Boolean(selectedOrder && selectedStation);
+}
+
+function stationWorkActionButtons(order, station) {
+  const claimedByOther = stationClaimedByOther(station);
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const actions = window.EZOP_FLOW?.stationWorkActions({
+    canOperate: canOperateStation(station),
+    blocked: isOrderBlocked(order),
+    claimedByOther,
+    claimed,
+    managerRole: isManagerRole(),
+    status: station.status,
+    paused: Boolean(station.workPausedAt),
+  }) || [];
+  return actions.map(action => {
+    if (action === 'claimed_by_other') {
+      return \`<span style="font-size:11px;color:var(--text3);align-self:center">Převzato: \${escapeHtml(stationWorkerLabel(station))}</span>\`;
+    }
+    if (action === 'claim') {
+      return \`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('\${order.id}', '\${station.stId}')">Převzít práci</button>\`;
+    }
+    if (action === 'resume') {
+      return \`<button class="btn btn-teal btn-sm station-claim-primary" onclick="claimStationWork('\${order.id}', '\${station.stId}')">Obnovit práci</button>\`;
+    }
+    if (action === 'pause') {
+      return \`<button class="btn btn-ghost btn-sm" onclick="pauseStationWork('\${order.id}', '\${station.stId}')">Pozastavit</button>\`;
+    }
+    if (action === 'finish') {
+      return \`<button class="btn btn-primary btn-sm" onclick="finishStationWork('\${order.id}', '\${station.stId}')">Dokončit</button>\`;
+    }
+    if (action === 'done') {
+      return \`<span class="station-action-done">Dokončeno: \${escapeHtml(stationWorkerLabel(station))}</span>\`;
+    }
+    return '';
+  }).join('');
+}
+
+function claimStationWork(orderId, stId) {
+  if (!setSelectedStation(orderId, stId)) return;
+  if (!canOperateStation(selectedStation)) {
+    showToast('🚫 Toto stanoviště nemáte přiřazené.');
+    return;
+  }
+  if (isOrderBlocked(selectedOrder)) {
+    showToast('⛔ Zakázka je blokovaná. Nelze ji převzít.');
+    return;
+  }
+  if (stationClaimedByOther(selectedStation)) {
+    showToast(\`⚠️ Stanoviště už převzal \${stationWorkerLabel(selectedStation)}.\`);
+    return;
+  }
+
+  const before = cloneForAudit(selectedStation);
+  selectedStation.workerUserId = currentUser.id;
+  selectedStation.workerLogin = currentUser.login;
+  selectedStation.workerName = currentUser.name;
+  selectedStation.workerRole = currentUser.role;
+  selectedStation.workStartedAt ||= new Date().toISOString();
+  selectedStation.workPausedAt = null;
+  selectedStation.workPauseReason = '';
+  if (['waiting','partial'].includes(selectedStation.status)) selectedStation.status = 'in_progress';
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  writeAudit(
+    'station.work_claimed',
+    'order_station',
+    stationAuditId(selectedOrder, selectedStation),
+    \`\${selectedOrder.number} · \${stInfo?.name || selectedStation.stId}: převzato \${currentUser.name}\`,
+    before,
+    cloneForAudit(selectedStation)
+  );
+  saveState();
+  refreshCurrentView();
+  showToast('👤 Práce převzata', { skipSave: true });
+}
+
+function pauseStationWork(orderId, stId) {
+  if (!setSelectedStation(orderId, stId)) return;
+  if (!canOperateStationNow(selectedStation, selectedOrder)) {
+    showToast('🚫 Toto stanoviště nemůžete pozastavit.');
+    return;
+  }
+  const reason = prompt('Důvod pozastavení (volitelné):', selectedStation.workPauseReason || '');
+  if (reason === null) return;
+  const before = cloneForAudit(selectedStation);
+  selectedStation.workPausedAt = new Date().toISOString();
+  selectedStation.workPauseReason = String(reason || '').trim();
+  if (selectedStation.status === 'in_progress') selectedStation.status = 'partial';
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  writeAudit(
+    'station.work_paused',
+    'order_station',
+    stationAuditId(selectedOrder, selectedStation),
+    \`\${selectedOrder.number} · \${stInfo?.name || selectedStation.stId}: práce pozastavena\`,
+    before,
+    cloneForAudit(selectedStation)
+  );
+  saveState();
+  refreshCurrentView();
+  showToast('⏸ Práce pozastavena', { skipSave: true });
+}
+
+function finishStationWork(orderId, stId) {
+  if (!setSelectedStation(orderId, stId)) return;
+  if (!canOperateStationNow(selectedStation, selectedOrder)) {
+    showToast('🚫 Toto stanoviště nemůžete dokončit.');
+    return;
+  }
+  selectedStation.workCompletedAt = new Date().toISOString();
+  selectedStation.workCompletedByUserId = currentUser.id;
+  selectedStation.workCompletedByLogin = currentUser.login;
+  selectedStation.workCompletedByName = currentUser.name;
+  setStatus('completed');
+}
+
+function findOrderByCode(rawCode) {
+  const code = String(rawCode || '').trim();
+  if (!code) return null;
+  const normalized = code
+    .replace(/^ezop:/i, '')
+    .replace(/^zakazka:/i, '')
+    .trim();
+  const fromUrl = (() => {
+    try {
+      const url = new URL(normalized, location.origin);
+      return url.searchParams.get('order') || url.searchParams.get('code') || url.searchParams.get('qr') || '';
+    } catch {
+      return '';
+    }
+  })();
+  const needle = (fromUrl || normalized).trim().toLowerCase();
+  return ORDERS.find(o =>
+    String(o.number || '').toLowerCase() === needle ||
+    String(o.id || '').toLowerCase() === needle ||
+    String(o.purchaseOrderNumber || '').toLowerCase() === needle
+  ) || null;
+}
+
+function openOrderByCode(code, options = {}) {
+  const order = findOrderByCode(code);
+  if (!order) {
+    if (!options.silent) showToast('⚠️ Zakázka podle kódu nebyla nalezena');
+    return false;
+  }
+  const stationId = Number(options.station) || 0;
+  if (stationId && order.stations?.some(st => Number(st.stId) === stationId)) {
+    openStation(order.id, stationId);
+  } else {
+    openOrder(order.id);
+  }
+  if (!options.silent) showToast(\`📎 Otevřeno: \${order.number}\`, { skipSave: true });
+  return true;
+}
+
+function currentOrderLink(order, stationId = '') {
+  const url = new URL(location.href);
+  url.search = '';
+  url.hash = '';
+  url.searchParams.set('order', order.number || order.id);
+  if (stationId) url.searchParams.set('station', String(stationId));
+  return url.toString();
+}
+
+function validStencilNumber(value) {
+  return !String(value || '').trim() || /^\\d+\\/\\d{4}$/.test(String(value).trim());
+}
+
+function normalizeLegacyStencilNumber(value) {
+  const map = {
+    'PL-VB300-R3': '3/0001',
+    'PL-PM24-001': '3/0002',
+    'PL-SR10-R2': '3/0003',
+  };
+  return map[String(value || '').trim()] || String(value || '').trim();
+}
+
+// ── APP SETTINGS (editable by admin) ──────────────────
+let APP_SETTINGS = cloneDefault('appSettings') || {};
+
+// ── STATIONS ──────────────────────────────────────────
+const STATIONS = cloneDefault('stations') || [];
+
+// ── REPORTED ISSUES (visible to all users) ───────────
+let ISSUES = [];   // { id, orderId, stationId, severity, description, reportedBy, reportedAt, resolved }
+
+// ── PRODUCTION NOTES (visible to all users) ──────────
+// type: 'info' | 'storage' | 'material' | 'change' | 'other'
+let PROD_NOTES = cloneDefault('productionNotes') || [];
+
+// ── DEMO ORDERS ───────────────────────────────────────
+// Číslo zakázky = 6místný kód (auto-increment od 261100)
+let NEXT_ORDER_CODE = DEFAULTS.nextOrderCode || 261104;
+let ORDERS = cloneDefault('orders') || [];
+
+const LOGIN_LOG_KEY = 'vyrobais-login-log-v1';
+const NOTIFICATION_READ_KEY = 'ezop4-notification-read-v1';
+const APP_THEME_KEY = 'ezop4-app-theme-v1';
+let LOGIN_LOGS = loadLoginLogs();
+let PRODUCT_MEMORY = {};
+
+function normalizeAppTheme(theme) {
+  return theme === 'light' ? 'light' : 'dark';
+}
+
+function getAppTheme() {
+  try {
+    return normalizeAppTheme(localStorage.getItem(APP_THEME_KEY));
+  } catch {
+    return 'dark';
+  }
+}
+
+function applyAppTheme(theme = getAppTheme()) {
+  const normalized = normalizeAppTheme(theme);
+  document.body.classList.toggle('ezop-theme-light', normalized === 'light');
+  document.body.classList.toggle('ezop-theme-dark', normalized === 'dark');
+  document.body.dataset.appTheme = normalized;
+  const btn = document.getElementById('tbar-theme');
+  if (btn) {
+    btn.textContent = normalized === 'light' ? '☀️' : '🌙';
+    btn.title = normalized === 'light' ? 'Přepnout na tmavý režim' : 'Přepnout na světlý režim';
+    btn.setAttribute('aria-label', btn.title);
+    btn.setAttribute('aria-pressed', normalized === 'light' ? 'true' : 'false');
+  }
+}
+
+function setAppTheme(theme) {
+  const normalized = normalizeAppTheme(theme);
+  try {
+    localStorage.setItem(APP_THEME_KEY, normalized);
+  } catch {}
+  applyAppTheme(normalized);
+  if (document.getElementById('page-profile')?.classList.contains('active')) renderProfile();
+  showToast(normalized === 'light' ? '☀️ Světlý režim zapnutý' : '🌙 Tmavý režim zapnutý', { skipSave: true });
+}
+
+function toggleAppTheme() {
+  setAppTheme(getAppTheme() === 'light' ? 'dark' : 'light');
+}
+
+applyAppTheme();
+
+function autoReadyBase(note) {
+  const parts = String(note?.autoKey || '').split(':');
+  return parts.length === 5 && parts[0] === 'auto-ready'
+    ? parts.slice(0, 4).join(':')
+    : '';
+}
+
+function autoReadyQty(note) {
+  const parts = String(note?.autoKey || '').split(':');
+  return Number(parts[4]) || 0;
+}
+
+function cleanupAppMemory(options = {}) {
+  const before = {
+    notes: PROD_NOTES.length,
+    logs: LOGIN_LOGS.length,
+    memory: Object.keys(PRODUCT_MEMORY || {}).length,
+  };
+
+  const autoWinners = new Map();
+  PROD_NOTES.forEach(note => {
+    const base = autoReadyBase(note);
+    if (!base) return;
+    const current = autoWinners.get(base);
+    const currentTime = current ? new Date(current.createdAt || 0).getTime() : 0;
+    const noteTime = new Date(note.createdAt || 0).getTime();
+    if (!current || autoReadyQty(note) > autoReadyQty(current) || noteTime > currentTime) {
+      autoWinners.set(base, note);
+    }
+  });
+
+  const seenIds = new Set();
+  PROD_NOTES = PROD_NOTES.filter(note => {
+    if (seenIds.has(note.id)) return false;
+    seenIds.add(note.id);
+    const base = autoReadyBase(note);
+    return !base || autoWinners.get(base) === note;
+  });
+
+  LOGIN_LOGS = LOGIN_LOGS.slice(0, 80);
+  PRODUCT_MEMORY = Object.fromEntries(Object.entries(PRODUCT_MEMORY || {}).filter(([, memory]) =>
+    memory?.photoDataUrl ||
+    Object.keys(memory?.stationPrograms || {}).length > 0 ||
+    (Array.isArray(memory?.reusableNotes) && memory.reusableNotes.length > 0)
+  ));
+
+  if (options.clearLoginGuard) {
+    try { localStorage.removeItem(LOGIN_GUARD_KEY); } catch { /* localStorage can be unavailable. */ }
+  }
+
+  const stats = {
+    removedNotes: before.notes - PROD_NOTES.length,
+    removedLogs: before.logs - LOGIN_LOGS.length,
+    removedMemory: before.memory - Object.keys(PRODUCT_MEMORY || {}).length,
+  };
+
+  if (options.persist) {
+    saveLoginLogs();
+    saveState();
+  }
+  return stats;
+}
+
+// ── HYDRATE z localStorage (demo data jsou fallback) ─
+const _saved = loadState();
+if (_saved) {
+  migrateCredentialsFromState(_saved);
+  applyState(_saved, { includeUsers: true, includeLogs: true });
+}
+normalizeAppData();
+cleanupAppMemory({ persist: false });
+
+// Auto-save při změně stavu
+let _saveDebounce;
+function autoSave() {
+  clearTimeout(_saveDebounce);
+  _saveDebounce = setTimeout(saveState, 200);
+}
+
+// ── STATE ─────────────────────────────────────────────
+let currentUser = null;
+let currentAuthSource = 'demo';
+let currentPage = 'dashboard';
+let detailView = null;
+let selectedOrder = null;
+let selectedStation = null;
+let pageBackStack = [];
+let navigationSkipHistory = false;
+let mobileSwipe = null;
+
+// Numpad state
+let numpadValue = '';
+let numpadCallback = null;
+let numpadField = null;
+
+function loadLoginLogs() {
+  try {
+    return JSON.parse(localStorage.getItem(LOGIN_LOG_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveLoginLogs() {
+  try {
+    localStorage.setItem(LOGIN_LOG_KEY, JSON.stringify(LOGIN_LOGS.slice(0, 200)));
+    localStorage.setItem(LS_KEY, JSON.stringify(currentState()));
+  } catch {
+    // Staticka demo verze muze bezet i v rezimu bez localStorage.
+  }
+  cloudPush();
+}
+
+function loginSourceDetails() {
+  const nav = window.navigator || {};
+  const screenInfo = window.screen ? \`\${window.screen.width}x\${window.screen.height}\` : \`\${window.innerWidth}x\${window.innerHeight}\`;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'nezjisteno';
+  return {
+    host: window.location.host || 'lokalni soubor',
+    url: window.location.href,
+    device: nav.platform || 'nezjisteno',
+    browser: nav.userAgent || 'nezjisteno',
+    language: nav.language || 'nezjisteno',
+    timezone: tz,
+    screen: screenInfo,
+  };
+}
+
+function recordLoginEvent(login, user, success) {
+  LOGIN_LOGS.unshift({
+    id: 'll' + Date.now(),
+    at: new Date().toISOString(),
+    success,
+    login,
+    userId: user?.id || null,
+    name: user?.name || 'Neznamy uzivatel',
+    role: user?.role || null,
+    source: loginSourceDetails(),
+  });
+  LOGIN_LOGS = LOGIN_LOGS.slice(0, 200);
+  saveLoginLogs();
+}
+
+function cloneForAudit(value) {
+  try { return JSON.parse(JSON.stringify(value)); }
+  catch { return value; }
+}
+
+function auditUser() {
+  return currentUser
+    ? { id: currentUser.id, name: currentUser.name, role: currentUser.role }
+    : null;
+}
+
+function writeAudit(action, entityType, entityId, summary, before, after) {
+  if (!window.EZOP4_AUDIT?.recordAudit) return;
+  window.EZOP4_AUDIT.recordAudit({
+    user: auditUser(),
+    action,
+    entityType,
+    entityId: String(entityId || ''),
+    summary,
+    before,
+    after,
+  }, currentAuthSource === 'supabase' ? db : null);
+}
+
+function auditRows() {
+  return window.EZOP4_AUDIT?.readAuditLog?.() || [];
+}
+
+function clearAuditRows() {
+  window.EZOP4_AUDIT?.clearAuditLog?.();
+}
+
+function stationAuditId(order, station) {
+  return \`\${order?.id || 'order'}:\${station?.stId || 'station'}\`;
+}
+
+// ── LOGIN / LOGOUT ─────────────────────────────────────
+const REMEMBER_USER_KEY = 'vyrobais-remember-user';
+const LOGIN_GUARD_KEY = 'vyrobais-login-guard-v1';
+const PASSKEYS_KEY = 'ezop4-passkeys-v1';
+const START_PAGE_KEY = 'ezop4-start-page';
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 60 * 1000;
+const START_PAGE_LABELS = {
+  dashboard: 'Přehled',
+  orders: 'Zakázky',
+  queue: 'Fronty pracovišť',
+  kanban: 'Kanban',
+  issues: 'Problémy',
+  kpi: 'KPI',
+  admin: 'Správa',
+  workspace: 'Můj prostor',
+  profile: 'Profil',
+};
+const ROLE_START_PAGE_OPTIONS = {
+  admin: ['dashboard','orders','queue','kanban','issues','kpi','admin','workspace','profile'],
+  dispatcher: ['dashboard','queue','kanban','orders','issues','kpi','workspace','profile'],
+  management: ['dashboard','kpi','queue','kanban','orders','issues','workspace','profile'],
+  tpv: ['orders','issues','queue','kanban','dashboard','kpi','workspace','profile'],
+  operator: ['queue','issues','profile'],
+};
+
+function startPageStorageKey(user = currentUser) {
+  return \`\${START_PAGE_KEY}:\${normalizeLogin(user?.login || user?.id || 'anonymous')}\`;
+}
+
+function defaultStartPageForRole(role = currentUser?.role) {
+  const configured = APP_SETTINGS?.startPagesByRole?.[role];
+  if (configured) return configured;
+  if (role === 'operator') return 'queue';
+  if (role === 'dispatcher') return 'dashboard';
+  if (role === 'management') return 'dashboard';
+  if (role === 'tpv') return 'orders';
+  return 'dashboard';
+}
+
+function startPageOptions() {
+  return getNavItems().map(item => ({
+    id: item.id,
+    label: START_PAGE_LABELS[item.id] || item.label.replace(/\\s*\\(\\d+\\)/, ''),
+  }));
+}
+
+function preferredStartPage() {
+  const options = startPageOptions();
+  const allowed = new Set(options.map(item => item.id));
+  let saved = '';
+  try { saved = localStorage.getItem(startPageStorageKey()) || ''; }
+  catch { saved = ''; }
+  if (saved && allowed.has(saved)) return saved;
+  const fallback = defaultStartPageForRole();
+  return allowed.has(fallback) ? fallback : (options[0]?.id || 'dashboard');
+}
+
+function updateStartPagePreference(page) {
+  const allowed = new Set(startPageOptions().map(item => item.id));
+  if (!allowed.has(page)) {
+    showToast('Tuto stránku nelze nastavit jako úvodní.');
+    renderProfile();
+    return;
+  }
+  try { localStorage.setItem(startPageStorageKey(), page); }
+  catch { /* Osobní nastavení je jen lokální volba v prohlížeči. */ }
+  showToast('Úvodní stránka nastavena');
+  renderProfile();
+}
+
+function roleStartPageOptions(role) {
+  const configured = APP_SETTINGS?.startPagesByRole?.[role];
+  const base = ROLE_START_PAGE_OPTIONS[role] || ['dashboard','orders','issues','profile'];
+  return configured && !base.includes(configured) ? [configured, ...base] : base;
+}
+
+function renderRoleStartPageSettings() {
+  const roles = ['operator', 'dispatcher', 'tpv', 'management', 'admin'];
+  return \`<div class="card" style="border-left:4px solid var(--cyan)">
+    <div class="card-title">🏁 Úvodní stránka podle role</div>
+    <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+      Admin nastaví výchozí stránku po přihlášení. Uživatel si ji může ve svém Profilu přepsat jen pro svoje zařízení.
+    </div>
+    \${roles.map(role => {
+      const selected = defaultStartPageForRole(role);
+      return \`<div class="settings-row">
+        <div>
+          <div class="settings-label">\${escapeHtml(ROLE_LABELS[role] || role)}</div>
+          <div class="settings-desc">Výchozí stránka pro novou relaci této role</div>
+        </div>
+        <select class="input" style="width:190px" onchange="updateRoleStartPage('\${role}', this.value)">
+          \${roleStartPageOptions(role).map(page => \`
+            <option value="\${escapeHtml(page)}" \${page === selected ? 'selected' : ''}>\${escapeHtml(START_PAGE_LABELS[page] || page)}</option>
+          \`).join('')}
+        </select>
+      </div>\`;
+    }).join('')}
+  </div>\`;
+}
+
+function updateRoleStartPage(role, page) {
+  const allowed = roleStartPageOptions(role);
+  if (!allowed.includes(page)) {
+    showToast('Tuto stránku nelze pro roli nastavit.');
+    renderAdmin();
+    return;
+  }
+  if (!APP_SETTINGS.startPagesByRole) APP_SETTINGS.startPagesByRole = {};
+  const before = APP_SETTINGS.startPagesByRole[role] || defaultStartPageForRole(role);
+  APP_SETTINGS.startPagesByRole[role] = page;
+  writeAudit(
+    'app.role_start_page_changed',
+    'app_settings',
+    \`start-page:\${role}\`,
+    \`\${ROLE_LABELS[role] || role}: \${START_PAGE_LABELS[before] || before} → \${START_PAGE_LABELS[page] || page}\`,
+    { page: before },
+    { page }
+  );
+  saveState();
+  renderAdmin();
+  showToast('Výchozí stránka role uložena');
+}
+
+function loadLoginGuard() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOGIN_GUARD_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLoginGuard(guard) {
+  try { localStorage.setItem(LOGIN_GUARD_KEY, JSON.stringify(guard)); }
+  catch { /* Jen lokální ochrana proti rychlému hádání hesla. */ }
+}
+
+function loginGuardStatus(login) {
+  const key = normalizeLogin(login) || '_empty';
+  const guard = loadLoginGuard();
+  const entry = guard[key];
+  if (!entry?.lockedUntil) return { locked: false, remainingSec: 0 };
+  const remaining = Math.ceil((entry.lockedUntil - Date.now()) / 1000);
+  if (remaining <= 0) {
+    delete guard[key];
+    saveLoginGuard(guard);
+    return { locked: false, remainingSec: 0 };
+  }
+  return { locked: true, remainingSec: remaining };
+}
+
+function registerLoginFailure(login) {
+  const key = normalizeLogin(login) || '_empty';
+  const guard = loadLoginGuard();
+  const entry = guard[key] || { count: 0, lockedUntil: 0 };
+  entry.count = (entry.count || 0) + 1;
+  if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+    entry.lockedUntil = Date.now() + LOGIN_LOCK_MS;
+    entry.count = 0;
+  }
+  guard[key] = entry;
+  saveLoginGuard(guard);
+}
+
+function clearLoginFailures(login) {
+  const key = normalizeLogin(login) || '_empty';
+  const guard = loadLoginGuard();
+  delete guard[key];
+  saveLoginGuard(guard);
+}
+
+function savedLoginUser() {
+  try { return localStorage.getItem(REMEMBER_USER_KEY) || ''; }
+  catch { return ''; }
+}
+
+function passkeySupported() {
+  return Boolean(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
+}
+
+function bytesToBase64Url(bytes) {
+  const binary = Array.from(new Uint8Array(bytes)).map(b => String.fromCharCode(b)).join('');
+  return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBytes(value) {
+  const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+}
+
+function randomChallenge() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function readPasskeys() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PASSKEYS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter(item => item?.id && item?.login) : [];
+  } catch {
+    return [];
+  }
+}
+
+function savePasskeys(items) {
+  try { localStorage.setItem(PASSKEYS_KEY, JSON.stringify(items.slice(-20))); }
+  catch { /* Passkey map is device-local convenience only. */ }
+}
+
+function passkeysForLogin(login = '') {
+  const normalized = normalizeLogin(login);
+  return readPasskeys().filter(item => !normalized || normalizeLogin(item.login) === normalized);
+}
+
+function passkeyForCurrentUser() {
+  return passkeysForLogin(currentUser?.login).find(item => item.userId === currentUser?.id) || null;
+}
+
+function updatePasskeyLoginHint() {
+  const hint = document.getElementById('passkey-login-hint');
+  const btn = document.getElementById('passkey-login-btn');
+  if (!hint || !btn) return;
+  if (!passkeySupported()) {
+    btn.disabled = true;
+    hint.textContent = 'Biometrie/passkey vyžaduje HTTPS nebo localhost a podporovaný telefon či prohlížeč.';
+    return;
+  }
+  const login = normalizeLogin(document.getElementById('login-user')?.value);
+  const count = passkeysForLogin(login).length;
+  btn.disabled = count === 0;
+  hint.textContent = count
+    ? (login ? \`Pro účet \${login} je na tomto zařízení aktivní passkey.\` : 'Na tomto zařízení je aktivní passkey.')
+    : 'Nejdřív se přihlaste heslem a v Profilu zapněte biometrii pro toto zařízení.';
+}
+
+function applyRememberedLogin() {
+  const saved = savedLoginUser();
+  const userInput = document.getElementById('login-user');
+  const remember = document.getElementById('remember-user');
+  userInput.value = saved;
+  remember.checked = !!saved;
+  updatePasskeyLoginHint();
+  if (saved) document.getElementById('login-pass').focus();
+  else userInput.focus();
+}
+
+function updateRememberedLogin(login) {
+  const remember = document.getElementById('remember-user').checked;
+  try {
+    if (remember && login) localStorage.setItem(REMEMBER_USER_KEY, login);
+    else localStorage.removeItem(REMEMBER_USER_KEY);
+  } catch {
+    // Zapamatovani je pouze pohodlna lokalni volba v prohlizeci.
+  }
+}
+
+function shouldOpenLoginFirst() {
+  const params = new URLSearchParams(location.search);
+  return Boolean(params.get('go') || params.get('order') || params.get('code') || params.get('qr') || params.get('source') === 'pwa');
+}
+
+function showLandingScreen() {
+  document.getElementById('landing-screen').style.display = 'block';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-error').textContent = '';
+}
+
+function showLoginScreen() {
+  document.getElementById('landing-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  applyRememberedLogin();
+}
+
+function openDemoLogin() {
+  setEzop4AuthMode('demo');
+  showLoginScreen();
+  const userInput = document.getElementById('login-user');
+  const passInput = document.getElementById('login-pass');
+  userInput.value = 'admin';
+  passInput.value = '';
+  updatePasskeyLoginHint();
+  passInput.focus();
+}
+
+function completeLogin(user, loginForRemember, authSource) {
+  currentUser = user;
+  currentAuthSource = authSource || 'demo';
+  lastUserActivityAt = Date.now();
+  startInactivityMonitor();
+  const lockedRole = currentAuthSource === 'demo' ? BUILTIN_USER_ROLES[normalizeLogin(user.login)] : null;
+  if (lockedRole) currentUser.role = lockedRole;
+  clearLoginFailures(normalizeLogin(loginForRemember || user.login));
+  updateRememberedLogin(user.login);
+  recordLoginEvent(user.login, user, true);
+  if (authSource === 'demo_fallback') {
+    console.warn('[auth] Přihlášení proběhlo přes demo fallback – Supabase Auth nedostupný.');
+  }
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('landing-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app').style.flexDirection = 'column';
+  initApp();
+}
+
+function loginFailureMessage(rawLogin, found, supabaseError = '') {
+  const login = normalizeLogin(rawLogin);
+  const authMode = ezop4AuthMode();
+  if (!found) {
+    const base = login
+      ? \`Uživatel "\${login}" není v \${authMode === 'supabase' ? 'Supabase profilu ani v lokálních demo účtech' : 'lokálních demo účtech této instalace'}.\`
+      : 'Vyplňte přihlašovací jméno.';
+    const sourceHint = 'GitHub slouží jen pro kód/deploy, ne jako databáze uživatelů aplikace.';
+    const nextStep = authMode === 'supabase'
+      ? 'Vytvořte účet v Supabase Auth a řádek v tabulce profiles, nebo uživatele založte lokálně v Admin → Uživatelé.'
+      : 'Uživatele založte v této aplikaci přes Admin → Uživatelé, nebo přepněte Admin → Ezop4 na Supabase Auth.';
+    return supabaseError
+      ? \`Supabase Auth: \${supabaseError}. \${base} \${sourceHint} \${nextStep}\`
+      : \`\${base} \${sourceHint} \${nextStep}\`;
+  }
+  return supabaseError
+    ? \`Supabase Auth: \${supabaseError}. Demo fallback našel lokálního uživatele, ale heslo nesedí. Hesla jsou uložená jen v tomto prohlížeči.\`
+    : 'Nesprávné heslo. V demo režimu jsou hesla uložená jen lokálně v tomto prohlížeči.';
+}
+
+function refreshTopbarUser() {
+  if (!currentUser) return;
+  const name = document.getElementById('tbar-name');
+  if (name) name.textContent = currentUser.name;
+  const rb = document.getElementById('tbar-role');
+  if (rb) {
+    rb.textContent = ROLE_LABELS[currentUser.role] || currentUser.role || '';
+    rb.className = 'role-badge role-' + currentUser.role;
+  }
+  refreshNotificationBadge();
+  refreshMessengerBadge();
+}
+
+function directMessagePeers() {
+  return (USERS || [])
+    .filter(u => u.id !== currentUser?.id)
+    .filter(u => userCanUseMessenger(u));
+}
+
+function userCanUseMessenger(user) {
+  return userEffectivePermission(user, 'use_messenger');
+}
+
+function messageTouchesUser(message, userId = currentUser?.id) {
+  return Boolean(userId && (message.fromUserId === userId || message.toUserId === userId));
+}
+
+function directMessagesForCurrentUser() {
+  return (DIRECT_MESSAGES || [])
+    .filter(message => messageTouchesUser(message))
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function unreadDirectMessages() {
+  const uid = currentUser?.id;
+  if (!uid) return [];
+  return (DIRECT_MESSAGES || []).filter(message =>
+    message.toUserId === uid && !(Array.isArray(message.readBy) && message.readBy.includes(uid))
+  );
+}
+
+function directMessagePeerId(message) {
+  if (!currentUser) return '';
+  return message.fromUserId === currentUser.id ? message.toUserId : message.fromUserId;
+}
+
+function latestDirectMessageByPeer() {
+  const map = new Map();
+  directMessagesForCurrentUser().forEach(message => {
+    map.set(directMessagePeerId(message), message);
+  });
+  return map;
+}
+
+function refreshMessengerBadge() {
+  const btn = document.getElementById('tbar-messenger');
+  const count = document.getElementById('messenger-count');
+  if (!btn || !count) return;
+  if (!currentUser || !can('use_messenger')) {
+    btn.style.display = 'none';
+    btn.classList.remove('has-unread');
+    count.textContent = '';
+    return;
+  }
+  const unread = unreadDirectMessages().length;
+  btn.style.display = '';
+  btn.classList.toggle('has-unread', unread > 0);
+  count.textContent = unread > 0 ? String(Math.min(unread, 99)) : '';
+}
+
+function markDirectThreadRead(peerId) {
+  const uid = currentUser?.id;
+  if (!uid || !peerId) return;
+  let changed = false;
+  DIRECT_MESSAGES.forEach(message => {
+    if (message.fromUserId === peerId && message.toUserId === uid) {
+      if (!Array.isArray(message.readBy)) message.readBy = [];
+      if (!message.readBy.includes(uid)) {
+        message.readBy.push(uid);
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    saveState();
+    refreshMessengerBadge();
+    refreshNotificationBadge();
+  }
+}
+
+function openMessengerModal(peerId = '') {
+  if (!can('use_messenger')) {
+    showToast('Messenger není pro tuto roli povolený');
+    return;
+  }
+  const peers = directMessagePeers();
+  if (!peers.length) {
+    openModal('💬 Messenger', '<div style="color:var(--text2);padding:20px;text-align:center">V aplikaci zatím nejsou další uživatelé.</div>', [
+      { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+    ]);
+    return;
+  }
+  const latest = latestDirectMessageByPeer();
+  const sortedPeers = [...peers].sort((a, b) => {
+    const atA = latest.get(a.id)?.createdAt || '';
+    const atB = latest.get(b.id)?.createdAt || '';
+    return atB.localeCompare(atA) || a.name.localeCompare(b.name, 'cs');
+  });
+  const selectedPeerId = peerId || sortedPeers[0]?.id || '';
+  const selectedPeer = sortedPeers.find(u => u.id === selectedPeerId) || sortedPeers[0];
+  markDirectThreadRead(selectedPeer.id);
+  const messages = directMessagesForCurrentUser()
+    .filter(message => directMessagePeerId(message) === selectedPeer.id)
+    .slice(-80);
+  openModal('💬 Messenger', \`
+    <div class="messenger-layout">
+      <div class="messenger-peers">
+        \${sortedPeers.map(peer => {
+          const last = latest.get(peer.id);
+          const unread = unreadDirectMessages().filter(message => message.fromUserId === peer.id).length;
+          return \`<button class="messenger-peer \${peer.id === selectedPeer.id ? 'active' : ''}" onclick="openMessengerModal('\${escapeHtml(peer.id)}')">
+            <span class="messenger-avatar" style="background:\${escapeHtml(peer.color || '#64748b')}22;color:\${escapeHtml(peer.color || '#64748b')}">\${escapeHtml(peer.avatar || '👤')}</span>
+            <span><strong>\${escapeHtml(peer.name)}</strong><em>\${escapeHtml(last?.text || ROLE_LABELS[peer.role] || peer.role)}</em></span>
+            \${unread ? \`<b>\${unread}</b>\` : ''}
+          </button>\`;
+        }).join('')}
+      </div>
+      <div class="messenger-thread">
+        <div class="messenger-thread-head">
+          <span class="messenger-avatar" style="background:\${escapeHtml(selectedPeer.color || '#64748b')}22;color:\${escapeHtml(selectedPeer.color || '#64748b')}">\${escapeHtml(selectedPeer.avatar || '👤')}</span>
+          <div><strong>\${escapeHtml(selectedPeer.name)}</strong><em>\${escapeHtml(ROLE_LABELS[selectedPeer.role] || selectedPeer.role)}</em></div>
+        </div>
+        <div class="messenger-messages">
+          \${messages.length === 0
+            ? \`<div class="messenger-empty">Zatím žádná přímá zpráva.</div>\`
+            : messages.map(message => messengerMessageHtml(message)).join('')}
+        </div>
+        <div class="messenger-compose">
+          <input type="hidden" id="dm-to" value="\${escapeHtml(selectedPeer.id)}">
+          <textarea class="input" id="dm-text" rows="3" maxlength="\${messengerMaxLength()}" placeholder="Napiš zprávu pro \${escapeHtml(selectedPeer.name)}..."></textarea>
+          <button class="btn btn-primary" onclick="sendDirectMessage()">Odeslat</button>
+        </div>
+      </div>
+    </div>
+  \`, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+  setTimeout(() => document.getElementById('dm-text')?.focus(), 50);
+}
+
+function messengerMessageHtml(message) {
+  const mine = message.fromUserId === currentUser?.id;
+  const canDelete = APP_SETTINGS.messengerAllowDeleteOwn && (mine || currentUser?.role === 'admin');
+  return \`<div class="messenger-message \${mine ? 'mine' : 'theirs'}">
+    <div>\${escapeHtml(message.text || '')}</div>
+    <small>
+      \${mine ? 'Já' : escapeHtml(message.fromName || 'Uživatel')} · \${formatDateTime(message.createdAt)}
+      \${canDelete ? \` · <button class="link-btn" onclick="deleteDirectMessage('\${escapeHtml(message.id)}')">smazat</button>\` : ''}
+    </small>
+  </div>\`;
+}
+
+function messengerMaxLength() {
+  return Math.max(50, Number(APP_SETTINGS.messengerMaxLength) || 500);
+}
+
+function sendDirectMessage() {
+  if (!can('use_messenger')) {
+    showToast('Messenger není pro tuto roli povolený');
+    return;
+  }
+  const toUserId = document.getElementById('dm-to')?.value;
+  const text = document.getElementById('dm-text')?.value?.trim();
+  const to = USERS.find(u => u.id === toUserId);
+  if (!to || !currentUser) return;
+  if (!userCanUseMessenger(to)) {
+    showToast('Příjemce nemá Messenger povolený');
+    return;
+  }
+  if (!text) {
+    showToast('Zpráva je prázdná');
+    return;
+  }
+  const maxLen = messengerMaxLength();
+  if (text.length > maxLen) {
+    showToast(\`Zpráva je moc dlouhá (\${text.length}/\${maxLen})\`);
+    return;
+  }
+  const message = {
+    id: 'dm' + Date.now() + Math.random().toString(36).slice(2, 6),
+    fromUserId: currentUser.id,
+    fromLogin: currentUser.login,
+    fromName: currentUser.name,
+    toUserId: to.id,
+    toLogin: to.login,
+    toName: to.name,
+    text,
+    createdAt: new Date().toISOString(),
+    readBy: [currentUser.id],
+  };
+  DIRECT_MESSAGES.push(message);
+  writeAudit(
+    'direct_message.sent',
+    'direct_message',
+    message.id,
+    \`\${currentUser.name} → \${to.name}\`,
+    null,
+    {
+      id: message.id,
+      fromUserId: currentUser.id,
+      toUserId: to.id,
+      createdAt: message.createdAt,
+      textLength: text.length,
+    }
+  );
+  saveState();
+  refreshMessengerBadge();
+  refreshNotificationBadge();
+  openMessengerModal(to.id);
+  showToast('Zpráva odeslána');
+}
+
+function deleteDirectMessage(id) {
+  const message = DIRECT_MESSAGES.find(item => item.id === id);
+  if (!message || !currentUser) return;
+  const allowed = message.fromUserId === currentUser.id || currentUser.role === 'admin';
+  if (!APP_SETTINGS.messengerAllowDeleteOwn || !allowed) {
+    showToast('Mazání zpráv není povolené');
+    return;
+  }
+  const peerId = directMessagePeerId(message);
+  DIRECT_MESSAGES = DIRECT_MESSAGES.filter(item => item.id !== id);
+  writeAudit(
+    'direct_message.deleted',
+    'direct_message',
+    id,
+    \`Smazána přímá zpráva (\${message.fromName} → \${message.toName})\`,
+    { id, fromUserId: message.fromUserId, toUserId: message.toUserId, textLength: (message.text || '').length },
+    null
+  );
+  saveState();
+  refreshMessengerBadge();
+  refreshNotificationBadge();
+  openMessengerModal(peerId);
+  showToast('Zpráva smazána');
+}
+
+function notificationReadStorageKey() {
+  const userKey = normalizeLogin(currentUser?.login || currentUser?.id || 'anonymous') || 'anonymous';
+  return \`\${NOTIFICATION_READ_KEY}:\${userKey}\`;
+}
+
+function notificationSnoozeStorageKey() {
+  const userKey = normalizeLogin(currentUser?.login || currentUser?.id || 'anonymous') || 'anonymous';
+  return \`\${NOTIFICATION_READ_KEY}:snooze:\${userKey}\`;
+}
+
+function readNotificationIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(notificationReadStorageKey()) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveNotificationIds(ids) {
+  localStorage.setItem(notificationReadStorageKey(), JSON.stringify([...ids].slice(-500)));
+}
+
+function readNotificationSnoozes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(notificationSnoozeStorageKey()) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveNotificationSnoozes(snoozes) {
+  const now = Date.now();
+  const cleaned = Object.fromEntries(Object.entries(snoozes || {})
+    .filter(([, until]) => Number(until) > now));
+  localStorage.setItem(notificationSnoozeStorageKey(), JSON.stringify(cleaned));
+}
+
+function snoozedUntil(id) {
+  const until = Number(readNotificationSnoozes()[id] || 0);
+  return until > Date.now() ? until : 0;
+}
+
+function snoozeNotification(id, minutes = 60, filter = 'new') {
+  const snoozes = readNotificationSnoozes();
+  snoozes[id] = Date.now() + Math.max(5, Number(minutes) || 60) * 60000;
+  saveNotificationSnoozes(snoozes);
+  refreshNotificationBadge();
+  openNotificationsModal(filter);
+  showToast('Upozornění odloženo');
+}
+
+function notificationTime(value) {
+  try { return new Date(value || Date.now()).toISOString(); }
+  catch { return new Date().toISOString(); }
+}
+
+function notificationAge(value) {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000));
+  if (minutes < 1) return 'teď';
+  if (minutes < 60) return \`\${minutes} min\`;
+  if (minutes < 1440) return \`\${Math.round(minutes / 60)} h\`;
+  return \`\${Math.round(minutes / 1440)} d\`;
+}
+
+function noteTargetsCurrentUser(note) {
+  if (!noteVisibleToCurrentUser(note) || noteAuthoredByCurrentUser(note)) return false;
+  if (currentUser?.role !== 'operator') return true;
+  const allowed = accessibleStations().map(st => Number(st.id)).filter(Boolean);
+  if (note.targetScope === 'all') return true;
+  const stationIds = Array.isArray(note.stationIds) ? note.stationIds.map(Number) : [Number(note.stationId)];
+  return stationIds.some(id => allowed.includes(id));
+}
+
+function blockedNotificationId(order) {
+  return \`blocked:\${order.id}:\${order.blocked?.at || order.blocked?.createdAt || 'active'}\`;
+}
+
+function buildNotifications() {
+  if (!currentUser) return [];
+  const read = readNotificationIds();
+  const items = [];
+
+  visibleIssues().filter(issue => !issue.resolved).forEach(issue => {
+    items.push({
+      id: \`issue:\${issue.id}\`,
+      issueId: issue.id,
+      type: 'Problém',
+      category: 'issues',
+      icon: issue.severity === 'high' ? '🚨' : '⚠️',
+      tone: issue.severity === 'high' ? 'danger' : 'warning',
+      title: \`\${issue.stationName || 'Stanoviště'} · \${issue.orderNumber || ''}\`,
+      body: issue.description || 'Nahlášený problém čeká na řešení.',
+      at: notificationTime(issue.reportedAt),
+      action: \`markNotificationRead('issue:\${issue.id}');openIssueDetail('\${issue.id}')\`,
+    });
+  });
+
+  unreadDirectMessages().forEach(message => {
+    items.push({
+      id: \`direct:\${message.id}\`,
+      type: 'Přímá zpráva',
+      category: 'messages',
+      icon: '💬',
+      tone: 'info',
+      title: message.fromName || 'Zpráva',
+      body: message.text || '',
+      at: notificationTime(message.createdAt),
+      action: \`markNotificationRead('direct:\${message.id}');openMessengerModal('\${message.fromUserId}')\`,
+    });
+  });
+
+  PROD_NOTES
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(noteTargetsCurrentUser)
+    .forEach(note => {
+      const order = ORDERS.find(o => o.id === note.orderId);
+      const station = STATIONS.find(st => Number(st.id) === Number(note.stationId));
+      const ready = String(note.autoKey || '').startsWith('auto-ready:');
+      items.push({
+        id: \`note:\${note.id}\`,
+        type: ready ? 'Připraveno' : 'Poznámka',
+        category: 'production',
+        icon: ready ? '✅' : '📝',
+        tone: ready ? 'success' : 'info',
+        title: \`\${order?.number || 'Zakázka'} · \${station?.name || 'vzkaz'}\`,
+        body: note.text || 'Nový vzkaz k výrobě.',
+        at: notificationTime(note.createdAt),
+        action: order && station
+          ? \`markNotificationRead('note:\${note.id}');openStation('\${order.id}','\${station.id}')\`
+          : \`markNotificationRead('note:\${note.id}');navigateTo('orders')\`,
+      });
+    });
+
+  visibleAnnouncements().forEach(a => {
+    items.push({
+      id: \`announcement:\${a.id}\`,
+      type: 'Oznámení',
+      category: 'production',
+      icon: ANNOUNCE_TYPES[a.type]?.icon || '📢',
+      tone: a.type === 'urgent' ? 'danger' : a.type === 'warning' ? 'warning' : 'info',
+      title: a.title || ANNOUNCE_TYPES[a.type]?.label || 'Oznámení',
+      body: a.text || '',
+      at: notificationTime(a.createdAt),
+      action: \`markNotificationRead('announcement:\${a.id}')\`,
+    });
+  });
+
+  unseenHandovers(20).forEach(h => {
+    items.push({
+      id: \`handover:\${h.id}\`,
+      type: 'Předání směny',
+      category: 'production',
+      icon: '🔄',
+      tone: 'info',
+      title: h.title || 'Předání směny',
+      body: h.text || '',
+      at: notificationTime(h.createdAt),
+      action: \`markNotificationRead('handover:\${h.id}');markHandoverSeen('\${h.id}')\`,
+    });
+  });
+
+  ORDERS.filter(isOrderBlocked).forEach(order => {
+    if (currentUser.role === 'operator' && !orderVisibleToCurrentUser(order)) return;
+    const id = blockedNotificationId(order);
+    items.push({
+      id,
+      type: 'Blokace',
+      category: 'production',
+      icon: '⛔',
+      tone: 'danger',
+      title: \`\${order.number} · \${order.name}\`,
+      body: orderBlockReason(order) || 'Zakázka je blokovaná.',
+      at: notificationTime(order.blocked?.at || order.blocked?.createdAt || order.due),
+      action: \`markNotificationRead('\${id}');openOrder('\${order.id}')\`,
+    });
+  });
+
+  return items
+    .map(item => ({ ...item, read: read.has(item.id), snoozedUntil: snoozedUntil(item.id) }))
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+}
+
+function unreadNotifications() {
+  return buildNotifications().filter(item => !item.read && !item.snoozedUntil);
+}
+
+function notificationFilterLabel(filter) {
+  return {
+    new: 'Nové',
+    production: 'Výroba',
+    issues: 'Problémy',
+    messages: 'Zprávy',
+    all: 'Vše',
+  }[filter] || filter;
+}
+
+function refreshNotificationBadge() {
+  const btn = document.getElementById('tbar-notifications');
+  const count = document.getElementById('notification-count');
+  if (!btn || !count) return;
+  if (!currentUser) {
+    btn.style.display = 'none';
+    return;
+  }
+  const unread = unreadNotifications().length;
+  btn.style.display = '';
+  btn.classList.toggle('has-unread', unread > 0);
+  count.textContent = unread > 0 ? String(Math.min(unread, 99)) : '';
+}
+
+function markNotificationRead(id) {
+  const read = readNotificationIds();
+  read.add(id);
+  saveNotificationIds(read);
+  refreshNotificationBadge();
+}
+
+function markNotificationReadAndRefresh(id, filter = 'new') {
+  markNotificationRead(id);
+  openNotificationsModal(filter);
+}
+
+function markAllNotificationsRead() {
+  const read = readNotificationIds();
+  buildNotifications().filter(item => !item.snoozedUntil).forEach(item => read.add(item.id));
+  saveNotificationIds(read);
+  refreshNotificationBadge();
+  openNotificationsModal('all');
+}
+
+function openNotificationsModal(filter = 'new') {
+  const all = buildNotifications();
+  const activeAll = all.filter(item => !item.snoozedUntil);
+  const unread = activeAll.filter(item => !item.read);
+  const filters = ['new', 'production', 'issues', 'messages', 'all'];
+  const safeFilter = filters.includes(filter) ? filter : 'new';
+  const list = safeFilter === 'all'
+    ? all
+    : safeFilter === 'new'
+      ? unread
+      : activeAll.filter(item => item.category === safeFilter);
+  const countForFilter = key => {
+    if (key === 'all') return all.length;
+    if (key === 'new') return unread.length;
+    return activeAll.filter(item => item.category === key).length;
+  };
+  openModal('🔔 Upozornění', \`
+    <div class="notification-inbox-summary">
+      <div><b>\${unread.length}</b><span>nové</span></div>
+      <div><b>\${countForFilter('production')}</b><span>výroba</span></div>
+      <div><b>\${countForFilter('issues')}</b><span>problémy</span></div>
+      <div><b>\${countForFilter('messages')}</b><span>zprávy</span></div>
+    </div>
+    <div class="notification-tabs">
+      \${filters.map(key => \`
+        <button class="\${safeFilter === key ? 'active' : ''}" onclick="openNotificationsModal('\${key}')">
+          \${notificationFilterLabel(key)} (\${countForFilter(key)})
+        </button>
+      \`).join('')}
+    </div>
+    \${list.length === 0
+      ? \`<div style="text-align:center;color:var(--text2);padding:28px 12px">Žádná upozornění v kategorii \${escapeHtml(notificationFilterLabel(safeFilter).toLowerCase())}.</div>\`
+      : \`<div class="notification-list">\${list.slice(0, 30).map(item => notificationItemHtml(item, safeFilter)).join('')}</div>\`}
+  \`, [
+    { label: 'Označit přečtené', cls: 'btn-ghost', action: 'markAllNotificationsRead()' },
+    { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ]);
+}
+
+function notificationItemHtml(item, filter = 'new') {
+  const snoozed = item.snoozedUntil ? \` · odloženo do \${new Date(item.snoozedUntil).toLocaleTimeString('cs-CZ', { hour:'2-digit', minute:'2-digit' })}\` : '';
+  const resolveButton = item.issueId && canResolveIssues()
+    ? \`<button class="notification-resolve" onclick="resolveIssueFromNotification('\${item.issueId}', '\${filter}')">Vyřešit</button>\`
+    : '';
+  return \`<div class="notification-item \${item.read ? 'read' : ''} \${item.snoozedUntil ? 'snoozed' : ''} \${item.tone || 'info'}">
+    <span class="notification-icon">\${item.icon}</span>
+    <button class="notification-copy" onclick="closeModal();\${item.action}">
+      <strong>\${escapeHtml(item.title)}</strong>
+      <em>\${escapeHtml(item.type)} · \${notificationAge(item.at)}\${snoozed}</em>
+      <small>\${escapeHtml(item.body)}</small>
+    </button>
+    <span class="notification-actions">
+      <button onclick="closeModal();\${item.action}">Otevřít</button>
+      \${resolveButton}
+      \${!item.read ? \`<button onclick="markNotificationReadAndRefresh('\${item.id}', '\${filter}')">Přečtené</button>\` : ''}
+      \${!item.read && !item.snoozedUntil ? \`<button onclick="snoozeNotification('\${item.id}', 60, '\${filter}')">Odložit</button>\` : ''}
+    </span>
+  </div>\`;
+}
+
+async function registerCurrentUserPasskey() {
+  if (!currentUser) return;
+  if (!passkeySupported()) {
+    showToast('Biometrie/passkey není v tomto prohlížeči dostupná');
+    return;
+  }
+  try {
+    const existing = passkeysForLogin(currentUser.login);
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge: randomChallenge(),
+        rp: { name: 'EZOP4' },
+        user: {
+          id: new TextEncoder().encode(currentUser.id || currentUser.login).slice(0, 64),
+          name: currentUser.login,
+          displayName: currentUser.name,
+        },
+        pubKeyCredParams: [
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 },
+        ],
+        timeout: 60000,
+        attestation: 'none',
+        authenticatorSelection: {
+          residentKey: 'preferred',
+          userVerification: 'required',
+        },
+        excludeCredentials: existing.map(item => ({
+          type: 'public-key',
+          id: base64UrlToBytes(item.id),
+        })),
+      },
+    });
+    if (!credential?.rawId) throw new Error('Passkey nebyl vytvořen.');
+    const id = bytesToBase64Url(credential.rawId);
+    const items = readPasskeys().filter(item => item.id !== id && normalizeLogin(item.login) !== normalizeLogin(currentUser.login));
+    items.push({
+      id,
+      userId: currentUser.id,
+      login: normalizeLogin(currentUser.login),
+      name: currentUser.name,
+      role: currentUser.role,
+      createdAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+    });
+    savePasskeys(items);
+    writeAudit('auth.passkey_registered', 'user', currentUser.id, \`\${currentUser.name} zapnul/a passkey na zařízení\`);
+    renderProfile();
+    showToast('🔐 Biometrie/passkey je zapnutá pro toto zařízení');
+  } catch (error) {
+    console.warn('Passkey registration failed:', error);
+    showToast(error?.name === 'NotAllowedError' ? 'Registrace biometrie byla zrušena' : 'Passkey se nepodařilo zapnout');
+  }
+}
+
+async function loginWithPasskey() {
+  const errorBox = document.getElementById('login-error');
+  if (!passkeySupported()) {
+    errorBox.textContent = 'Biometrie/passkey není v tomto prohlížeči dostupná. Použijte HTTPS, localhost a podporované zařízení.';
+    return;
+  }
+  const login = normalizeLogin(document.getElementById('login-user')?.value);
+  const candidates = passkeysForLogin(login);
+  if (!candidates.length) {
+    errorBox.textContent = login
+      ? \`Pro účet \${login} není na tomto zařízení zapnutá biometrie/passkey. Přihlaste se heslem a zapněte ji v Profilu.\`
+      : 'Na tomto zařízení zatím není uložený žádný passkey pro EZOP4.';
+    updatePasskeyLoginHint();
+    return;
+  }
+  try {
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: randomChallenge(),
+        timeout: 60000,
+        userVerification: 'required',
+        allowCredentials: candidates.map(item => ({
+          type: 'public-key',
+          id: base64UrlToBytes(item.id),
+        })),
+      },
+    });
+    const matchedId = bytesToBase64Url(assertion.rawId);
+    const passkey = candidates.find(item => item.id === matchedId);
+    const user = passkey ? resolveLoginUser(passkey.login) : null;
+    if (!user) {
+      errorBox.textContent = 'Passkey existuje, ale uživatel už v aplikaci není.';
+      return;
+    }
+    updateRememberedLogin(user.login);
+    completeLogin(user, user.login, 'passkey');
+    writeAudit('auth.passkey_login', 'user', user.id, \`\${user.name} se přihlásil/a přes passkey\`);
+  } catch (error) {
+    console.warn('Passkey login failed:', error);
+    errorBox.textContent = error?.name === 'NotAllowedError'
+      ? 'Biometrické přihlášení bylo zrušeno.'
+      : 'Biometrické přihlášení se nezdařilo. Použijte heslo.';
+  }
+}
+
+function removeCurrentUserPasskey() {
+  if (!currentUser) return;
+  const before = readPasskeys();
+  const after = before.filter(item => normalizeLogin(item.login) !== normalizeLogin(currentUser.login));
+  savePasskeys(after);
+  writeAudit('auth.passkey_removed', 'user', currentUser.id, \`\${currentUser.name} vypnul/a passkey na zařízení\`);
+  renderProfile();
+  showToast('Biometrie/passkey je na tomto zařízení vypnutá');
+}
+
+async function doLogin() {
+  const rawLogin = document.getElementById('login-user').value;
+  const u = normalizeLogin(rawLogin);
+  const p = document.getElementById('login-pass').value;
+  const guard = loginGuardStatus(u);
+  if (guard.locked) {
+    document.getElementById('login-error').textContent =
+      \`Příliš mnoho pokusů. Zkuste to znovu za \${guard.remainingSec} s.\`;
+    return;
+  }
+
+  let supabaseError = '';
+  if (ezop4AuthMode() === 'supabase') {
+    try {
+      if (!db) throw new Error('Supabase není připojený.');
+      const authPort = window.EZOP4_AUTH?.createSupabaseAuthPort?.(db);
+      if (!authPort) throw new Error('Auth modul není načtený.');
+      const session = await authPort.signIn(rawLogin, p);
+      completeLogin(session.user, rawLogin, 'supabase');
+      writeAudit('auth.login', 'user', session.user.id, 'Supabase Auth přihlášení');
+      return;
+    } catch (error) {
+      supabaseError = error?.message || 'Supabase Auth se nezdařil.';
+      console.warn('Supabase Auth failed:', error);
+      if (!demoFallbackAllowed()) {
+        registerLoginFailure(u);
+        recordLoginEvent(u || '(prazdne)', null, false);
+        document.getElementById('login-error').textContent =
+          \`Supabase Auth: \${supabaseError}. Demo fallback je z bezpečnostních důvodů vypnutý.\`;
+        return;
+      }
+      console.warn('[auth] Nouzovy demo fallback je rucne povoleny.');
+    }
+  }
+
+  const found = resolveLoginUser(rawLogin);
+  if (!found || !(await verifyLocalPassword(found, p))) {
+    registerLoginFailure(u);
+    recordLoginEvent(u || '(prazdne)', null, false);
+    document.getElementById('login-error').textContent = loginFailureMessage(rawLogin, found, supabaseError);
+    return;
+  }
+  completeLogin(found, rawLogin, supabaseError ? 'demo_fallback' : 'demo');
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+document.getElementById('login-user').addEventListener('input', updatePasskeyLoginHint);
+document.getElementById('remember-user').addEventListener('change', () => {
+  if (!document.getElementById('remember-user').checked) updateRememberedLogin('');
+});
+if (shouldOpenLoginFirst()) showLoginScreen();
+else showLandingScreen();
+
+async function doLogout(options = {}) {
+  // Reminder: pokud je uživatel přihlášený na směnu a ještě se neodhlásil,
+  // nabídneme rychlý odchod před odhlášením.
+  if (!options.skipCheckoutPrompt && currentUser) {
+    const rec = todayAttendance();
+    if (rec && rec.checkIn && !rec.checkOut) {
+      openModal('🕐 Ještě jste se neodhlásil/a ze směny', \`
+        <div style="font-size:13px;color:var(--text);line-height:1.5">
+          Máte otevřený příchod od <b>\${formatTime(rec.checkIn)}</b>.
+          Chcete zaznamenat odchod předtím, než se odhlásíte z aplikace?
+        </div>
+      \`, [
+        { label: '⏭️ Odhlásit bez odchodu', cls: 'btn-ghost',   action: 'doLogout({skipCheckoutPrompt:true})' },
+        { label: '🔴 Odchod + odhlásit',    cls: 'btn-primary', action: 'workspaceCheckOut({skipHandoverPrompt:true}); doLogout({skipCheckoutPrompt:true})' },
+      ]);
+      return;
+    }
+  }
+
+  if (currentAuthSource === 'supabase') {
+    try {
+      const authPort = db && window.EZOP4_AUTH?.createSupabaseAuthPort?.(db);
+      await authPort?.signOut?.();
+    } catch (error) {
+      console.warn('Supabase signOut failed:', error);
+    }
+  }
+  closeModal();
+  currentUser = null;
+  currentAuthSource = 'demo';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('landing-screen').style.display = 'block';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('login-pass').value = '';
+  const ind = document.getElementById('tbar-attendance');
+  if (ind) ind.style.display = 'none';
+  const notif = document.getElementById('tbar-notifications');
+  if (notif) notif.style.display = 'none';
+  const messenger = document.getElementById('tbar-messenger');
+  if (messenger) messenger.style.display = 'none';
+}
+
+// ── ROLE PERMISSIONS ──────────────────────────────────
+const ROLE_PERMISSION_LABELS = {
+  view_orders: 'Vidí zakázky',
+  edit_qty: 'Zadává počty',
+  change_status: 'Mění stav stanoviště',
+  create_order: 'Vytváří zakázky',
+  delete_order: 'Maže zakázky',
+  manage_order_stations: 'Řídí stanoviště',
+  edit_order_info: 'Upravuje údaje zakázky',
+  edit_product_memory: 'Programy a fotky',
+  manage_scrap: 'Správa zmetků',
+  block_order: 'Blokuje zakázky',
+  use_messenger: 'Messenger',
+  view_kpi: 'Vidí KPI',
+  manage_users: 'Správa uživatelů',
+  app_settings: 'Nastavení aplikace',
+};
+
+const BASE_ROLE_PERMISSIONS = {
+  view_orders:    ['operator','tpv','dispatcher','management','admin'],
+  edit_qty:       ['operator','tpv','dispatcher','management','admin'],
+  change_status:  ['operator','tpv','dispatcher','management','admin'],
+  create_order:   ['dispatcher','management','admin'],
+  delete_order:   ['tpv','dispatcher','management','admin'],
+  manage_order_stations:['dispatcher','management','admin'],
+  edit_order_info:['dispatcher','management','admin'],
+  edit_product_memory:['tpv','dispatcher','management','admin'],
+  manage_scrap:   ['tpv','dispatcher','management','admin'],
+  block_order:    ['tpv','dispatcher','management','admin'],
+  use_messenger:  ['operator','tpv','dispatcher','management','admin'],
+  view_kpi:       ['dispatcher','management','admin'],
+  manage_users:   ['admin'],
+  app_settings:   ['admin'],
+};
+
+const ROLE_PERMISSION_ACTIONS = [
+  'view_orders',
+  'edit_qty',
+  'change_status',
+  'create_order',
+  'delete_order',
+  'manage_order_stations',
+  'edit_order_info',
+  'edit_product_memory',
+  'manage_scrap',
+  'block_order',
+  'use_messenger',
+  'view_kpi',
+];
+
+const USER_PERMISSION_ACTIONS = [
+  ...ROLE_PERMISSION_ACTIONS,
+  'manage_users',
+  'app_settings',
+];
+
+const ROLE_NAV_ITEMS = [
+  { id:'dashboard', label:'Přehled', icon:'🏠', lockedFor:['admin'] },
+  { id:'queue', label:'Fronty', icon:'🧭' },
+  { id:'orders', label:'Zakázky', icon:'📋' },
+  { id:'issues', label:'Problémy', icon:'⚠️' },
+  { id:'kpi', label:'KPI', icon:'📊' },
+  { id:'workspace', label:'Můj prostor', icon:'📒' },
+  { id:'admin', label:'Správa', icon:'⚙️', lockedFor:['admin'] },
+  { id:'profile', label:'Profil', icon:'👤', lockedFor:['admin','dispatcher','tpv','management','operator'] },
+];
+
+const ROLE_PERMISSION_NAV = {
+  view_orders: ['orders'],
+  view_kpi: ['kpi'],
+  app_settings: ['admin'],
+};
+
+function rolePermissionOverride(role, action) {
+  return APP_SETTINGS?.rolePermissionOverrides?.[role]?.[action];
+}
+
+function rolePermissionAllowed(role, action) {
+  if (role === 'admin') return true;
+  return rolePermissionOverride(role, action) !== false;
+}
+
+function effectiveRoleForUser(user) {
+  return BUILTIN_USER_ROLES[normalizeLogin(user?.login)] || user?.role || '';
+}
+
+function userPermissionKey(user) {
+  return String(user?.id || '');
+}
+
+function userPermissionOverride(user, action) {
+  const key = userPermissionKey(user);
+  return key ? APP_SETTINGS?.userPermissionOverrides?.[key]?.[action] : undefined;
+}
+
+function permissionFeatureEnabledForUser(user, action) {
+  const role = effectiveRoleForUser(user);
+  const gatedFeatures = {
+    edit_product_memory: 'featureProductMemory',
+    manage_scrap: 'featureScrapManagement',
+    block_order: 'featureOrderBlocking',
+    use_messenger: 'featureMessenger',
+  };
+  const gate = gatedFeatures[action];
+  return !gate || featureEnabled(gate) || role === 'admin';
+}
+
+function roleBasePermissionAllowed(role, action) {
+  return (BASE_ROLE_PERMISSIONS[action]?.includes(role) ?? false) && rolePermissionAllowed(role, action);
+}
+
+function userEffectivePermission(user, action) {
+  if (!user || !permissionFeatureEnabledForUser(user, action)) return false;
+  const role = effectiveRoleForUser(user);
+  const override = userPermissionOverride(user, action);
+  if (override === true) return true;
+  if (override === false) return false;
+  return roleBasePermissionAllowed(role, action);
+}
+
+function can(action) {
+  return userEffectivePermission(currentUser, action);
+}
+
+function navHiddenForRole(role, navId) {
+  return Array.isArray(APP_SETTINGS?.hiddenNavByRole?.[role]) && APP_SETTINGS.hiddenNavByRole[role].includes(navId);
+}
+
+function navRequiredPermission(navId) {
+  return Object.entries(ROLE_PERMISSION_NAV).find(([, items]) => items.includes(navId))?.[0] || '';
+}
+
+function navVisibleForCurrentUser(navId) {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  if (!role) return false;
+  const meta = ROLE_NAV_ITEMS.find(item => item.id === navId);
+  if (meta?.lockedFor?.includes(role)) return true;
+  const required = navRequiredPermission(navId);
+  if (required) return can(required);
+  return !navHiddenForRole(role, navId);
+}
+
+// ── INIT ──────────────────────────────────────────────
+async function initApp() {
+  // Pokud je cloud připojen, stáhneme aktuální stav před prvním renderem
+  if (db) {
+    const ok = await cloudPull();
+    if (ok) console.log('📥 Stav stažen z cloudu');
+    startCloudRealtime();
+  }
+
+  // Topbar
+  refreshTopbarUser();
+  applyAppTheme();
+
+  // Cloud indikátor
+  const cb = document.getElementById('tbar-cloud');
+  if (db) {
+    cb.textContent = '☁️ Cloud';
+    cb.style.background = 'rgba(34,197,94,.15)';
+    cb.style.color = 'var(--green)';
+  } else {
+    cb.textContent = '💾 Lokálně';
+    cb.style.background = 'rgba(153,153,153,.15)';
+    cb.style.color = 'var(--text2)';
+  }
+
+  buildNav();
+
+  // Routing z PWA shortcut, QR/deeplink URL parametru nebo rychlého odkazu.
+  const params = new URLSearchParams(location.search);
+  const target = params.get('go');
+  const orderCode = params.get('order') || params.get('code') || params.get('qr');
+  const stationCode = params.get('station');
+  const validTargets = ['dashboard','orders','queue','kanban','issues','workspace','profile','kpi','admin'];
+  if (orderCode && openOrderByCode(orderCode, { station: stationCode, silent: true })) {
+    // Deeplink otevřel zakázku nebo stanoviště.
+  } else {
+    navigateTo(validTargets.includes(target) ? target : preferredStartPage());
+  }
+
+  refreshAttendanceIndicator();
+  refreshInstallButton();
+  const searchBtn = document.getElementById('tbar-search');
+  if (searchBtn) searchBtn.style.display = '';
+  setInterval(refreshAttendanceIndicator, 60000);
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+function getNavItems() {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  const openIssueCount = visibleIssues().filter(i => !i.resolved).length;
+  if (role === 'operator') {
+    const operatorItems = [
+      { id:'queue', label:'Moje práce', icon:'🧭' },
+      { id:'orders', label:'Zakázky', icon:'📋' },
+      { id:'issues', label:'Problém' + (openIssueCount?\` (\${openIssueCount})\`:''), icon:'⚠️' },
+    ];
+    if (can('view_kpi') || APP_SETTINGS.showKpiOperator) {
+      operatorItems.push({ id:'kpi', label:'KPI', icon:'📊' });
+    }
+    operatorItems.push({ id:'profile', label:'Profil', icon:'👤' });
+    return operatorItems.filter(item => navVisibleForCurrentUser(item.id));
+  }
+  const items = [
+    { id:'dashboard', label:'Přehled',  icon:'🏠' },
+    { id:'queue',     label:'Fronty',   icon:'🧭' },
+    { id:'orders',    label:'Zakázky',  icon:'📋' },
+    { id:'issues',    label:'Problémy' + (openIssueCount?\` (\${openIssueCount})\`:''), icon:'⚠️' },
+  ];
+  if (can('view_kpi') || (currentUser?.role === 'operator' && APP_SETTINGS.showKpiOperator)) {
+    items.push({ id:'kpi', label:'KPI', icon:'📊' });
+  }
+  if (can('app_settings')) items.push({ id:'admin', label:'Správa',   icon:'⚙️' });
+  if (featureEnabled('featureAttendance') || currentUser?.role === 'admin') {
+    items.push({ id:'workspace', label:'Můj prostor', icon:'📒' });
+  }
+  items.push({ id:'profile',   label:'Profil',      icon:'👤' });
+  return items.filter(item => navVisibleForCurrentUser(item.id));
+}
+
+function bottomNavPriority() {
+  const role = BUILTIN_USER_ROLES[normalizeLogin(currentUser?.login)] || currentUser?.role;
+  if (role === 'admin') return ['dashboard', 'orders', 'issues', 'admin', 'profile'];
+  if (['dispatcher', 'management', 'tpv'].includes(role)) return ['dashboard', 'orders', 'queue', 'issues', 'profile'];
+  return ['queue', 'orders', 'issues', 'profile'];
+}
+
+function getBottomNavModel(items) {
+  const priority = bottomNavPriority();
+  const sorted = [...items].sort((a, b) => {
+    const ai = priority.includes(a.id) ? priority.indexOf(a.id) : 99;
+    const bi = priority.includes(b.id) ? priority.indexOf(b.id) : 99;
+    return ai - bi;
+  });
+  if (sorted.length <= 5) return { visible: sorted, more: [] };
+  const visible = sorted.slice(0, 4);
+  const more = sorted.filter(item => !visible.some(v => v.id === item.id));
+  return { visible, more };
+}
+
+function buildNav() {
+  const items = getNavItems();
+  const bottom = getBottomNavModel(items);
+  const nt = document.getElementById('navtabs');
+  const bn = document.getElementById('bottom-nav');
+  nt.innerHTML = items.map(i =>
+    \`<div class="navtab" id="tab-\${i.id}" onclick="navigateTo('\${i.id}')">
+      <span class="tab-icon">\${i.icon}</span>\${i.label}
+    </div>\`
+  ).join('');
+  bn.innerHTML = \`<div class="bottom-nav-inner">\` +
+    bottom.visible.map(i =>
+      \`<div class="bn-item" id="bn-\${i.id}" onclick="navigateTo('\${i.id}')">
+        <span class="bn-icon">\${i.icon}</span><span>\${i.label}</span>
+      </div>\`
+    ).join('') +
+    (bottom.more.length ? \`
+      <div class="bn-item bn-more" id="bn-more" onclick="openMobileMoreNav()">
+        <span class="bn-icon">⋯</span><span>Více</span>
+      </div>\` : '') +
+    \`</div>\`;
+  refreshNotificationBadge();
+  refreshMessengerBadge();
+}
+
+function openMobileMoreNav() {
+  const { more } = getBottomNavModel(getNavItems());
+  if (!more.length) return;
+  openModal('Více možností', \`
+    <div class="mobile-more-grid">
+      \${more.map(item => \`
+        <button class="mobile-more-item" onclick="closeModal();navigateTo('\${item.id}')">
+          <span>\${item.icon}</span>
+          <strong>\${escapeHtml(item.label)}</strong>
+        </button>
+      \`).join('')}
+    </div>
+  \`, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+}
+
+function scrollAppToTop() {
+  const reset = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    document.scrollingElement?.scrollTo?.({ top: 0, left: 0, behavior: 'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const active = document.querySelector('#app .page.active');
+    if (active) active.scrollTop = 0;
+  };
+  requestAnimationFrame(() => {
+    reset();
+    setTimeout(reset, 40);
+  });
+}
+
+function mobileBackStep() {
+  if (document.getElementById('numpad-overlay')?.classList.contains('visible')) return false;
+  if (document.getElementById('modal-overlay')?.classList.contains('visible')) {
+    closeModal();
+    return true;
+  }
+  if (detailView?.type === 'station' && detailView.orderId) {
+    openOrder(detailView.orderId, { skipHistory: true });
+    return true;
+  }
+  if (detailView?.type === 'order') {
+    navigateTo('orders', { skipHistory: true });
+    return true;
+  }
+  const previous = pageBackStack.pop();
+  if (previous && previous !== currentPage) {
+    navigateTo(previous, { skipHistory: true });
+    return true;
+  }
+  return false;
+}
+
+function navigateTo(page, options = {}) {
+  // Při přechodu pryč ze stránky zakázek (mimo přes showOrdersFiltered) zruš filtr
+  if (currentPage === 'orders' && page !== 'orders') orderFilter = null;
+  detailView = null;
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.navtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
+
+  if (!options.skipHistory && !navigationSkipHistory && currentPage && currentPage !== page) {
+    pageBackStack.push(currentPage);
+    pageBackStack = pageBackStack.slice(-12);
+  }
+  currentPage = page;
+  let pg = document.getElementById('page-' + page);
+  if (!pg && page === 'queue') {
+    pg = document.createElement('div');
+    pg.className = 'page';
+    pg.id = 'page-queue';
+    document.querySelector('#app > div[style*="padding-bottom"]')?.appendChild(pg);
+  }
+  if (pg) pg.classList.add('active');
+  const tab = document.getElementById('tab-' + page);
+  if (tab) tab.classList.add('active');
+  const bn = document.getElementById('bn-' + page);
+  if (bn) bn.classList.add('active');
+
+  const renderers = {
+    dashboard: renderDashboard,
+    kanban:    () => window.__ezopRenderKanban?.(),
+    queue:     renderWorkQueue,
+    orders:    renderOrders,
+    issues:    renderIssues,
+    kpi:       renderKpi,
+    admin:     renderAdmin,
+    workspace: renderWorkspace,
+    profile:   renderProfile,
+  };
+  renderers[page]?.();
+  refreshTopbarUser();
+  refreshAttendanceIndicator();
+  buildNav(); // refresh badge counts
+  document.querySelectorAll('.navtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + page)?.classList.add('active');
+  document.getElementById('bn-' + page)?.classList.add('active');
+  scrollAppToTop();
+}
+
+function refreshCurrentView() {
+  if (detailView?.type === 'station') {
+    openStation(detailView.orderId, detailView.stId, { fromSync: true });
+    return;
+  }
+  if (detailView?.type === 'order') {
+    openOrder(detailView.orderId, { fromSync: true });
+    return;
+  }
+  if (currentPage) navigateTo(currentPage);
+}
+
+// ── ISSUES PAGE (visible to ALL users) ────────────────
+let issueFilter = 'open';
+
+function issueFilterLabel(filter) {
+  return {
+    open: 'Aktivní',
+    high: 'Vysoká priorita',
+    mine: 'Moje hlášení',
+    resolved: 'Vyřešené',
+    all: 'Vše',
+  }[filter || 'open'] || 'Aktivní';
+}
+
+function issueMatchesFilter(issue, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'resolved') return Boolean(issue.resolved);
+  if (filter === 'high') return !issue.resolved && issue.severity === 'high';
+  if (filter === 'mine') {
+    const login = normalizeLogin(currentUser?.login);
+    return issue.reportedByUserId === currentUser?.id ||
+      normalizeLogin(issue.reportedByLogin) === login ||
+      issue.reportedBy === currentUser?.name;
+  }
+  return !issue.resolved;
+}
+
+function setIssueFilter(filter) {
+  issueFilter = filter || 'open';
+  renderIssues();
+}
+
+function issueCommandHtml(issues, filtered) {
+  const open = issues.filter(i => !i.resolved);
+  const high = open.filter(i => i.severity === 'high');
+  const mine = issues.filter(i => issueMatchesFilter(i, 'mine'));
+  const resolved = issues.filter(i => i.resolved);
+  const primary = high[0] || open[0] || filtered[0] || issues[0];
+  const filters = [
+    ['open', 'Aktivní', open.length],
+    ['high', 'Vysoká', high.length],
+    ['mine', 'Moje', mine.length],
+    ['resolved', 'Vyřešené', resolved.length],
+    ['all', 'Vše', issues.length],
+  ];
+
+  return \`<section class="issues-command">
+    <div class="issues-command-main">
+      <div class="app-shift-label"><span>⚠️</span><strong>Řízení problémů</strong></div>
+      <h2>\${primary ? escapeHtml(primary.orderNumber || 'Problém') : 'Bez problémů'}</h2>
+      <p>\${primary
+        ? \`\${escapeHtml(primary.stationName || 'Stanoviště')} · \${escapeHtml(primary.description || 'bez popisu')}\`
+        : 'Aktuálně nejsou hlášené žádné problémy.'}</p>
+      <div class="issues-filter-pills">
+        \${filters.map(([id, label, count]) => \`
+          <button class="issues-filter-pill \${issueFilter === id ? 'active' : ''}" onclick="setIssueFilter('\${id}')">
+            <span>\${count}</span><strong>\${label}</strong>
+          </button>
+        \`).join('')}
+      </div>
+    </div>
+    <div class="issues-command-side">
+      \${primary ? \`
+        <button class="issues-focus-card" type="button" onclick="openIssueDetail('\${primary.id}')">
+          <span>\${primary.stationIcon || '⚠️'}</span>
+          <div>
+            <strong>\${escapeHtml(primary.stationName || 'Stanoviště')}</strong>
+            <em>\${escapeHtml(primary.orderName || primary.orderNumber || '')}</em>
+          </div>
+          <b>Detail</b>
+        </button>
+      \` : \`<div class="issues-focus-card issues-focus-empty">Bez aktivního problému</div>\`}
+      <div class="issues-command-stats">
+        <button type="button" onclick="setIssueFilter('open')"><span>\${open.length}</span><em>aktivní</em></button>
+        <button type="button" onclick="setIssueFilter('high')"><span>\${high.length}</span><em>vysoké</em></button>
+        <button type="button" onclick="setIssueFilter('resolved')"><span>\${resolved.length}</span><em>vyřešené</em></button>
+      </div>
+    </div>
+  </section>\`;
+}
+
+function renderIssues() {
+  const issues = visibleIssues();
+  const filtered = issues.filter(issue => issueMatchesFilter(issue, issueFilter));
+  const isManager = canResolveIssues(currentUser.role);
+
+  document.getElementById('page-issues').innerHTML = \`
+    <div class="app-list-toolbar">
+      <div>
+        <div class="app-page-title"><strong>⚠️ Problémy</strong></div>
+        <div class="app-page-subtitle">Hlášení z výroby, front a zakázek.</div>
+      </div>
+    </div>
+
+    \${issueCommandHtml(issues, filtered)}
+
+    <div class="card app-filter-card issues-filter-card">
+      <div>
+        <strong>\${escapeHtml(issueFilterLabel(issueFilter))}</strong>
+        <span>\${filtered.length} \${filtered.length===1?'problém':filtered.length<5?'problémy':'problémů'}</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="setIssueFilter('open')">Aktivní</button>
+    </div>
+
+    <div class="issues-list">
+      \${filtered.length === 0
+        ? \`<div class="card app-empty" style="text-align:center;color:var(--text2);padding:30px">✅ Žádný problém pro tento filtr</div>\`
+        : filtered.map(i => issueCardHtml(i, isManager && !i.resolved)).join('')}
+    </div>
+  \`;
+}
+
+function issueCardHtml(i, canResolve) {
+  const sevColor = { low:'#f59e0b', medium:'#f97316', high:'#ef4444' }[i.severity] || '#999';
+  const time = new Date(i.reportedAt);
+  const ago  = Math.round((Date.now() - time.getTime()) / 60000);
+  const agoTxt = ago < 1 ? 'právě teď' : ago < 60 ? \`před \${ago} min\` : \`před \${Math.round(ago/60)} h\`;
+  const recipient = issueRecipientLabel(i);
+
+  return \`<div class="card issue-card \${i.resolved ? 'resolved' : ''}" style="--issue-color:\${sevColor}" onclick="openIssueDetail('\${i.id}')">
+    <div class="issue-card-icon">\${i.stationIcon || '⚠️'}</div>
+    <div class="issue-card-main">
+      <div class="issue-card-head">
+        <div>
+          <strong>\${escapeHtml(i.stationName || 'Stanoviště')}</strong>
+          <span>\${escapeHtml(i.orderName || '')} · \${escapeHtml(i.orderNumber || '')}</span>
+        </div>
+        <span class="badge" style="background:\${sevColor}22;color:\${sevColor}">\${sevLabel(i.severity)}</span>
+      </div>
+      <div class="issue-card-message">\${escapeHtml(i.description || '')}</div>
+      <div class="issue-card-meta">
+        <span>👤 \${escapeHtml(i.reportedBy || '')}</span>
+        <span>📨 \${escapeHtml(recipient)}</span>
+        <span>\${agoTxt}</span>
+      </div>
+    </div>
+    <div class="issue-card-actions">
+      \${i.resolved
+        ? \`<span class="issue-resolved">✅ Vyřešil \${escapeHtml(i.resolvedBy || '')}</span>\`
+        : canResolve
+          ? \`<button class="btn btn-teal btn-sm" onclick="event.stopPropagation();resolveIssue('\${i.id}')">✓ Označit vyřešeno</button>\`
+          : \`<span class="issue-pending">⏳ Čeká na vyřešení</span>\`
+      }
+    </div>
+  </div>\`;
+}
+
+function issueReporterUser(issue) {
+  if (!issue) return null;
+  if (issue.reportedByUserId) {
+    const byId = USERS.find(u => u.id === issue.reportedByUserId);
+    if (byId) return byId;
+  }
+  const login = normalizeLogin(issue.reportedByLogin);
+  if (login) {
+    const byLogin = USERS.find(u => normalizeLogin(u.login) === login);
+    if (byLogin) return byLogin;
+  }
+  return USERS.find(u => u.name === issue.reportedBy) || null;
+}
+
+function issueStationName(stId) {
+  return STATIONS.find(st => Number(st.id) === Number(stId))?.name || '';
+}
+
+function openIssueDetail(issueId) {
+  const issue = ISSUES.find(i => i.id === issueId);
+  if (!issue) {
+    showToast('Problém už v aplikaci není.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === issue.orderId);
+  const station = order?.stations.find(s => Number(s.stId) === Number(issue.stationId));
+  const reporter = issueReporterUser(issue);
+  const recipient = issueRecipientLabel(issue);
+  const reportedAt = formatDateTime(issue.reportedAt);
+  const resolvedAt = issue.resolvedAt ? formatDateTime(issue.resolvedAt) : '';
+  const canMessageReporter = reporter && reporter.id !== currentUser?.id && can('use_messenger') && userCanUseMessenger(reporter);
+  const routeLabel = order && station ? \`\${order.number} · \${issueStationName(station.stId)}\` : issue.orderNumber || 'Zakázka';
+  const safeIssueId = escapeHtml(issue.id);
+  const actions = [
+    ...(order && station ? [{ label: 'Otevřít stanoviště', cls: 'btn-ghost', action: \`closeModal();openIssueTarget('\${safeIssueId}')\` }] : []),
+    ...(canMessageReporter ? [{ label: 'Napsat zprávu', cls: 'btn-ghost', action: \`openMessengerModal('\${escapeHtml(reporter.id)}')\` }] : []),
+    ...(!issue.resolved && canResolveIssues() ? [{ label: '✓ Vyřešit problém', cls: 'btn-teal', action: \`resolveIssueFromDetail('\${safeIssueId}')\` }] : []),
+    { label: 'Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ];
+  openModal('⚠️ Detail problému', \`
+    <div class="issue-detail \${issue.resolved ? 'resolved' : ''}">
+      <div class="issue-detail-head">
+        <div class="issue-detail-icon">\${escapeHtml(issue.stationIcon || '⚠️')}</div>
+        <div>
+          <strong>\${escapeHtml(issue.stationName || issueStationName(issue.stationId) || 'Stanoviště')}</strong>
+          <span>\${escapeHtml(issue.orderName || order?.name || '')} · \${escapeHtml(issue.orderNumber || order?.number || '')}</span>
+        </div>
+        <span class="badge \${issue.resolved ? 'badge-done' : 'badge-issue'}">\${issue.resolved ? 'Vyřešeno' : sevLabel(issue.severity)}</span>
+      </div>
+
+      <div class="issue-detail-message">
+        \${escapeHtml(issue.description || 'Bez popisu problému.')}
+      </div>
+
+      <div class="issue-detail-grid">
+        <div><em>Zakázka</em><b>\${escapeHtml(routeLabel)}</b></div>
+        <div><em>Nahlásil</em><b>\${escapeHtml(issue.reportedBy || reporter?.name || 'Neznámý uživatel')}</b></div>
+        <div><em>Odesláno komu</em><b>\${escapeHtml(recipient)}</b></div>
+        <div><em>Čas hlášení</em><b>\${escapeHtml(reportedAt)}</b></div>
+        \${issue.resolved ? \`
+          <div><em>Vyřešil</em><b>\${escapeHtml(issue.resolvedBy || 'nezapsáno')}</b></div>
+          <div><em>Čas vyřešení</em><b>\${escapeHtml(resolvedAt)}</b></div>
+        \` : ''}
+      </div>
+    </div>
+  \`, actions);
+}
+
+function openIssueTarget(issueId) {
+  const issue = ISSUES.find(i => i.id === issueId);
+  if (!issue) return;
+  const order = ORDERS.find(o => o.id === issue.orderId);
+  const station = order?.stations.find(s => Number(s.stId) === Number(issue.stationId));
+  if (order && station) openStation(order.id, station.stId);
+  else if (order) openOrder(order.id);
+  else showToast('Zakázka k problému už v aplikaci není.');
+}
+
+const ISSUE_DEFAULT_TARGET = 'roles:admin,dispatcher,management';
+
+function issueRecipientOptionsHtml() {
+  const roleOptions = [
+    [ISSUE_DEFAULT_TARGET, 'Admin + mistr + vedení'],
+    ['roles:admin,dispatcher,management,tpv', 'Admin + mistr + vedení + TPV'],
+    ['roles:dispatcher', 'Mistr'],
+    ['roles:management', 'Vedení'],
+    ['roles:tpv', 'TPV'],
+    ['roles:admin', 'Admin'],
+    ['roles:all', 'Všichni uživatelé'],
+  ].map(([value, label]) =>
+    \`<option value="\${escapeHtml(value)}">\${escapeHtml(label)}</option>\`
+  ).join('');
+
+  const users = USERS
+    .filter(u => u.id !== currentUser?.id)
+    .map(u => {
+      const lockedRole = BUILTIN_USER_ROLES[normalizeLogin(u.login)] || u.role;
+      const roleLabel = ROLE_LABELS[lockedRole] || lockedRole;
+      return \`<option value="user:\${escapeHtml(u.id)}">\${escapeHtml(u.name)} · \${escapeHtml(roleLabel)}</option>\`;
+    }).join('');
+
+  return \`
+    <optgroup label="Role a skupiny">\${roleOptions}</optgroup>
+    \${users ? \`<optgroup label="Konkrétní uživatel">\${users}</optgroup>\` : ''}
+  \`;
+}
+
+function parseIssueTarget(value) {
+  const raw = value || ISSUE_DEFAULT_TARGET;
+  if (raw === 'roles:all') return { targetScope: 'all', targetLabel: 'všichni uživatelé' };
+  if (raw.startsWith('roles:')) {
+    const roles = raw.slice(6).split(',').map(r => r.trim()).filter(Boolean);
+    return {
+      targetScope: 'roles',
+      targetRoles: roles,
+      targetLabel: roles.map(r => ROLE_LABELS[r] || r).join(', '),
+    };
+  }
+  if (raw.startsWith('user:')) {
+    const id = raw.slice(5);
+    const user = USERS.find(u => u.id === id);
+    if (user) {
+      return {
+        targetScope: 'user',
+        targetUserIds: [user.id],
+        targetLogins: [normalizeLogin(user.login)],
+        targetLabel: user.name,
+      };
+    }
+  }
+  return parseIssueTarget(ISSUE_DEFAULT_TARGET);
+}
+
+function issueRecipientLabel(issue) {
+  if (issue.targetLabel) return issue.targetLabel;
+  if (issue.targetScope === 'all') return 'všichni uživatelé';
+  if (Array.isArray(issue.targetUserIds) && issue.targetUserIds.length) {
+    return issue.targetUserIds
+      .map(id => USERS.find(u => u.id === id)?.name)
+      .filter(Boolean)
+      .join(', ') || 'konkrétní uživatel';
+  }
+  if (Array.isArray(issue.targetLogins) && issue.targetLogins.length) {
+    return issue.targetLogins
+      .map(login => USERS.find(u => normalizeLogin(u.login) === normalizeLogin(login))?.name || login)
+      .join(', ');
+  }
+  if (Array.isArray(issue.targetRoles) && issue.targetRoles.length) {
+    return issue.targetRoles.map(r => ROLE_LABELS[r] || r).join(', ');
+  }
+  return 'všichni uživatelé';
+}
+
+function operatorCanSeeIssue(issue) {
+  const stationId = Number(issue?.stationId);
+  if (!stationId || !userCanAccessStation(stationId)) return false;
+  const order = ORDERS.find(o => o.id === issue.orderId || String(o.number) === String(issue.orderNumber));
+  const stationIndex = order?.stations?.findIndex(station => Number(station.stId) === stationId) ?? -1;
+  const station = stationIndex >= 0 ? order.stations[stationIndex] : null;
+  if (!order || !station || ['completed','skipped'].includes(station.status)) return false;
+  const progress = stationProgressForDisplay(order, station, stationIndex);
+  return progress.available > 0 && progress.remaining > 0;
+}
+
+function userCanSeeIssue(issue) {
+  if (isManagerRole(currentUser?.role)) return true;
+  if (currentUser?.role === 'operator') return operatorCanSeeIssue(issue);
+  const login = normalizeLogin(currentUser?.login);
+  if (issue.reportedByUserId && issue.reportedByUserId === currentUser?.id) return true;
+  if (issue.reportedByLogin && normalizeLogin(issue.reportedByLogin) === login) return true;
+  if (!issue.reportedByUserId && !issue.reportedByLogin && issue.reportedBy === currentUser?.name) return true;
+  if (issue.targetScope === 'all') return true;
+  if (Array.isArray(issue.targetUserIds) && issue.targetUserIds.includes(currentUser?.id)) return true;
+  if (Array.isArray(issue.targetLogins) && issue.targetLogins.map(normalizeLogin).includes(login)) return true;
+  if (Array.isArray(issue.targetRoles)) return issue.targetRoles.includes(currentUser?.role);
+  return true;
+}
+
+function visibleIssues() {
+  return ISSUES.filter(userCanSeeIssue);
+}
+
+function orderStopItems(orders = visibleOrders()) {
+  const issueByOrder = visibleIssues().filter(issue => !issue.resolved)
+    .reduce((map, issue) => {
+      if (!map.has(issue.orderId)) map.set(issue.orderId, []);
+      map.get(issue.orderId).push(issue);
+      return map;
+    }, new Map());
+
+  return orders.flatMap(order => {
+    const items = [];
+    const activeIndex = activeStationIndex(order);
+    const station = order.stations?.[activeIndex];
+    const stInfo = STATIONS.find(st => Number(st.id) === Number(station?.stId));
+    const readiness = readinessSummary(order);
+
+    if (isOrderBlocked(order)) {
+      items.push({
+        tone: 'danger',
+        icon: '⛔',
+        label: 'Blokace',
+        reason: orderBlockReason(order) || 'Zakázka je blokovaná.',
+        order,
+        station,
+        stInfo,
+        rank: 0,
+      });
+    }
+
+    (issueByOrder.get(order.id) || []).slice(0, 1).forEach(issue => {
+      const issueStation = STATIONS.find(st => Number(st.id) === Number(issue.stationId));
+      items.push({
+        tone: 'danger',
+        icon: '⚠️',
+        label: 'Problém',
+        reason: issue.description || 'Otevřený problém ve výrobě.',
+        order,
+        station: order.stations?.find(st => Number(st.stId) === Number(issue.stationId)) || station,
+        stInfo: issueStation || stInfo,
+        rank: 1,
+      });
+    });
+
+    if (isOrderOverdue(order)) {
+      items.push({
+        tone: 'warning',
+        icon: '⏰',
+        label: 'Po termínu',
+        reason: \`Termín \${formatDate(order.due)} · \${orderDaysLate(order)} dní po termínu.\`,
+        order,
+        station,
+        stInfo,
+        rank: 2,
+      });
+    }
+
+    if (readiness.status !== 'ok') {
+      const missing = Object.keys(READINESS_ITEMS)
+        .filter(key => readinessEffectiveStatus(order, key) !== 'ok')
+        .map(key => READINESS_ITEMS[key].label)
+        .slice(0, 3)
+        .join(', ');
+      items.push({
+        tone: readiness.status === 'blocked' ? 'danger' : 'warning',
+        icon: readiness.status === 'blocked' ? '🔴' : '🟡',
+        label: 'Příprava',
+        reason: missing ? \`Dořešit: \${missing}\` : 'Zakázka není plně připravená.',
+        order,
+        station,
+        stInfo,
+        rank: 3,
+      });
+    }
+
+    if (station && !orderIsClosed(order) && !isOrderBlocked(order)) {
+      const available = stationInputQty(order, station, activeIndex);
+      const processed = stationProcessedQty(station);
+      const needsClaim = available > processed && !station.workerUserId && !station.workerLogin && ['waiting', 'in_progress', 'partial'].includes(station.status);
+      if (needsClaim) {
+        items.push({
+          tone: 'info',
+          icon: '👤',
+          label: 'Nepřevzato',
+          reason: \`\${stInfo?.name || 'Stanoviště'} čeká na převzetí práce.\`,
+          order,
+          station,
+          stInfo,
+          rank: 4,
+        });
+      }
+    }
+
+    return items;
+  }).sort((a, b) =>
+    a.rank - b.rank ||
+    priorityRank(a.order.priority) - priorityRank(b.order.priority) ||
+    dueTime(a.order) - dueTime(b.order)
+  );
+}
+
+function dashboardStoppedWorkHtml(orders) {
+  const items = orderStopItems(orders).slice(0, 6);
+  if (!items.length) {
+    return \`<div class="card app-stop-panel app-stop-panel-calm">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">🟢 Co stojí</div>
+          <div class="app-muted">Teď není vidět žádná blokace, problém ani prošlý termín.</div>
+        </div>
+      </div>
+    </div>\`;
+  }
+  return \`<div class="card app-stop-panel">
+    <div class="app-panel-head">
+      <div>
+        <div class="card-title">🚦 Co stojí</div>
+        <div class="app-muted">\${items.length} nejdůležitějších věcí, které brzdí výrobu.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showOrdersFiltered('blocked')">Blokace</button>
+    </div>
+    <div class="app-stop-list">
+      \${items.map(item => \`
+        <button class="app-stop-row \${item.tone}" type="button" onclick="\${item.station ? \`openStation('\${item.order.id}','\${item.station.stId}')\` : \`openOrder('\${item.order.id}')\`}">
+          <span class="app-stop-icon">\${item.icon}</span>
+          <span class="app-stop-copy">
+            <b>\${escapeHtml(item.order.number)} · \${escapeHtml(item.label)}</b>
+            <small>\${escapeHtml(item.reason)}</small>
+            <em>\${item.stInfo ? \`\${item.stInfo.icon} \${escapeHtml(item.stInfo.name)}\` : escapeHtml(item.order.name)}</em>
+          </span>
+          <span class="app-stop-action">Otevřít</span>
+        </button>
+      \`).join('')}
+    </div>
+  </div>\`;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────
+function renderDashboard() {
+  const orders = visibleOrders();
+  const total = orders.length;
+  const inProg = orders.filter(o => o.stations.some(s => ['in_progress','partial'].includes(s.status))).length;
+  const issues = orders.filter(o => o.stations.some(s => s.status === 'issue')).length;
+  const done   = orders.filter(o => o.stations.every(s => ['completed','skipped'].includes(s.status))).length;
+  const urgent = orders.filter(o => o.priority === 'urgent').length;
+  document.getElementById('page-dashboard').innerHTML = \`
+    <div class="app-page-hero">
+      <div>
+      <div class="app-page-title">
+        Dobrý den, <strong>\${escapeHtml(currentUser.name.split(' ')[0])}</strong>! 👋
+      </div>
+      <div class="app-page-subtitle">
+        \${new Date().toLocaleDateString('cs-CZ', {weekday:'long', day:'numeric', month:'long'})}
+        &nbsp;·&nbsp; \${escapeHtml(APP_SETTINGS.companyName || '')}
+        \${currentUser.role === 'operator' ? \`&nbsp;·&nbsp; \${escapeHtml(stationAccessLabel())}\` : ''}
+      </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+
+    \${announcementsBannerHtml()}
+
+    \${dashboardOperatorWorkHtml()}
+
+    \${dashboardCleanOverviewHtml(orders, { total, inProg, issues, done, urgent })}
+
+    \${dashboardSecondaryOverviewHtml()}
+  \`;
+}
+
+function dashboardSecondaryOverviewHtml() {
+  const widgets = [
+    shiftHandoverWidgetHtml(),
+  ].filter(Boolean);
+  if (!widgets.length) return '';
+  return advancedPanelHtml(
+    'Další přehled',
+    \`<div class="dashboard-secondary-grid">\${widgets.join('')}</div>\`,
+    { subtitle: 'předání směny a osobní prostor' }
+  );
+}
+
+function dashboardCleanOverviewHtml(orders, stats) {
+  const stopItems = orderStopItems(orders);
+  const focus = stopItems[0] || null;
+  const allQueueItems = workQueueItems('');
+  const openIssues = visibleIssues().filter(i => !i.resolved);
+  const blocked = orders.filter(isOrderBlocked).length;
+  const overdue = orders.filter(isOrderOverdue).length;
+  const active = orders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status))).length;
+  const focusAction = focus
+    ? (focus.station ? \`openStation('\${focus.order.id}','\${focus.station.stId}')\` : \`openOrder('\${focus.order.id}')\`)
+    : "navigateTo('queue')";
+  const focusTitle = focus ? \`\${focus.order.number} · \${focus.label}\` : 'Výroba běží bez viditelné blokace';
+  const focusText = focus ? focus.reason : 'Přehled je čistý. Další práci najdete ve frontě pracovišť.';
+  const focusMeta = focus?.stInfo ? \`\${focus.stInfo.icon} \${focus.stInfo.name}\` : 'Otevřít frontu';
+
+  return \`<section class="dashboard-clean">
+    <button class="dashboard-focus-card \${focus ? focus.tone : 'success'}" type="button" onclick="\${focusAction}">
+      <span>\${focus ? 'Teď řešit' : 'Aktuální stav'}</span>
+      <strong>\${escapeHtml(focusTitle)}</strong>
+      <small>\${escapeHtml(focusText)}</small>
+      <em>\${escapeHtml(focusMeta)}</em>
+    </button>
+
+    <div class="dashboard-summary-grid">
+      <button class="dashboard-summary-card" type="button" onclick="navigateTo('queue')">
+        <span>Fronta</span>
+        <strong>\${allQueueItems.length}</strong>
+        <em>položek k práci</em>
+      </button>
+      <button class="dashboard-summary-card" type="button" onclick="showOrdersFiltered(null)">
+        <span>Zakázky</span>
+        <strong>\${stats.total}</strong>
+        <em>\${active} aktivní · \${stats.done} hotovo</em>
+      </button>
+      <button class="dashboard-summary-card \${openIssues.length || blocked ? 'danger' : ''}" type="button" onclick="navigateTo('issues')">
+        <span>Problémy</span>
+        <strong>\${openIssues.length}</strong>
+        <em>\${blocked} blokace · \${overdue} po termínu</em>
+      </button>
+    </div>
+
+    \${dashboardStopMiniHtml(stopItems)}
+  </section>\`;
+}
+
+function dashboardStopMiniHtml(items) {
+  const top = items.slice(0, 2);
+  if (!top.length) {
+    return \`<div class="dashboard-mini-list dashboard-mini-list-calm">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">Důležité</div>
+          <div class="app-muted">Výroba nemá akutní blokaci ani problém.</div>
+        </div>
+      </div>
+    </div>\`;
+  }
+  return \`<div class="dashboard-mini-list">
+    <div class="app-panel-head">
+      <div>
+        <div class="card-title">Důležité</div>
+        <div class="app-muted">Jen položky, které vyžadují pozornost.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="navigateTo('issues')">Vše</button>
+    </div>
+    \${top.map(item => \`
+      <button class="dashboard-mini-row \${item.tone}" type="button" onclick="\${item.station ? \`openStation('\${item.order.id}','\${item.station.stId}')\` : \`openOrder('\${item.order.id}')\`}">
+        <span>\${item.icon}</span>
+        <b>\${escapeHtml(item.order.number)} · \${escapeHtml(item.label)}</b>
+        <small>\${escapeHtml(item.reason)}</small>
+        <em>\${item.stInfo ? \`\${item.stInfo.icon} \${escapeHtml(item.stInfo.name)}\` : escapeHtml(item.order.name)}</em>
+      </button>
+    \`).join('')}
+    \${items.length > top.length ? \`<button class="dashboard-mini-more" type="button" onclick="navigateTo('issues')">+ \${items.length - top.length} dalších upozornění</button>\` : ''}
+  </div>\`;
+}
+
+function dashboardContext(orders, stats) {
+  const queueItems = workQueueItems('');
+  const openIssues = visibleIssues().filter(i => !i.resolved);
+  const overdueOrders = orders.filter(isOrderOverdue);
+  const blockedOrders = orders.filter(isOrderBlocked);
+  const loads = stationLoadSummaries();
+  const bottleneck = loads[0];
+  return { orders, stats, queueItems, openIssues, overdueOrders, blockedOrders, loads, bottleneck };
+}
+
+function dashboardOverviewRailHtml(context) {
+  const { stats, queueItems, openIssues, overdueOrders, blockedOrders, bottleneck } = context;
+  const punctuality = stats.total ? Math.max(0, Math.round((stats.total - overdueOrders.length) / stats.total * 100)) : 100;
+  const bottleneckLabel = bottleneck ? bottleneck.station.name : 'bez zátěže';
+  const bottleneckCount = bottleneck ? bottleneck.count : 0;
+  const items = [
+    {
+      cls: 'primary',
+      icon: '📋',
+      label: 'Zakázky',
+      value: stats.total,
+      sub: \`\${stats.inProg} ve výrobě\`,
+      action: "showOrdersFiltered(null)",
+    },
+    {
+      cls: queueItems.length ? 'watch' : 'ok',
+      icon: '🧭',
+      label: 'Tok práce',
+      value: queueItems.length,
+      sub: 'položek ve frontách',
+      action: "navigateTo('queue')",
+    },
+    {
+      cls: openIssues.length || blockedOrders.length ? 'danger' : 'ok',
+      icon: '⚠️',
+      label: 'Zásahy',
+      value: openIssues.length + blockedOrders.length,
+      sub: \`\${openIssues.length} problémů · \${blockedOrders.length} blok.\`,
+      action: "navigateTo('issues')",
+    },
+    {
+      cls: overdueOrders.length ? 'danger' : 'ok',
+      icon: '⏱',
+      label: 'Včasnost',
+      value: \`\${punctuality}%\`,
+      sub: \`\${overdueOrders.length} po termínu\`,
+      action: "showOrdersFiltered('overdue')",
+    },
+    {
+      cls: bottleneck?.level === 'high' ? 'danger' : bottleneck?.level === 'medium' ? 'watch' : 'ok',
+      icon: bottleneck?.station?.icon || '✅',
+      label: 'Úzké místo',
+      value: bottleneckCount,
+      sub: bottleneckLabel,
+      action: bottleneck ? \`openQueueForStation('\${bottleneck.station.id}')\` : "navigateTo('queue')",
+    },
+  ];
+
+  return \`<section class="dashboard-rail" aria-label="Souhrn přehledu">
+    \${items.map(item => \`
+      <button class="dashboard-rail-tile \${item.cls}" type="button" onclick="\${item.action}">
+        <span>\${item.icon}</span>
+        <div>
+          <em>\${escapeHtml(item.label)}</em>
+          <strong>\${escapeHtml(String(item.value))}</strong>
+          <small>\${escapeHtml(item.sub)}</small>
+        </div>
+      </button>
+    \`).join('')}
+  </section>\`;
+}
+
+function dashboardStationRows(context) {
+  const queueItems = context.queueItems || [];
+  return accessibleStations().map(st => {
+    const items = queueItems.filter(item => Number(item.station?.stId) === Number(st.id));
+    const blockedCount = items.filter(item => isOrderBlocked(item.order)).length;
+    const readyCount = items.filter(item => item.queueState.label === 'Připraveno').length;
+    const activeCount = items.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label)).length;
+    return { st, items, blockedCount, readyCount, activeCount };
+  }).filter(row => row.items.length || queueItems.length === 0).slice(0, 7);
+}
+
+function dashboardShiftCommandHtml(context) {
+  if (operatorDashboardFocusOnly()) return dashboardOperatorShiftCommandHtml(context);
+
+  const { orders, stats, queueItems, openIssues, overdueOrders, blockedOrders, bottleneck } = context;
+  const pressure = overdueOrders.length + openIssues.length + blockedOrders.length + (bottleneck && bottleneck.level !== 'ok' ? 1 : 0);
+  const tone = pressure >= 4 ? 'risk' : pressure > 0 ? 'watch' : 'calm';
+  const statusLabel = tone === 'risk' ? 'Zásah dnes' : tone === 'watch' ? 'Sledovat' : 'Klidný provoz';
+  const action = dashboardPrimaryAction(orders, queueItems, openIssues, overdueOrders, bottleneck);
+
+  return \`<section class="app-shift-command app-shift-command-\${tone}">
+    <div class="app-shift-main">
+      <div class="app-shift-label">
+        <span>\${tone === 'risk' ? '⚠️' : tone === 'watch' ? '🟡' : '🟢'}</span>
+        <strong>\${statusLabel}</strong>
+      </div>
+      <h2>Směna pod kontrolou</h2>
+      <p>\${escapeHtml(action.summary)}</p>
+      <div class="app-shift-actions">
+        <button class="btn btn-primary" onclick="\${action.onclick}">\${escapeHtml(action.button)}</button>
+        <button class="btn btn-ghost" onclick="navigateTo('queue')">Fronty</button>
+        <button class="btn btn-ghost" onclick="navigateTo('orders')">Zakázky</button>
+      </div>
+    </div>
+    <div class="app-shift-side">
+      <button class="app-shift-next" type="button" onclick="\${action.onclick}">
+        <span>\${action.icon}</span>
+        <div>
+          <strong>\${escapeHtml(action.title)}</strong>
+          <em>\${escapeHtml(action.detail)}</em>
+        </div>
+        <b>→</b>
+      </button>
+      <div class="app-shift-metrics app-shift-metrics-simple">
+        <button type="button" onclick="showOrdersFiltered('overdue')">
+          <span>\${overdueOrders.length}</span><em>po termínu</em>
+        </button>
+        <button type="button" onclick="navigateTo('issues')">
+          <span>\${openIssues.length || stats.issues}</span><em>problémy</em>
+        </button>
+        <button type="button" onclick="\${bottleneck ? \`openQueueForStation('\${bottleneck.station.id}')\` : "navigateTo('queue')"}">
+          <span>\${bottleneck ? bottleneck.count : 0}</span><em>\${bottleneck ? escapeHtml(bottleneck.station.name) : 'bez zátěže'}</em>
+        </button>
+      </div>
+    </div>
+  </section>\`;
+}
+
+function dashboardOperatorShiftCommandHtml(context) {
+  const queueItems = context.queueItems || [];
+  const stations = accessibleStations();
+  const activeItems = queueItems.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label));
+  const issueItems = queueItems.filter(item => item.station.status === 'issue');
+  const primary = queueItems[0];
+  const empty = !queueItems.length;
+  const primaryAction = primary
+    ? \`openStation('\${primary.order.id}', '\${primary.station.stId}')\`
+    : "navigateTo('queue')";
+
+  return \`<section class="app-shift-command app-shift-command-\${empty ? 'calm' : issueItems.length ? 'risk' : 'watch'}">
+    <div class="app-shift-main">
+      <div class="app-shift-label">
+        <span>\${empty ? '🟢' : '🎯'}</span>
+        <strong>Moje stanoviště</strong>
+      </div>
+      <h2>\${empty ? 'Teď není přiřazená práce' : 'Další práce pro operátora'}</h2>
+      <p>\${escapeHtml(empty
+        ? \`Sledujete jen přiřazená stanoviště: \${stationAccessLabel()}.\`
+        : 'Přehled je zúžený na vaše stanoviště. Detaily zakázky a širší provoz řídí mistr nebo admin.'
+      )}</p>
+      <div class="app-shift-actions">
+        <button class="btn btn-primary" onclick="\${primaryAction}">\${primary ? 'Otevřít práci' : 'Moje fronta'}</button>
+        <button class="btn btn-ghost" onclick="navigateTo('queue')">Moje fronta</button>
+        <button class="btn btn-ghost" onclick="openWorkspace('attendance')">Docházka</button>
+      </div>
+    </div>
+    <div class="app-shift-side">
+      <button class="app-shift-next" type="button" onclick="\${primaryAction}">
+        <span>\${primary?.stInfo?.icon || '🎯'}</span>
+        <div>
+          <strong>\${primary ? \`\${primary.order.number} · \${primary.stInfo?.name || 'Stanoviště'}\` : 'Bez čekající práce'}</strong>
+          <em>\${primary ? \`\${primary.queueState.label} · \${positiveQty(primary.order.qty)} ks\` : 'Počkejte na přiřazení dalšího úkolu.'}</em>
+        </div>
+        <b>→</b>
+      </button>
+      <div class="app-shift-metrics">
+        <button type="button" onclick="navigateTo('queue')">
+          <span>\${stations.length}</span><em>stanoviště</em>
+        </button>
+        <button type="button" onclick="navigateTo('queue')">
+          <span>\${queueItems.length}</span><em>moje práce</em>
+        </button>
+        <button type="button" onclick="navigateTo('queue')">
+          <span>\${activeItems.length}</span><em>rozpracováno</em>
+        </button>
+        <button type="button" onclick="navigateTo('issues')">
+          <span>\${issueItems.length}</span><em>problémy</em>
+        </button>
+      </div>
+      \${dashboardQuickActionsHtml(context)}
+    </div>
+  </section>\`;
+}
+
+function dashboardQuickActionsHtml(context) {
+  const { openIssues, overdueOrders, bottleneck } = context;
+  const issueCount = openIssues.length || context.stats?.issues || 0;
+  if (operatorDashboardFocusOnly()) {
+    const items = [
+      { icon:'🧭', label:'Moje fronta', desc:'přiřazená stanoviště', action:"navigateTo('queue')" },
+      { icon:'📅', label:'Docházka', desc:'zápis dne', action:"openWorkspace('attendance')" },
+      { icon:'📒', label:'Moje práce', desc:'poznámky a kusy', action:"openWorkspace('notes')" },
+      { icon:'⚠️', label:'Problém', desc:'hlášení k práci', action:"navigateTo('issues')" },
+    ];
+    return \`<div class="app-shift-quick" aria-label="Rychlé akce">
+      \${items.map(item => \`
+        <button type="button" onclick="\${item.action}">
+          <span>\${item.icon}</span>
+          <strong>\${escapeHtml(item.label)}</strong>
+          <em>\${escapeHtml(item.desc)}</em>
+        </button>
+      \`).join('')}
+    </div>\`;
+  }
+  const items = [
+    { icon:'🔎', label:'Hledat', desc:'zakázku / osobu', action:'openGlobalSearch()' },
+    { icon:'📌', label:'Kanban', desc:'tok výroby', action:"navigateTo('kanban')" },
+    { icon:'⏰', label:'Skluz', desc:\`\${overdueOrders.length} po termínu\`, action:"showOrdersFiltered('overdue')" },
+    { icon:'⚠️', label:'Problémy', desc:\`\${issueCount} otevřené\`, action:"navigateTo('issues')" },
+    { icon:'📅', label:'Docházka', desc:'zápis dne', action:"workspaceTab='attendance';navigateTo('workspace')" },
+  ];
+  if (bottleneck) {
+    items.splice(3, 0, {
+      icon: bottleneck.station.icon || '🚦',
+      label:'Úzké hrdlo',
+      desc: bottleneck.station.name,
+      action:\`openQueueForStation('\${bottleneck.station.id}')\`
+    });
+  }
+  if (can('create_order')) {
+    items.push({ icon:'+', label:'Nová zakázka', desc:'rychlé založení', action:'newOrderModal()' });
+  }
+
+  return \`<div class="app-shift-quick" aria-label="Rychlé akce">
+    \${items.map(item => \`
+      <button type="button" onclick="\${item.action}">
+        <span>\${item.icon}</span>
+        <strong>\${escapeHtml(item.label)}</strong>
+        <em>\${escapeHtml(item.desc)}</em>
+      </button>
+    \`).join('')}
+  </div>\`;
+}
+
+function dashboardPrimaryAction(orders, queueItems, openIssues, overdueOrders, bottleneck) {
+  if (currentUser?.role === 'operator' && queueItems.length) {
+    const item = queueItems[0];
+    return {
+      icon: item.stInfo?.icon || '🎯',
+      title: \`\${item.order.number} · \${item.stInfo?.name || 'Pracoviště'}\`,
+      detail: \`\${item.queueState.label} · \${positiveQty(item.order.qty)} ks\`,
+      button: 'Otevřít práci',
+      onclick: \`openStation('\${item.order.id}', '\${item.station.stId}')\`,
+      summary: 'První karta ukazuje nejbližší práci pro vaše přiřazené stanoviště.'
+    };
+  }
+  if (openIssues.length) {
+    const issue = openIssues[0];
+    return {
+      icon: issue.stationIcon || '⚠️',
+      title: \`\${issue.stationName || 'Problém'} · \${issue.orderName || 'Zakázka'}\`,
+      detail: issue.description || 'Otevřený problém čeká na řešení.',
+      button: 'Řešit problémy',
+      onclick: "navigateTo('issues')",
+      summary: 'Nejdřív řešte otevřené problémy, aby se výroba zbytečně nezastavila.'
+    };
+  }
+  if (overdueOrders.length) {
+    const order = overdueOrders[0];
+    return {
+      icon: '⏰',
+      title: \`\${order.number} · po termínu\`,
+      detail: \`\${order.name} · \${orderDaysLate(order)} dní\`,
+      button: 'Zobrazit zpoždění',
+      onclick: "showOrdersFiltered('overdue')",
+      summary: 'Na první obrazovce jsou vytažené zakázky, které nejvíc tlačí na termín.'
+    };
+  }
+  if (bottleneck) {
+    return {
+      icon: bottleneck.station.icon || '🚦',
+      title: bottleneck.station.name,
+      detail: \`\${bottleneck.count} položek ve frontě\`,
+      button: 'Otevřít úzké hrdlo',
+      onclick: \`openQueueForStation('\${bottleneck.station.id}')\`,
+      summary: 'Sledujte nejzatíženější pracoviště a udržte tok výroby bez čekání.'
+    };
+  }
+  const firstOrder = orders.find(o => !orderIsClosed(o)) || orders[0];
+  return {
+    icon: '✅',
+    title: firstOrder ? \`\${firstOrder.number} · \${firstOrder.name}\` : 'Bez aktivní zakázky',
+    detail: firstOrder ? 'Výroba je bez kritického upozornění.' : 'Nejsou načtené žádné zakázky.',
+    button: firstOrder ? 'Otevřít zakázky' : 'Zobrazit přehled',
+    onclick: firstOrder ? "navigateTo('orders')" : "navigateTo('dashboard')",
+    summary: 'Nejsou vidět kritické blokace. Pokračujte běžnou kontrolou front a zakázek.'
+  };
+}
+
+function dashboardCockpitHtml(context) {
+  const { orders, stats, queueItems: allQueueItems, openIssues } = context;
+  const activeOrders = orders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status)));
+  const primaryOrder = activeOrders[0] || orders.find(o => !orderIsClosed(o)) || orders[0];
+  const stationRows = dashboardStationRows(context).slice(0, 4);
+
+  return \`<section class="app-cockpit app-cockpit-simple">
+    <div class="app-cockpit-main app-cockpit-priority">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">Co řešit teď</div>
+          <div class="app-muted">\${new Date().toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'})} · online provoz</div>
+        </div>
+      </div>
+
+      \${primaryOrder ? dashboardCurrentOrderHtml(primaryOrder) : \`<div class="app-current-work app-empty">Žádná zakázka není aktivní.</div>\`}
+      \${dashboardRecentIssuesHtml(openIssues)}
+    </div>
+
+    <div class="app-cockpit-left app-cockpit-summary">
+      <div class="app-panel-head">
+        <div>
+          <div class="card-title">Dnešní čísla</div>
+          <div class="app-muted">\${allQueueItems.length} položek ve frontách</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Fronty</button>
+      </div>
+
+      <div class="app-kpi-grid app-kpi-grid-simple">
+        <button class="app-kpi-tile" type="button" onclick="showOrdersFiltered(null)">
+          <span>Zakázky</span><strong>\${stats.total}</strong><em>celkem</em>
+        </button>
+        <button class="app-kpi-tile" type="button" onclick="showOrdersFiltered('in_progress')">
+          <span>Výroba</span><strong class="blue">\${stats.inProg}</strong><em>aktivní</em>
+        </button>
+        <button class="app-kpi-tile" type="button" onclick="navigateTo('issues')">
+          <span>Problémy</span><strong class="red">\${openIssues.length || stats.issues}</strong><em>otevřené</em>
+        </button>
+        <button class="app-kpi-tile" type="button" onclick="showOrdersFiltered('urgent')">
+          <span>Urgentní</span><strong class="amber">\${stats.urgent}</strong><em>zakázky</em>
+        </button>
+      </div>
+
+      <div class="app-station-list">
+        \${stationRows.map(row => \`
+          <button class="app-station-row" type="button" onclick="openQueueForStation('\${row.st.id}')">
+            <span class="app-station-name">\${row.st.icon} \${escapeHtml(row.st.name)}</span>
+            <strong>\${row.items.length}</strong>
+            <em>\${row.blockedCount ? \`\${row.blockedCount} blok.\` : row.readyCount ? \`\${row.readyCount} připr.\` : row.activeCount ? \`\${row.activeCount} aktiv.\` : 'bez fronty'}</em>
+          </button>
+        \`).join('') || \`<div class="app-empty">Žádná fronta teď nečeká.</div>\`}
+      </div>
+    </div>
+  </section>\`;
+}
+
+function dashboardCurrentOrderHtml(order) {
+  const done = order.stations.filter(s => s.status === 'completed').length;
+  const pct = Math.round(done / order.stations.length * 100);
+  const activeIndex = activeStationIndex(order);
+  const station = order.stations[activeIndex];
+  const stInfo = STATIONS.find(st => st.id === Number(station?.stId));
+  const ok = orderGoodQty(order);
+  return \`<div class="app-current-work" onclick="openOrder('\${order.id}')">
+    <div class="app-current-title">
+      <div>
+        <span>Aktuální práce</span>
+        <strong>\${escapeHtml(order.number)}</strong>
+        <em>\${escapeHtml(order.name)}</em>
+      </div>
+      <b>\${pct}%</b>
+    </div>
+    <div class="app-current-grid">
+      <div><span>Stanoviště</span><strong>\${stInfo?.icon || '🔧'} \${escapeHtml(stInfo?.name || 'Stanoviště')}</strong></div>
+      <div><span>Zákazník</span><strong>\${escapeHtml(order.customer || '—')}</strong></div>
+      <div><span>OK kusů</span><strong>\${ok} / \${positiveQty(order.qty)}</strong></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:\${pct}%"></div></div>
+  </div>\`;
+}
+
+function dashboardRecentIssuesHtml(openIssues) {
+  return \`<div class="app-issue-strip" onclick="navigateTo('issues')">
+    <div class="app-panel-head">
+      <div class="card-title">Poslední problémy</div>
+      <span>Zobrazit vše</span>
+    </div>
+    \${openIssues.slice(0, 3).map(i => \`
+      <div class="app-issue-row">
+        <span>\${i.stationIcon || '⚠️'}</span>
+        <strong>\${escapeHtml(i.stationName)} · \${escapeHtml(i.orderName)}</strong>
+        <em>\${escapeHtml(i.description.slice(0, 52))}\${i.description.length > 52 ? '...' : ''}</em>
+      </div>
+    \`).join('') || \`<div class="app-empty">Žádné otevřené problémy.</div>\`}
+  </div>\`;
+}
+
+function dashboardOperatorWorkHtml() {
+  if (currentUser?.role !== 'operator') return '';
+  const items = workQueueItems('').slice(0, 4);
+  return \`<div class="card" style="border-left:4px solid var(--teal);background:linear-gradient(135deg,rgba(34,184,158,.12),rgba(15,23,42,.02))">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div class="card-title" style="margin:0">🎯 Moje další práce</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">\${escapeHtml(stationAccessLabel())}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="navigateTo('queue')">Fronta</button>
+    </div>
+    \${items.length ? items.map(item => {
+      const { order, station, index, stInfo, queueState } = item;
+      const available = stationInputQty(order, station, index);
+      const processed = stationProcessedQty(station);
+      const remaining = Math.max(0, available - processed);
+      const notes = stationNotes(order.id, station.stId).length;
+      return \`<div style="background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:11px;margin-bottom:8px;cursor:pointer"
+        onclick="openStation('\${order.id}', '\${station.stId}')">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px">
+          <div style="min-width:0">
+            <div style="font-size:12px;font-weight:900;color:var(--gold);font-family:'SF Mono',Menlo,monospace">\${escapeHtml(order.number)}</div>
+            <div style="font-size:14px;font-weight:900;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escapeHtml(order.name)}</div>
+            <div style="font-size:11px;color:var(--teal2);margin-top:2px">\${stInfo?.icon || '🔧'} \${escapeHtml(stInfo?.name || 'Stanoviště')} · \${escapeHtml(queueState.label)}</div>
+          </div>
+          <span class="badge badge-\${order.priority}">\${priorityLabel(order.priority)}</span>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <span class="badge" style="background:rgba(212,160,23,.14);color:var(--gold)">\${available} ks přišlo</span>
+          <span class="badge" style="background:\${remaining ? 'rgba(245,158,11,.14)' : 'rgba(34,197,94,.14)'};color:\${remaining ? 'var(--amber)' : 'var(--green)'}">\${remaining} ks zbývá</span>
+          \${notes ? \`<span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">📝 \${notes}</span>\` : ''}
+          \${isOrderBlocked(order) ? \`<span class="badge badge-issue">⛔ blokace</span>\` : ''}
+        </div>
+      </div>\`;
+    }).join('') : \`<div style="text-align:center;color:var(--text2);font-size:13px;padding:16px 8px">
+      Teď nemáte žádnou aktivní práci ve svých stanovištích.
+    </div>\`}
+  </div>\`;
+}
+
+// ── WORK QUEUES ───────────────────────────────────────
+let queueStationFilter = '';
+let queueSearch = '';
+let queueQuickFilter = '';
+
+function renderWorkQueue() {
+  const operatorFocused = currentUser?.role === 'operator';
+  const allItems = workQueueItems(queueStationFilter);
+  const q = queueSearch.trim().toLowerCase();
+  const searchedItems = q
+    ? allItems.filter(item => {
+      const o = item.order;
+      const st = item.stInfo;
+      return \`\${o.number} \${o.name} \${o.customer || ''} \${st?.name || ''}\`.toLowerCase().includes(q);
+    })
+    : allItems;
+  const list = queueQuickFilter
+    ? searchedItems.filter(item => queueQuickFilterMatches(item, queueQuickFilter))
+    : searchedItems;
+  const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter);
+
+  document.getElementById('page-queue').innerHTML = \`
+    <div class="app-list-toolbar">
+      <div>
+        <div class="app-page-title"><strong>\${operatorFocused ? '🧭 Moje práce' : '🧭 Fronty pracovišť'}</strong></div>
+        <div class="app-page-subtitle">\${operatorFocused
+          ? \`Jen přiřazená stanoviště: \${escapeHtml(stationAccessLabel())}.\`
+          : 'Řazeno podle blokace, problému, priority a termínu.'}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="quickOpenOrderModal()">📎 QR / kód</button>
+    </div>
+
+    \${queueCommandHtml(list, allItems, manualPlanning)}
+    \${operatorFocused ? '' : queueStationLoadBoardHtml()}
+
+    \${operatorFocused ? '' : \`<div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div class="input-label">Stanoviště</div>
+          <select class="input" id="queue-station" onchange="queueStationFilter=this.value;queueQuickFilter='';renderWorkQueue()">
+            <option value="">\${operatorFocused ? 'Moje aktuální práce' : 'Aktuální krok každé zakázky'}</option>
+            \${accessibleStations().map(st => \`<option value="\${st.id}" \${String(st.id)===String(queueStationFilter)?'selected':''}>\${st.icon} \${escapeHtml(st.name)}</option>\`).join('')}
+          </select>
+        </div>
+        <div>
+          <div class="input-label">Hledat ve frontě</div>
+          <input class="input" id="queue-search" value="\${escapeHtml(queueSearch)}" placeholder="\${operatorFocused ? 'stanoviště nebo práce...' : 'číslo, výrobek, zákazník...'}"
+            oninput="queueSearch=this.value;renderWorkQueue()">
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">
+        \${list.length} \${list.length===1?'položka':list.length<5?'položky':'položek'} ve frontě
+        \${queueQuickFilter ? \` · filtr: \${escapeHtml(queueQuickFilterLabel(queueQuickFilter))}\` : ''}
+        \${manualPlanning ? \` · ruční pořadí zapnuto pro vybrané stanoviště\` : ''}
+      </div>
+    </div>\`}
+
+    \${can('manage_order_stations') ? \`
+      <div class="card" style="border-left:4px solid \${manualPlanning ? 'var(--teal)' : 'var(--amber)'};padding:10px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🧩 Plánování mistra</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.45">
+          \${manualPlanning
+            ? 'Pořadí ve frontě lze měnit přetažením karty nebo tlačítky ↑ ↓. Ukládá se ke stanovišti zakázky.'
+            : 'Vyberte konkrétní stanoviště. Potom půjde ručně seřadit frontu dané linky.'}
+        </div>
+      </div>
+    \` : ''}
+
+    <div id="queue-list" class="\${operatorFocused ? 'operator-queue-list' : ''}">
+      \${list.length ? list.map((item, index) => queueCardHtml(item, index, list.length)).join('') : \`<div class="card" style="text-align:center;color:var(--text2);padding:28px">Fronta je prázdná.</div>\`}
+    </div>
+  \`;
+}
+
+function queueStationLoadBoardHtml() {
+  if (!isManagerRole()) return '';
+  const loads = stationLoadSummaries().slice(0, 8);
+  if (!loads.length) return \`<section class="queue-load-board calm">
+    <div>
+      <strong>Zatížení stanovišť</strong>
+      <span>Ve frontách teď není žádná otevřená práce.</span>
+    </div>
+  </section>\`;
+  return \`<section class="queue-load-board">
+    <div class="queue-load-head">
+      <div>
+        <strong>Zatížení stanovišť</strong>
+        <span>Rychlý pohled pro mistra a admina. Kliknutím otevřete frontu pracoviště.</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="queueStationFilter='';queueQuickFilter='';renderWorkQueue()">Všechny fronty</button>
+    </div>
+    <div class="queue-load-grid">
+      \${loads.map(load => {
+        const color = stationLoadColor(load.level);
+        const pct = Math.min(100, 18 + load.count * 13 + load.overdue * 12 + load.blocked * 12 + load.inProgress * 8);
+        return \`<button class="queue-load-card \${load.level}" type="button" onclick="openQueueForStation('\${load.station.id}')">
+          <div class="queue-load-title">
+            <span>\${load.station.icon}</span>
+            <strong>\${escapeHtml(load.station.name)}</strong>
+            <b style="color:\${color}">\${load.count}</b>
+          </div>
+          <div class="queue-load-bar"><i style="width:\${pct}%;background:\${color}"></i></div>
+          <div class="queue-load-meta">
+            <em>\${load.inProgress} běží</em>
+            <em>\${load.urgent} urgent</em>
+            <em>\${load.overdue} po termínu</em>
+            <em>\${load.blocked} blok.</em>
+          </div>
+        </button>\`;
+      }).join('')}
+    </div>
+  </section>\`;
+}
+
+function queueCommandHtml(list, allItems, manualPlanning) {
+  const primary = list[0];
+  const operatorFocused = currentUser?.role === 'operator';
+  const stats = {
+    ready: allItems.filter(item => item.queueState.label === 'Připraveno').length,
+    active: allItems.filter(item => ['Rozpracováno','Problém'].includes(item.queueState.label)).length,
+    issue: allItems.filter(item => item.station.status === 'issue').length,
+    blocked: allItems.filter(item => isOrderBlocked(item.order)).length,
+    urgent: allItems.filter(item => item.order.priority === 'urgent').length,
+    overdue: allItems.filter(item => isOrderOverdue(item.order)).length,
+  };
+  const filters = [
+    ['ready', 'Připraveno', stats.ready],
+    ['active', 'Běží', stats.active],
+    ['issue', 'Problém', stats.issue],
+    ['urgent', 'Urgentní', stats.urgent],
+    ['overdue', 'Po termínu', stats.overdue],
+    ['blocked', 'Blokace', stats.blocked],
+  ];
+
+  if (operatorFocused) {
+    return \`<section class="queue-command operator-work-command">
+      <div class="queue-command-main">
+        <div class="app-shift-label"><span>🧭</span><strong>Moje další práce</strong></div>
+        <h2>\${primary ? escapeHtml(operatorShowOrderIdentifier() ? primary.order.number : primary.stInfo?.name || 'Stanoviště') : 'Bez čekající práce'}</h2>
+        <p>\${primary
+          ? \`\${escapeHtml(primary.order.name)} · \${stationInputQty(primary.order, primary.station, primary.index)} ks\`
+          : \`Sledujete jen přiřazená stanoviště: \${escapeHtml(stationAccessLabel())}.\`}</p>
+      </div>
+      <div class="queue-command-side">
+        \${primary ? \`
+          <button class="queue-action-card operator-primary-open" type="button" onclick="openStation('\${primary.order.id}', '\${primary.station.stId}')">
+            <span>\${primary.stInfo?.icon || '🔧'}</span>
+            <div>
+              <strong>\${escapeHtml(primary.stInfo?.name || 'Stanoviště')}</strong>
+              <em>\${escapeHtml(primary.queueState.label)}</em>
+            </div>
+            <b>Otevřít</b>
+          </button>
+        \` : \`<div class="queue-action-card queue-action-empty">Žádná aktuální operace</div>\`}
+      </div>
+    </section>\`;
+  }
+
+  return \`<section class="queue-command">
+    <div class="queue-command-main">
+      <div class="app-shift-label"><span>🧭</span><strong>\${operatorFocused ? 'Moje další práce' : 'Rychlé řízení fronty'}</strong></div>
+      <h2>\${primary ? escapeHtml(operatorFocused && !operatorShowOrderIdentifier() ? primary.stInfo?.name || 'Stanoviště' : primary.order.number) : 'Fronta je prázdná'}</h2>
+      <p>\${primary
+        ? operatorFocused
+          ? \`\${escapeHtml(primary.stInfo?.name || 'Stanoviště')} · \${escapeHtml(primary.queueState.label)} · \${stationInputQty(primary.order, primary.station, primary.index)} ks k dispozici\`
+          : \`\${escapeHtml(primary.order.name)} · \${escapeHtml(primary.stInfo?.name || 'Stanoviště')} · \${escapeHtml(primary.queueState.label)}\`
+        : 'Vyberte stanoviště nebo změňte filtr pro další práci.'}</p>
+      <div class="queue-filter-pills">
+        <button class="queue-filter-pill \${queueQuickFilter === '' ? 'active' : ''}" onclick="setQueueQuickFilter('')">
+          <span>\${allItems.length}</span><strong>Vše</strong>
+        </button>
+        \${filters.map(([id, label, count]) => \`
+          <button class="queue-filter-pill \${queueQuickFilter === id ? 'active' : ''}" onclick="setQueueQuickFilter('\${id}')">
+            <span>\${count}</span><strong>\${label}</strong>
+          </button>
+        \`).join('')}
+      </div>
+    </div>
+    <div class="queue-command-side">
+      \${primary ? \`
+        <button class="queue-action-card" type="button" onclick="openStation('\${primary.order.id}', '\${primary.station.stId}')">
+          <span>\${primary.stInfo?.icon || '🔧'}</span>
+          <div>
+            <strong>\${escapeHtml(primary.stInfo?.name || 'Stanoviště')}</strong>
+            <em>\${escapeHtml(operatorFocused
+              ? (operatorShowOrderIdentifier() ? primary.order.name : 'Otevřít pracovní obrazovku')
+              : primary.order.customer || primary.order.name || '')}</em>
+          </div>
+          <b>Otevřít</b>
+        </button>
+      \` : \`<div class="queue-action-card queue-action-empty">Bez položky k otevření</div>\`}
+      <div class="queue-command-stats">
+        <button type="button" onclick="setQueueQuickFilter('blocked')"><span>\${stats.blocked}</span><em>blokace</em></button>
+        <button type="button" onclick="setQueueQuickFilter('urgent')"><span>\${stats.urgent}</span><em>urgentní</em></button>
+        <button type="button" onclick="setQueueQuickFilter('ready')"><span>\${stats.ready}</span><em>připraveno</em></button>
+      </div>
+      \${manualPlanning ? \`<div class="queue-command-note">Ruční pořadí je aktivní pro vybrané stanoviště.</div>\` : ''}
+    </div>
+  </section>\`;
+}
+
+function queueQuickFilterLabel(filter) {
+  return {
+    ready: 'Připraveno',
+    active: 'Běží',
+    issue: 'Problém',
+    urgent: 'Urgentní',
+    overdue: 'Po termínu',
+    blocked: 'Blokace',
+  }[filter] || 'Vše';
+}
+
+function queueQuickFilterMatches(item, filter) {
+  if (filter === 'ready') return item.queueState.label === 'Připraveno';
+  if (filter === 'active') return ['Rozpracováno','Problém'].includes(item.queueState.label);
+  if (filter === 'issue') return item.station.status === 'issue';
+  if (filter === 'urgent') return item.order.priority === 'urgent';
+  if (filter === 'overdue') return isOrderOverdue(item.order);
+  if (filter === 'blocked') return isOrderBlocked(item.order);
+  return true;
+}
+
+function setQueueQuickFilter(filter) {
+  queueQuickFilter = filter || '';
+  renderWorkQueue();
+}
+
+function queueCardHtml(item, position = 0, total = 0) {
+  const { order, station, index, stInfo, queueState } = item;
+  const meta = stationStatusMeta(station.status);
+  const blockReason = orderBlockReason(order);
+  const manualPlanning = can('manage_order_stations') && Boolean(queueStationFilter) && Number(queueStationFilter) === Number(station.stId);
+  const operatorFocused = currentUser?.role === 'operator';
+  const showOrder = operatorShowOrderIdentifier();
+  const showCustomer = operatorShowCustomerContext();
+  const showDue = operatorShowDueContext();
+  const showNotes = operatorShowNotesContext();
+  const available = stationInputQty(order, station, index);
+  const processed = stationProcessedQty(station);
+  const remaining = Math.max(0, available - processed);
+  const notes = stationNotes(order.id, station.stId).length;
+  const title = operatorFocused && !showOrder ? (stInfo?.name || 'Stanoviště') : order.number;
+  const subtitle = operatorFocused && !showOrder ? 'Práce na stanovišti' : order.name;
+  const taskState = operatorFocused ? stationTaskState(order, station) : null;
+  const contextLine = operatorFocused
+    ? [
+      stInfo?.name || 'Stanoviště',
+      queueState.label,
+      showDue ? \`termín \${formatDate(order.due || '')}\` : '',
+    ].filter(Boolean).join(' · ')
+    : \`\${escapeHtml(order.customer || '')} · \${escapeHtml(stInfo?.name || 'Stanoviště')} · \${escapeHtml(queueState.label)}\`;
+
+  return \`<div class="card app-queue-card \${operatorFocused ? 'operator-queue-card' : ''}" \${manualPlanning ? \`draggable="true" ondragstart="queueDragStart(event,'\${order.id}','\${station.stId}')" ondragover="queueDragOver(event)" ondrop="queueDrop(event,'\${order.id}','\${station.stId}')"\` : ''}
+    role="button" tabindex="0" aria-label="Otevřít stanoviště \${escapeHtml(stInfo?.name || 'stanoviště')} zakázky \${escapeHtml(order.number)}"
+    onclick="queueCardOpen(event,'\${order.id}','\${station.stId}')"
+    onkeydown="queueCardKeyOpen(event,'\${order.id}','\${station.stId}')"
+    style="margin-bottom:8px;border-left:4px solid \${queueState.color};\${isOrderBlocked(order)?'background:rgba(239,68,68,.08)':''}">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:26px;line-height:1">\${stInfo?.icon || '🔧'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:900;color:var(--gold)">\${escapeHtml(title)}</span>
+          \${operatorFocused ? '' : \`<span class="badge badge-\${order.priority}">\${priorityLabel(order.priority)}</span>\`}
+          \${orderBlockedBadgeHtml(order)}
+          \${operatorFocused ? '' : orderReadinessBadgeHtml(order)}
+          \${stationWorkBadgeHtml(station)}
+          <span class="badge \${meta.badge}">\${meta.label}</span>
+          \${queueRankValue(station) < Number.MAX_SAFE_INTEGER ? \`<span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">#\${queueRankValue(station)}</span>\` : ''}
+        </div>
+        <div style="font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escapeHtml(subtitle)}</div>
+        <div style="font-size:11px;color:var(--teal2);margin:2px 0 6px">\${operatorFocused ? escapeHtml(contextLine) : contextLine}</div>
+        \${station.workPausedAt ? \`<div style="font-size:11px;color:var(--amber);margin-bottom:5px">⏸ Pozastaveno \${formatDateTime(station.workPausedAt)}\${station.workPauseReason ? \` · \${escapeHtml(station.workPauseReason)}\` : ''}</div>\` : ''}
+        \${operatorFocused ? \`
+          <div class="operator-next-action" style="--operator-action-color:\${taskState.color}">
+            <span>\${taskState.icon}</span>
+            <div>
+              <strong>\${escapeHtml(taskState.label)}</strong>
+              <em>\${escapeHtml(taskState.action)}</em>
+            </div>
+          </div>
+          <div class="operator-queue-progress">
+            <span><b>\${available}</b><em>k dispozici</em></span>
+            <span><b>\${processed}</b><em>zapsáno</em></span>
+            <span><b>\${remaining}</b><em>zbývá</em></span>
+          </div>
+        \` : stationCardQtyHtml(order, station, index)}
+        \${operatorFocused && showCustomer ? \`<div style="font-size:11px;color:var(--text2);margin-top:6px">Zákazník: \${escapeHtml(order.customer || '—')}</div>\` : ''}
+        \${operatorFocused && showNotes && notes ? \`<div style="font-size:11px;color:var(--teal2);margin-top:6px">📝 \${notes} poznámek k tomuto kroku</div>\` : ''}
+        \${blockReason ? \`<div style="font-size:11px;color:var(--red);margin-top:6px">⛔ \${escapeHtml(blockReason)}</div>\` : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          \${manualPlanning ? \`
+            <button class="btn btn-ghost btn-sm" onclick="moveQueueItem('\${order.id}', '\${station.stId}', -1)" \${position === 0 ? 'disabled style="opacity:.45"' : ''}>↑</button>
+            <button class="btn btn-ghost btn-sm" onclick="moveQueueItem('\${order.id}', '\${station.stId}', 1)" \${position >= total - 1 ? 'disabled style="opacity:.45"' : ''}>↓</button>
+          \` : ''}
+          \${stationWorkActionButtons(order, station)}
+          <button class="btn btn-primary btn-sm" onclick="openStation('\${order.id}', '\${station.stId}')">\${operatorFocused ? 'Otevřít práci' : 'Otevřít stanoviště'}</button>
+          \${operatorFocused ? '' : orderMoreButton(order.id, station.stId)}
+        </div>
+      </div>
+    </div>
+  </div>\`;
+}
+
+function queueCardOpen(event, orderId, stId) {
+  if (event?.target?.closest?.('button,a,input,select,textarea,[data-no-card-open]')) return;
+  openStation(orderId, stId);
+}
+
+function queueCardKeyOpen(event, orderId, stId) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  openStation(orderId, stId);
+}
+
+function quickOpenOrderModal() {
+  openModal('📎 Rychlé otevření zakázky', \`
+    <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+      Naskenujte QR/čárový kód do pole, nebo napište číslo zakázky. Podporuje číslo zakázky, ID, číslo objednávky i odkaz s parametrem <b>?order=</b>.
+    </div>
+    <div class="input-group">
+      <div class="input-label">Kód zakázky</div>
+      <input class="input" id="qo-code" placeholder="např. 261100" onkeydown="if(event.key==='Enter') submitQuickOpenOrder()">
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Otevřít', action:'submitQuickOpenOrder()', cls:'btn-primary' },
+  ]);
+  setTimeout(() => document.getElementById('qo-code')?.focus(), 50);
+}
+
+function submitQuickOpenOrder() {
+  const value = document.getElementById('qo-code')?.value || '';
+  if (!openOrderByCode(value)) return;
+  closeModal();
+}
+
+async function copyTextToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(String(text || ''));
+    showToast('📋 Odkaz zkopírován', { skipSave: true });
+  } catch {
+    showToast('⚠️ Kopírování se nepodařilo', { skipSave: true });
+  }
+}
+
+// ── ORDERS LIST ───────────────────────────────────────
+let orderSearch = '';
+let orderFilter = null; // 'in_progress' | 'urgent' | 'overdue' | 'blocked' | 'wait_*' | null
+
+function orderMoreButton(orderId, stationId = '') {
+  return \`<button class="btn btn-ghost btn-sm more-actions-btn"
+    onclick="event.stopPropagation();openOrderActionsModal('\${orderId}', '\${stationId}')">⋯ Další</button>\`;
+}
+
+function openOrderActionsModal(orderId, stationId = '') {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  const station = stationId ? order.stations?.find(s => Number(s.stId) === Number(stationId)) : null;
+  const stInfo = station ? STATIONS.find(st => Number(st.id) === Number(station.stId)) : null;
+  const items = [
+    \`<button class="action-menu-item primary" onclick="closeModal();openOrder('\${order.id}')">
+      <span>📋</span><b>Detail zakázky</b><small>\${escapeHtml(order.number)} · \${escapeHtml(order.name)}</small>
+    </button>\`,
+    station ? \`<button class="action-menu-item primary" onclick="closeModal();openStation('\${order.id}', '\${station.stId}')">
+      <span>\${stInfo?.icon || '🔧'}</span><b>Otevřít stanoviště</b><small>\${escapeHtml(stInfo?.name || 'Stanoviště')}</small>
+    </button>\` : '',
+    \`<button class="action-menu-item" onclick="copyTextToClipboard(currentOrderLink(ORDERS.find(o=>o.id==='\${order.id}'), '\${stationId}'));closeModal()">
+      <span>🔗</span><b>\${station ? 'QR odkaz na stanoviště' : 'Odkaz na zakázku'}</b><small>Zkopírovat odkaz pro mobil nebo QR</small>
+    </button>\`,
+    can('manage_order_stations') ? \`<button class="action-menu-item" onclick="closeModal();manageStationsModal('\${order.id}')">
+      <span>⚙️</span><b>Spravovat stanoviště</b><small>Zapnout, vypnout a seřadit postup výroby</small>
+    </button>\` : '',
+    can('block_order') ? (isOrderBlocked(order)
+      ? \`<button class="action-menu-item" onclick="closeModal();unblockOrderModal('\${order.id}')">
+          <span>✅</span><b>Odblokovat zakázku</b><small>Zakázka bude znovu dostupná pro výrobu</small>
+        </button>\`
+      : \`<button class="action-menu-item danger" onclick="closeModal();blockOrderModal('\${order.id}')">
+          <span>⛔</span><b>Blokovat zakázku</b><small>Zastavit práci kvůli materiálu, dokumentaci nebo problému</small>
+        </button>\`) : '',
+    can('delete_order') ? \`<button class="action-menu-item danger" onclick="closeModal();deleteOrderModal('\${order.id}')">
+      <span>🗑️</span><b>Smazat zakázku</b><small>Citlivá akce dostupná jen oprávněným rolím</small>
+    </button>\` : '',
+  ].filter(Boolean).join('');
+  openModal('Další možnosti', \`<div class="action-menu">\${items}</div>\`, [
+    { label: 'Zavřít', cls: 'btn-ghost', action: 'closeModal()' },
+  ]);
+}
+
+function filterOrders(q) {
+  let list = visibleOrders();
+  if (orderFilter === 'in_progress') {
+    list = list.filter(o => o.stations.some(s => ['in_progress','partial'].includes(s.status)));
+  } else if (orderFilter === 'urgent') {
+    list = list.filter(o => o.priority === 'urgent');
+  } else if (orderFilter === 'overdue') {
+    list = list.filter(isOrderOverdue);
+  } else if (orderFilter === 'blocked') {
+    list = list.filter(isOrderBlocked);
+  } else if (READINESS_ORDER_FILTERS[orderFilter]) {
+    list = list.filter(order => orderMatchesReadinessFilter(order, orderFilter));
+  }
+  if (q) {
+    const s = q.toLowerCase().trim();
+    list = list.filter(o =>
+      o.number.includes(s) ||
+      (o.name||'').toLowerCase().includes(s) ||
+      (o.customer||'').toLowerCase().includes(s)
+    );
+  }
+  return list.sort((a,b) => a.number.localeCompare(b.number));
+}
+
+function showOrdersFiltered(filter) {
+  orderFilter = filter;
+  orderSearch = '';
+  navigateTo('orders');
+}
+
+function orderFilterLabel(filter) {
+  return {
+    in_progress: { label:'⚙️ Ve výrobě', cls:'badge-progress' },
+    urgent:      { label:'🔥 Urgentní',  cls:'badge-urgent' },
+    overdue:     { label:'⏰ Po termínu', cls:'badge-issue' },
+    blocked:     { label:'⛔ Blokované', cls:'badge-issue' },
+    wait_material: { label:'📦 Čeká na materiál', cls:'badge-waiting' },
+    wait_docs:     { label:'📄 Čeká na dokumentaci', cls:'badge-waiting' },
+    wait_program:  { label:'🧠 Čeká na program/planžetu', cls:'badge-waiting' },
+  }[filter] || null;
+}
+
+function ordersCommandHtml(list) {
+  const all = visibleOrders();
+  const stats = {
+    total: all.length,
+    active: all.filter(o => o.stations.some(s => ['in_progress','partial'].includes(s.status))).length,
+    urgent: all.filter(o => o.priority === 'urgent').length,
+    overdue: all.filter(isOrderOverdue).length,
+    blocked: all.filter(isOrderBlocked).length,
+  };
+  const primary = list.find(isOrderBlocked) || list.find(isOrderOverdue) || list.find(o => o.priority === 'urgent') || list[0] || all[0];
+  const activeIndex = primary ? activeStationIndex(primary) : -1;
+  const activeStation = activeIndex >= 0 ? primary.stations[activeIndex] : null;
+  const stInfo = activeStation ? STATIONS.find(st => Number(st.id) === Number(activeStation.stId)) : null;
+  const filters = [
+    ['', 'Vše', stats.total],
+    ['in_progress', 'Ve výrobě', stats.active],
+    ['urgent', 'Urgentní', stats.urgent],
+    ['overdue', 'Po termínu', stats.overdue],
+    ['blocked', 'Blokace', stats.blocked],
+  ];
+
+  return \`<section class="orders-command">
+    <div class="orders-command-main">
+      <div class="app-shift-label"><span>📋</span><strong>Řízení zakázek</strong></div>
+      <h2>\${primary ? escapeHtml(primary.number) : 'Bez zakázek'}</h2>
+      <p>\${primary
+        ? \`\${escapeHtml(primary.name)} · \${escapeHtml(primary.customer || 'zákazník neuveden')}\`
+        : 'Po založení zakázky se zde zobrazí nejdůležitější práce.'}</p>
+      <div class="orders-filter-pills">
+        \${filters.map(([id, label, count]) => \`
+          <button class="orders-filter-pill \${String(orderFilter || '') === id ? 'active' : ''}" onclick="showOrdersFiltered(\${id ? \`'\${id}'\` : 'null'})">
+            <span>\${count}</span><strong>\${label}</strong>
+          </button>
+        \`).join('')}
+      </div>
+    </div>
+    <div class="orders-command-side">
+      \${primary ? \`
+        <button class="orders-focus-card" type="button" onclick="openOrder('\${primary.id}')">
+          <span>\${isOrderBlocked(primary) ? '⛔' : isOrderOverdue(primary) ? '⏰' : stInfo?.icon || '📋'}</span>
+          <div>
+            <strong>\${escapeHtml(stInfo?.name || 'Detail zakázky')}</strong>
+            <em>\${isOrderOverdue(primary) ? \`\${orderDaysLate(primary)} dní po termínu\` : \`\${positiveQty(primary.qty)} ks · termín \${formatDate(primary.due)}\`}</em>
+          </div>
+          <b>Otevřít</b>
+        </button>
+      \` : \`<div class="orders-focus-card orders-focus-empty">Bez zakázky k otevření</div>\`}
+      <div class="orders-command-stats">
+        <button type="button" onclick="showOrdersFiltered('overdue')"><span>\${stats.overdue}</span><em>po termínu</em></button>
+        <button type="button" onclick="showOrdersFiltered('blocked')"><span>\${stats.blocked}</span><em>blokace</em></button>
+        <button type="button" onclick="showOrdersFiltered('urgent')"><span>\${stats.urgent}</span><em>urgentní</em></button>
+      </div>
+      \${can('create_order') ? \`<button class="btn btn-primary btn-sm orders-new-btn" onclick="newOrderModal()">+ Nová zakázka</button>\` : ''}
+    </div>
+  </section>\`;
+}
+
+function renderOrders() {
+  const list = filterOrders(orderSearch);
+  const activeFilter = orderFilterLabel(orderFilter);
+  const commandHtml = operatorSimpleMode() ? '' : ordersCommandHtml(list);
+  document.getElementById('page-orders').innerHTML = \`
+    <div class="app-list-toolbar">
+      <div class="app-page-title"><strong>📋 Zakázky</strong></div>
+      \${can('create_order') ? \`<button class="btn btn-primary btn-sm" onclick="newOrderModal()">+ Nová zakázka</button>\` : ''}
+    </div>
+
+    \${commandHtml}
+
+    <div class="card app-filter-card" style="padding:10px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">🔎</span>
+        <input id="ord-search" class="input" style="flex:1" placeholder="Hledat: číslo zakázky (např. 261100), výrobek, zákazník..."
+          value="\${orderSearch.replace(/"/g,'&quot;')}"
+          oninput="orderSearch=this.value;document.getElementById('ord-list').innerHTML=ordersListHtml(filterOrders(orderSearch))">
+        \${orderSearch ? \`<button class="btn btn-ghost btn-sm" onclick="orderSearch='';renderOrders()">✕</button>\`:''}
+      </div>
+      \${orderFilter ? \`
+        <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+          <span style="font-size:11px;color:var(--text2)">Filtr:</span>
+          <span class="badge \${activeFilter?.cls || 'badge-progress'}" style="display:inline-flex;align-items:center;gap:6px">
+            \${activeFilter?.label || 'Filtrované'}
+            <span style="cursor:pointer;font-weight:900" onclick="orderFilter=null;renderOrders()">✕</span>
+          </span>
+        </div>\` : ''}
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">
+        \${list.length} \${list.length===1?'zakázka':list.length<5?'zakázky':'zakázek'} \${(orderSearch||orderFilter)?'(filtrováno)':''}
+      </div>
+    </div>
+
+    <div id="ord-list">\${ordersListHtml(list)}</div>
+  \`;
+}
+
+function ordersListHtml(list) {
+  if (list.length === 0) {
+    return \`<div class="card" style="text-align:center;color:var(--text2);padding:30px">
+      Žádná zakázka neodpovídá hledání
+    </div>\`;
+  }
+  if (operatorSimpleMode()) {
+    return list.map(simpleOrderCardHtml).join('');
+  }
+  return list.map(o => {
+    const done = o.stations.filter(s=>s.status==='completed').length;
+    const pct = Math.round(done/o.stations.length*100);
+    const hasIssue = o.stations.some(s=>s.status==='issue');
+    const activeIndex = activeStationIndex(o);
+    const station = activeIndex >= 0 ? o.stations[activeIndex] : null;
+    const stInfo = station ? STATIONS.find(st => Number(st.id) === Number(station.stId)) : null;
+    const meta = station ? stationStatusMeta(station.status) : null;
+    return \`<div class="card app-order-card" onclick="openOrder('\${o.id}')">
+      <div class="order-card-grid">
+        <div class="order-number-tile">
+          <span>Zakázka</span>
+          <strong>\${o.number}</strong>
+        </div>
+        <div class="order-card-main">
+          <div class="order-card-top">
+            <div class="order-card-title">
+              <span>\${escapeHtml(o.customer || 'Zákazník neuveden')}</span>
+              <strong>\${escapeHtml(o.name)}</strong>
+            </div>
+            <div class="order-card-badges">
+            <span class="badge badge-\${o.priority}">\${priorityLabel(o.priority)}</span>
+            \${orderBlockedBadgeHtml(o)}
+            \${orderReadinessBadgeHtml(o)}
+              \${orderMoreButton(o.id)}
+            </div>
+          </div>
+          <div class="order-card-meta">
+            <span>📦 \${o.qty} ks</span>
+            <span>📅 \${formatDate(o.due)}</span>
+            \${stInfo ? \`<span>\${stInfo.icon} \${escapeHtml(stInfo.name)}</span>\` : ''}
+            \${meta ? \`<span class="order-card-stage \${meta.action}">\${escapeHtml(meta.label)}</span>\` : ''}
+          </div>
+          <div class="order-card-progress">
+            <div class="progress-bar" style="flex:1">
+              <div class="progress-fill" style="width:\${pct}%"></div>
+            </div>
+            <span>\${pct}%</span>
+          </div>
+          <div class="order-card-footer">
+            <span>\${done}/\${o.stations.length} stanovišť dokončeno</span>
+            \${isOrderOverdue(o) ? \`<b class="danger">⏰ \${orderDaysLate(o)} dní po termínu</b>\` : ''}
+            \${isOrderBlocked(o) ? \`<b class="danger">⛔ \${escapeHtml(orderBlockReason(o))}</b>\` : ''}
+            \${hasIssue ? '<b class="danger">⚠️ Problém na stanovišti</b>' : ''}
+          </div>
+        </div>
+      </div>
+    </div>\`;
+  }).join('');
+}
+
+function simpleOrderCardHtml(o) {
+  const done = o.stations.filter(s=>s.status==='completed').length;
+  const pct = Math.round(done/o.stations.length*100);
+  const activeIndex = activeStationIndex(o);
+  const station = activeIndex >= 0 ? o.stations[activeIndex] : null;
+  const stInfo = station ? STATIONS.find(st => Number(st.id) === Number(station.stId)) : null;
+  const meta = station ? stationStatusMeta(station.status) : null;
+  const hasIssue = o.stations.some(s=>s.status==='issue');
+  const actionLabel = hasIssue ? 'Vyřešit problém' : station ? 'Pokračovat' : 'Otevřít';
+  return \`<div class="card app-order-card app-order-card-simple" onclick="openOrder('\${o.id}')">
+    <div class="simple-order-main">
+      <div class="simple-order-kicker">
+        <span>\${operatorShowOrderIdentifier() ? escapeHtml(o.number) : 'Zakázka'}</span>
+        <em class="badge badge-\${o.priority}">\${priorityLabel(o.priority)}</em>
+      </div>
+      <strong>\${escapeHtml(o.name)}</strong>
+      <div class="simple-order-meta">
+        <span>📦 \${positiveQty(o.qty)} ks</span>
+        \${operatorShowDueContext() ? \`<span>📅 \${formatDate(o.due)}</span>\` : ''}
+        \${stInfo ? \`<span>\${stInfo.icon} \${escapeHtml(stInfo.name)}</span>\` : ''}
+      </div>
+      <div class="simple-order-progress">
+        <div class="progress-bar"><div class="progress-fill" style="width:\${pct}%"></div></div>
+        <span>\${pct}%</span>
+      </div>
+    </div>
+    <div class="simple-order-action">
+      \${meta ? \`<span class="badge \${meta.badge}">\${escapeHtml(meta.label)}</span>\` : ''}
+      \${hasIssue ? \`<b class="danger">⚠️ Problém</b>\` : ''}
+      <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openOrder('\${o.id}')">\${actionLabel}</button>
+    </div>
+  </div>\`;
+}
+
+function orderTimelineItems(order) {
+  if (!order) return [];
+  const stationName = stId => {
+    const st = STATIONS.find(item => Number(item.id) === Number(stId));
+    return st ? \`\${st.icon} \${st.name}\` : 'Stanoviště';
+  };
+  const items = [];
+
+  items.push({
+    at: order.orderDate || order.createdAt || order.due || '',
+    icon: '📋',
+    title: 'Zakázka vytvořena',
+    body: \`\${order.number} · \${order.name}\`,
+    actor: order.customer || '',
+    tone: 'info',
+  });
+
+  (order.stations || []).forEach((station, index) => {
+    const meta = stationStatusMeta(station.status);
+    const processed = stationProcessedQty(station);
+    const received = stationInputQty(order, station, index);
+    const lastAt = station.workCompletedAt || station.workPausedAt || station.workStartedAt || '';
+    if (station.workStartedAt || station.workerName || station.workerLogin) {
+      items.push({
+        at: station.workStartedAt || '',
+        icon: '👤',
+        title: \`\${stationName(station.stId)} převzato\`,
+        body: \`\${stationWorkerLabel(station)} · \${processed}/\${received} ks zpracováno\`,
+        actor: station.workerRole ? ROLE_LABELS[station.workerRole] || station.workerRole : '',
+        tone: 'info',
+      });
+    }
+    if (processed || ['completed', 'partial', 'issue'].includes(station.status)) {
+      items.push({
+        at: lastAt,
+        icon: meta.icon,
+        title: \`\${stationName(station.stId)} · \${meta.label}\`,
+        body: \`OK \${positiveQty(station.qtyOk)} · Oprava \${positiveQty(station.qtyRework)} · Zmetek \${positiveQty(station.qtyScrap)}\`,
+        actor: station.workCompletedByName || station.workerName || '',
+        tone: station.status === 'issue' ? 'danger' : station.status === 'completed' ? 'success' : 'info',
+      });
+    }
+  });
+
+  Object.entries(normalizeOrderReadiness(order)).forEach(([key, readiness]) => {
+    if (!readiness.updatedAt) return;
+    const item = READINESS_ITEMS[key];
+    const status = readinessEffectiveStatus(order, key);
+    items.push({
+      at: readiness.updatedAt,
+      icon: item?.icon || '🧩',
+      title: \`Připravenost · \${item?.label || key}\`,
+      body: readiness.note || READINESS_STATUS[status]?.label || status,
+      actor: readiness.updatedByName || '',
+      tone: status === 'ok' ? 'success' : status === 'blocked' ? 'danger' : 'warning',
+    });
+  });
+
+  PROD_NOTES
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(note => note.orderId === order.id && noteVisibleToCurrentUser(note))
+    .forEach(note => items.push({
+      at: note.createdAt,
+      icon: '📝',
+      title: NOTE_CATEGORIES[note.category] || note.type || 'Poznámka',
+      body: note.text,
+      actor: note.author || '',
+      tone: 'info',
+    }));
+
+  ISSUES
+    .filter(issue => issue.orderId === order.id && userCanSeeIssue(issue))
+    .forEach(issue => items.push({
+      at: issue.resolvedAt || issue.reportedAt,
+      icon: issue.resolved ? '✅' : '⚠️',
+      title: \`\${issue.resolved ? 'Vyřešený problém' : 'Nahlášený problém'} · \${stationName(issue.stationId)}\`,
+      body: issue.description || '',
+      actor: issue.resolvedBy || issue.reportedBy || '',
+      tone: issue.resolved ? 'success' : 'danger',
+    }));
+
+  auditRows()
+    .filter(row => row.entityId === order.id || String(row.entityId || '').startsWith(order.id + ':') || String(row.summary || '').includes(order.number))
+    .forEach(row => items.push({
+      at: row.at,
+      icon: '🧾',
+      title: auditActionLabel(row.action),
+      body: row.summary || row.action,
+      actor: row.userName || 'Systém',
+      tone: row.action?.includes('blocked') || row.action?.includes('deleted') ? 'danger' : 'info',
+    }));
+
+  const seen = new Set();
+  return items
+    .filter(item => item.title || item.body)
+    .filter(item => {
+      const key = \`\${item.at}|\${item.title}|\${item.body}\`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => {
+      const atA = new Date(a.at || 0).getTime() || 0;
+      const atB = new Date(b.at || 0).getTime() || 0;
+      return atB - atA;
+    });
+}
+
+function auditActionLabel(action) {
+  const labels = {
+    'station.qty_saved': 'Počty kusů',
+    'station.status_changed': 'Změna stavu',
+    'station.work_claimed': 'Převzetí práce',
+    'station.work_paused': 'Pozastavení práce',
+    'order.blocked': 'Blokace zakázky',
+    'order.unblocked': 'Odblokování zakázky',
+    'order.updated': 'Úprava zakázky',
+    'issue.reported': 'Problém',
+    'issue.resolved': 'Vyřešení problému',
+    'note.created': 'Poznámka',
+    'note.deleted': 'Smazání poznámky',
+  };
+  return labels[action] || action || 'Událost';
+}
+
+function orderTimelineCardHtml(order) {
+  const items = orderTimelineItems(order).slice(0, 14);
+  return \`<div class="card order-timeline-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div>
+        <div class="card-title" style="margin:0">🕒 Timeline zakázky</div>
+        <div class="app-muted">\${items.length} posledních událostí z výroby, poznámek, problémů a auditu.</div>
+      </div>
+      \${can('app_settings') ? \`<button class="btn btn-ghost btn-sm" onclick="switchAdminTab('audit');navigateTo('admin')">Audit</button>\` : ''}
+    </div>
+    <div class="order-timeline-list">
+      \${items.length ? items.map(item => \`
+        <div class="order-timeline-item \${item.tone || 'info'}">
+          <span class="order-timeline-dot">\${item.icon || '•'}</span>
+          <div class="order-timeline-copy">
+            <b>\${escapeHtml(item.title)}</b>
+            <span>\${escapeHtml(item.body || '')}</span>
+            <small>\${item.at ? formatDateTime(item.at) : 'bez času'}\${item.actor ? ' · ' + escapeHtml(item.actor) : ''}</small>
+          </div>
+        </div>
+      \`).join('') : \`<div class="app-empty">Zatím není z čeho složit historii zakázky.</div>\`}
+    </div>
+  </div>\`;
+}
+
+function orderManagerInsightHtml(order) {
+  if (currentUser?.role === 'operator' || !order) return '';
+  const stations = order.stations || [];
+  const total = stations.length || 1;
+  const done = stations.filter(s => ['completed','skipped'].includes(s.status)).length;
+  const active = stations.filter(s => ['in_progress','partial','issue'].includes(s.status));
+  const scrap = stations.reduce((sum, station) => sum + positiveQty(station.qtyScrap), 0);
+  const qualityBase = Math.max(orderGoodQty(order), scrap);
+  const defectRate = qualityBase ? Math.round(scrap / qualityBase * 100) : 0;
+  const workers = [...new Set(active.map(stationWorkerLabel).filter(Boolean).filter(x => x !== 'Neznámý'))];
+  const late = isOrderOverdue(order);
+  const blocked = isOrderBlocked(order);
+  const issueCount = stations.filter(station => station.status === 'issue').length;
+  const progress = Math.round(done / total * 100);
+  const activeIndex = activeStationIndex(order);
+  const currentStation = stations[activeIndex] || stations[0];
+  const progressDisplay = currentStation ? stationProgressForDisplay(order, currentStation, activeIndex) : null;
+  const currentStationInfo = currentStation ? STATIONS.find(st => Number(st.id) === Number(currentStation.stId)) : null;
+  const wipLabel = progressDisplay ? \`\${progressDisplay.processed}/\${progressDisplay.available} ks\` : '0/0 ks';
+  const wipDetail = progressDisplay?.overLimit
+    ? \`zapsáno \${progressDisplay.rawProcessed} ks - zkontrolovat počty\`
+    : active.length
+    ? \`aktuální krok: \${currentStationInfo?.name || 'stanoviště'}\`
+    : done >= total ? 'zakázka dokončena' : 'čeká na další krok';
+
+  return \`<section class="manager-order-insight">
+    <div class="manager-insight-tile \${blocked ? 'danger' : issueCount ? 'warn' : 'ok'}">
+      <span>Stav výroby</span>
+      <strong>\${blocked ? 'Blokováno' : issueCount ? 'Problém' : \`\${progress}% hotovo\`}</strong>
+      <em>\${done}/\${total} stanovišť</em>
+    </div>
+    <div class="manager-insight-tile">
+      <span>Kdo pracuje</span>
+      <strong>\${escapeHtml(workers.length ? workers.slice(0, 2).join(', ') : 'Nikdo')}</strong>
+      <em>\${active.length} aktivní operace</em>
+    </div>
+    <div class="manager-insight-tile \${late ? 'danger' : 'ok'}">
+      <span>Zpoždění</span>
+      <strong>\${late ? \`\${orderDaysLate(order)} dní\` : 'V termínu'}</strong>
+      <em>\${formatDate(order.due || '')}</em>
+    </div>
+    <div class="manager-insight-tile \${order.priority === 'urgent' ? 'danger' : order.priority === 'high' ? 'warn' : ''}">
+      <span>Priorita</span>
+      <strong>\${escapeHtml(priorityLabel(order.priority))}</strong>
+      <em>\${escapeHtml(order.customer || 'Zákazník neuveden')}</em>
+    </div>
+    <div class="manager-insight-tile \${defectRate > 5 ? 'danger' : defectRate > 0 ? 'warn' : 'ok'}">
+      <span>Chybovost</span>
+      <strong>\${defectRate}%</strong>
+      <em>\${scrap} zmetků</em>
+    </div>
+    <div class="manager-insight-tile \${progressDisplay?.overLimit ? 'warn' : ''}">
+      <span>Rozpracovanost</span>
+      <strong>\${escapeHtml(wipLabel)}</strong>
+      <em>\${escapeHtml(wipDetail)}</em>
+    </div>
+  </section>\`;
+}
+
+// ── ORDER DETAIL ──────────────────────────────────────
+function openOrder(orderId, options = {}) {
+  selectedOrder = ORDERS.find(o => o.id === orderId);
+  if (!selectedOrder) {
+    detailView = null;
+    if (options.fromSync) navigateTo('orders');
+    return;
+  }
+  if (!orderVisibleToCurrentUser(selectedOrder)) {
+    detailView = null;
+    showToast('🚫 Tuto zakázku nemáte přiřazenou přes své stanoviště.');
+    navigateTo('orders');
+    return;
+  }
+  if (syncOrderStationFlow(selectedOrder)) saveState();
+  detailView = { type: 'order', orderId };
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.navtab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(t => t.classList.remove('active'));
+
+  const pg = document.getElementById('page-station');
+  pg.classList.add('active');
+
+  const totalOk = orderGoodQty(selectedOrder);
+  const doneSt  = selectedOrder.stations.filter(s=>s.status==='completed').length;
+  const pct     = Math.round(doneSt / selectedOrder.stations.length * 100);
+  const orderControlCards = \`
+    \${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
+    \${featureEnabled('featureReadiness') ? orderReadinessCardHtml(selectedOrder) : ''}
+  \`;
+  const orderControlHtml = operatorSimpleMode()
+    ? advancedPanelHtml('Řízení a připravenost', orderControlCards, { subtitle: 'pokročilé' })
+    : orderControlCards;
+  const orderInfoHtml = operatorSimpleMode()
+    ? advancedPanelHtml('Údaje o zakázce', orderInfoCardHtml(selectedOrder), { subtitle: 'datum, planžeta, technologie' })
+    : orderInfoCardHtml(selectedOrder);
+  const orderTimelineHtml = advancedPanelHtml('Historie zakázky', orderTimelineCardHtml(selectedOrder), { subtitle: 'audit a změny' });
+
+  pg.innerHTML = \`
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 0 8px;cursor:pointer" onclick="navigateTo('orders')">
+      <span style="color:var(--text2);font-size:20px">←</span>
+      <span style="font-size:12px;color:var(--text2)">Zpět na zakázky</span>
+    </div>
+    <div class="card app-order-card" style="border-left:3px solid var(--gold)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px">Číslo zakázky</div>
+          <div style="font-size:26px;font-weight:800;color:var(--gold);font-family:'SF Mono',Menlo,monospace;letter-spacing:2px;margin-bottom:6px">\${selectedOrder.number}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--teal2)">\${selectedOrder.customer}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text)">\${selectedOrder.name}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <span class="badge badge-\${selectedOrder.priority}">\${priorityLabel(selectedOrder.priority)}</span>
+          \${featureEnabled('featureOrderBlocking') ? orderBlockedBadgeHtml(selectedOrder) : ''}
+          \${featureEnabled('featureReadiness') ? orderReadinessBadgeHtml(selectedOrder) : ''}
+          \${orderMoreButton(selectedOrder.id)}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div style="text-align:center;background:var(--card2);border-radius:8px;padding:8px">
+          <div style="font-size:20px;font-weight:800;color:var(--gold)">\${selectedOrder.qty}</div>
+          <div style="font-size:10px;color:var(--text2)">Objednáno</div>
+        </div>
+        <div style="text-align:center;background:var(--card2);border-radius:8px;padding:8px">
+          <div style="font-size:20px;font-weight:800;color:var(--green)">\${totalOk}</div>
+          <div style="font-size:10px;color:var(--text2)">OK kusů</div>
+        </div>
+        <div style="text-align:center;background:var(--card2);border-radius:8px;padding:8px">
+          <div style="font-size:20px;font-weight:800;color:var(--teal2)">\${pct}%</div>
+          <div style="font-size:10px;color:var(--text2)">Dokončeno</div>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:\${pct}%"></div>
+      </div>
+    </div>
+
+    \${orderManagerInsightHtml(selectedOrder)}
+    \${orderControlHtml}
+    \${orderInfoHtml}
+    \${orderTimelineHtml}
+    \${advancedPanelHtml('Další informace k zakázce', \`
+      \${featureEnabled('featureProductMemory') ? productPhotoCardHtml(selectedOrder) : ''}
+      \${orderDocsCardHtml(selectedOrder)}
+      \${featureEnabled('featureAiSummary') ? orderAiCardHtml(selectedOrder) : ''}
+    \`, { subtitle: 'foto, dokumenty, AI' })}
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px">Stanoviště výroby</div>
+      \${can('manage_order_stations') ? orderMoreButton(selectedOrder.id) : ''}
+    </div>
+    \${selectedOrder.stations.map((s, index) => ({ s, index })).filter(({ s }) => userCanAccessStation(s.stId)).map(({ s, index }) => {
+      const stInfo = STATIONS.find(x => x.id === s.stId);
+      const meta = stationStatusMeta(s.status);
+      const nCount = stationNotes(selectedOrder.id, s.stId).length;
+      return \`<div class="card app-queue-card" style="cursor:pointer;margin-bottom:8px" onclick="openStation('\${selectedOrder.id}','\${s.stId}')">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:24px">\${stInfo?.icon ?? '🔧'}</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:6px">
+              <span style="font-size:14px;font-weight:700">\${stInfo?.name ?? 'Stanoviště'}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                \${nCount ? \`<span style="font-size:10px;color:var(--teal2);background:rgba(34,184,158,.15);padding:2px 7px;border-radius:10px">📝 \${nCount}</span>\` : ''}
+                \${(s.workerLogin || s.workerName) ? \`<span style="font-size:10px;color:var(--text2);background:rgba(148,163,184,.14);padding:2px 7px;border-radius:10px">👤 \${escapeHtml(stationWorkerLabel(s))}</span>\` : ''}
+                <span class="badge \${meta.badge}">\${meta.label}</span>
+              </div>
+            </div>
+            \${stationCardQtyHtml(selectedOrder, s, index)}
+          </div>
+          <span style="color:var(--text3)">›</span>
+        </div>
+      </div>\`;
+    }).join('')}
+  \`;
+  scrollAppToTop();
+}
+
+function orderInfoCardHtml(o) {
+  const pt = PROD_TYPES[o.productionType] || PROD_TYPES.new;
+  const techColor = o.technology === 'olovo' ? '#a16207' : '#d4a017';
+  const techLabel = o.technology === 'olovo' ? '🔧 OLOVO' : '⚡ BEZOLOVO';
+  return \`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div class="card-title" style="margin:0">📋 Údaje o zakázce</div>
+      \${can('edit_order_info') ? \`<button class="btn btn-ghost btn-sm" onclick="editOrderInfoModal('\${o.id}')">✏️ Upravit</button>\` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Číslo objednávky</div>
+        <div style="font-size:13px;color:\${o.purchaseOrderNumber ? 'var(--gold)' : 'var(--text3)'};font-weight:700;font-family:'SF Mono',Menlo,monospace;margin-top:2px">\${escapeHtml(o.purchaseOrderNumber || '—')}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Datum objednání</div>
+        <div style="font-size:13px;color:var(--text);font-weight:600;margin-top:2px">\${formatDate(o.orderDate || '')}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Termín dodání</div>
+        <div style="font-size:13px;color:var(--text);font-weight:600;margin-top:2px">\${formatDate(o.due || '')}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Technologie</div>
+        <div style="font-size:13px;color:\${techColor};font-weight:700;margin-top:2px">\${techLabel}</div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Typ výroby</div>
+        <div style="font-size:13px;color:\${pt.color};font-weight:700;margin-top:2px">\${pt.icon} \${pt.label}</div>
+      </div>
+      \${o.stencilNumber ? \`<div style="grid-column:span 2">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Číslo planžety</div>
+        <div style="font-size:13px;color:var(--gold);font-weight:700;font-family:'SF Mono',Menlo,monospace;margin-top:2px">\${escapeHtml(o.stencilNumber)}</div>
+      </div>\` : ''}
+    </div>
+  </div>\`;
+}
+
+function orderBlockCardHtml(order) {
+  if (!isOrderBlocked(order)) return '';
+  const block = order.blocked || {};
+  return \`<div class="card" style="border-left:4px solid var(--red);background:rgba(239,68,68,.10)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+      <div>
+        <div class="card-title" style="color:var(--red);margin-bottom:6px">⛔ Zakázka je blokovaná</div>
+        <div style="font-size:12px;color:var(--amber);font-weight:800;margin-bottom:6px">\${escapeHtml(blockCategoryLabel(block.category))}</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.45">\${escapeHtml(block.reason || 'Bez důvodu')}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px">
+          \${escapeHtml(block.byName || 'Neznámý uživatel')} · \${formatDateTime(block.at)}
+        </div>
+      </div>
+      \${can('block_order') ? \`<button class="btn btn-teal btn-sm" onclick="unblockOrderModal('\${order.id}')">Odblokovat</button>\` : ''}
+    </div>
+  </div>\`;
+}
+
+function blockOrderModal(orderId) {
+  if (!can('block_order')) {
+    showToast('🚫 Nemáte oprávnění blokovat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  openModal('⛔ Blokovat zakázku', \`
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:800;color:var(--red);margin-bottom:5px">\${escapeHtml(order.number)} · \${escapeHtml(order.name)}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Blokace zastaví ukládání počtů a změny stavu na stanovištích, dokud ji oprávněná role neodblokuje.
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Typ blokace *</div>
+      <select class="input" id="bo-category">
+        \${Object.entries(BLOCK_CATEGORIES).map(([key, meta]) => \`
+          <option value="\${key}">\${meta.icon} \${meta.label}</option>
+        \`).join('')}
+      </select>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Důvod blokace *</div>
+      <textarea class="input" id="bo-reason" rows="4" placeholder="např. chybí materiál, čeká se na zákazníka, chyba dokumentace"
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Blokovat', action:\`submitBlockOrder('\${order.id}')\`, cls:'btn-danger' },
+  ]);
+  setTimeout(() => document.getElementById('bo-reason')?.focus(), 50);
+}
+
+function submitBlockOrder(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order || !can('block_order')) return;
+  const category = document.getElementById('bo-category')?.value || 'other';
+  const reason = document.getElementById('bo-reason')?.value.trim() || '';
+  if (!reason) {
+    showToast('⚠️ Vyplňte důvod blokace.');
+    return;
+  }
+  const before = cloneForAudit(order);
+  order.blocked = {
+    active: true,
+    category,
+    reason,
+    byUserId: currentUser.id,
+    byLogin: currentUser.login,
+    byName: currentUser.name,
+    byRole: currentUser.role,
+    at: new Date().toISOString(),
+  };
+  PROD_NOTES.unshift({
+    id: 'pn-block-' + Date.now(),
+    orderId: order.id,
+    stationId: order.stations?.[activeStationIndex(order)]?.stId || order.stations?.[0]?.stId || 0,
+    targetScope: 'all',
+    type: 'change',
+    text: \`Zakázka blokována (\${blockCategoryLabel(category)}): \${reason}\`,
+    author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
+    authorRole: currentUser.role,
+    createdAt: new Date().toISOString(),
+  });
+  writeAudit('order.blocked', 'order', order.id, \`\${order.number} · zakázka blokována (\${blockCategoryLabel(category)})\`, before, cloneForAudit(order));
+  closeModal();
+  saveState();
+  if (selectedOrder?.id === order.id) openOrder(order.id);
+  else refreshCurrentView();
+  showToast('⛔ Zakázka blokována', { skipSave: true });
+}
+
+function unblockOrderModal(orderId) {
+  if (!can('block_order')) {
+    showToast('🚫 Nemáte oprávnění odblokovat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  openModal('✅ Odblokovat zakázku', \`
+    <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+      Zakázka <b style="color:var(--text)">\${escapeHtml(order.number)} · \${escapeHtml(order.name)}</b> bude znovu uvolněna do výroby.
+    </div>
+    <div class="input-group">
+      <div class="input-label">Důvod odblokování *</div>
+      <textarea class="input" id="ubo-reason" rows="4" placeholder="např. materiál doplněn, dokumentace opravena, zákazník schválil pokračování"
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Odblokovat', action:\`submitUnblockOrder('\${order.id}')\`, cls:'btn-primary' },
+  ]);
+  setTimeout(() => document.getElementById('ubo-reason')?.focus(), 50);
+}
+
+function submitUnblockOrder(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order || !can('block_order')) return;
+  const reason = document.getElementById('ubo-reason')?.value.trim() || '';
+  if (!reason) {
+    showToast('⚠️ Vyplňte důvod odblokování.');
+    return;
+  }
+  const before = cloneForAudit(order);
+  order.blocked = {
+    ...(order.blocked || {}),
+    active: false,
+    resolvedReason: reason,
+    resolvedByUserId: currentUser.id,
+    resolvedByLogin: currentUser.login,
+    resolvedByName: currentUser.name,
+    resolvedByRole: currentUser.role,
+    resolvedAt: new Date().toISOString(),
+  };
+  PROD_NOTES.unshift({
+    id: 'pn-unblock-' + Date.now(),
+    orderId: order.id,
+    stationId: order.stations?.[activeStationIndex(order)]?.stId || order.stations?.[0]?.stId || 0,
+    targetScope: 'all',
+    type: 'change',
+    text: \`Zakázka odblokována: \${reason}\`,
+    author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
+    authorRole: currentUser.role,
+    createdAt: new Date().toISOString(),
+  });
+  writeAudit('order.unblocked', 'order', order.id, \`\${order.number} · zakázka odblokována\`, before, cloneForAudit(order));
+  closeModal();
+  saveState();
+  if (selectedOrder?.id === order.id) openOrder(order.id);
+  else refreshCurrentView();
+  showToast('✅ Zakázka odblokována', { skipSave: true });
+}
+
+function orderAiCardHtml(o) {
+  if (!can('edit_order_info') && !can('view_kpi')) return '';
+  return \`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div class="card-title" style="margin:0">🤖 AI přehled zakázky</div>
+      <button class="btn btn-ghost btn-sm" onclick="generateOrderAiSummary('\${o.id}')">Shrnout</button>
+    </div>
+    <div id="ai-summary-\${o.id}" style="font-size:12px;color:var(--text2);line-height:1.55">
+      AI přehled je dostupný při spuštění přes vývojový server EZOP4 s nastaveným OPENAI_API_KEY.
+    </div>
+  </div>\`;
+}
+
+async function generateOrderAiSummary(orderId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  const box = document.getElementById(\`ai-summary-\${orderId}\`);
+  if (!order || !box) return;
+  if (!window.EZOP4_AI?.summarizeOrder) {
+    box.innerHTML = 'AI modul není dostupný v této sestavě aplikace.';
+    return;
+  }
+
+  box.innerHTML = 'Generuji přehled zakázky...';
+  try {
+    const result = await window.EZOP4_AI.summarizeOrder({
+      order,
+      issues: ISSUES.filter(issue => issue.orderId === orderId),
+      notes: PROD_NOTES.filter(note => note.orderId === orderId),
+    });
+    box.innerHTML = \`
+      <div style="font-weight:700;color:var(--text);margin-bottom:8px">\${escapeHtml(result.summary || 'Bez shrnutí.')}</div>
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Rizika</div>
+      \${(result.risks || []).length ? \`<ul style="margin:0 0 10px 18px;padding:0">\${result.risks.map(item => \`<li>\${escapeHtml(item)}</li>\`).join('')}</ul>\` : '<div style="margin-bottom:10px">Bez významných rizik.</div>'}
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Doporučené kroky</div>
+      \${(result.nextSteps || []).length ? \`<ul style="margin:0 0 0 18px;padding:0">\${result.nextSteps.map(item => \`<li>\${escapeHtml(item)}</li>\`).join('')}</ul>\` : '<div>Bez doporučených kroků.</div>'}
+    \`;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'AI přehled se nepodařilo vytvořit.';
+    box.innerHTML = \`<div style="color:var(--amber);font-weight:700;margin-bottom:4px">AI přehled není dostupný</div>
+      <div>\${escapeHtml(message)}</div>\`;
+  }
+}
+
+function deleteOrderModal(orderId) {
+  if (!can('delete_order')) {
+    showToast('🚫 Nemáte oprávnění smazat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  const noteCount = PROD_NOTES.filter(n => n.orderId === orderId).length;
+  const issueCount = ISSUES.filter(i => i.orderId === orderId).length;
+  const stationCount = order.stations?.length || 0;
+  openModal('Smazat zakázku', \`
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--red);margin-bottom:6px">Tato akce je nevratná</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Smaže se zakázka <b style="color:var(--text)">\${escapeHtml(order.number)} · \${escapeHtml(order.name)}</b>,
+        její stanoviště, poznámky a hlášené problémy.
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">\${stationCount}</div><div class="stat-lbl">Stanovišť</div></div>
+      <div class="stat-card"><div class="stat-val">\${noteCount}</div><div class="stat-lbl">Poznámek</div></div>
+      <div class="stat-card"><div class="stat-val">\${issueCount}</div><div class="stat-lbl">Problémů</div></div>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'🗑️ Smazat zakázku', action:\`deleteOrder('\${orderId}')\`, cls:'btn-danger' },
+  ]);
+}
+
+function deleteOrder(orderId) {
+  if (!can('delete_order')) {
+    showToast('🚫 Nemáte oprávnění smazat zakázku.');
+    return;
+  }
+  const order = ORDERS.find(o => o.id === orderId);
+  if (!order) return;
+  const before = cloneForAudit({
+    order,
+    notes: PROD_NOTES.filter(n => n.orderId === orderId),
+    issues: ISSUES.filter(i => i.orderId === orderId),
+  });
+  const removedNotes = before.notes.length;
+  const removedIssues = before.issues.length;
+  ORDERS = ORDERS.filter(o => o.id !== orderId);
+  PROD_NOTES = PROD_NOTES.filter(n => n.orderId !== orderId);
+  ISSUES = ISSUES.filter(i => i.orderId !== orderId);
+  if (selectedOrder?.id === orderId) {
+    selectedOrder = null;
+    selectedStation = null;
+    detailView = null;
+  }
+  writeAudit(
+    'order.deleted',
+    'order',
+    orderId,
+    \`\${order.number} · zakázka smazána\`,
+    before,
+    { removedOrderId: orderId, removedNotes, removedIssues },
+  );
+  closeModal();
+  buildNav();
+  autoSave();
+  navigateTo('orders');
+  showToast(\`🗑️ Zakázka \${order.number} smazána\`);
+}
+
+function productPhotoCardHtml(order, compact = false) {
+  const hasPhoto = !!order.productPhotoDataUrl;
+  const canEdit = can('edit_product_memory');
+  return \`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div class="card-title" style="margin:0">📷 Foto výrobku pro opakovanou výrobu</div>
+      \${canEdit ? \`<label class="btn btn-teal btn-sm" style="cursor:pointer">
+        \${hasPhoto ? '↻ Změnit' : '+ Vyfotit'}
+        <input type="file" accept="image/*" capture="environment" style="display:none"
+          onchange="saveProductPhoto('\${order.id}', this.files[0])">
+      </label>\` : ''}
+    </div>
+    \${hasPhoto
+      ? \`<img src="\${order.productPhotoDataUrl}" alt="Foto výrobku \${escapeHtml(order.name)}"
+          style="width:100%;\${compact ? 'max-height:160px' : 'max-height:260px'};object-fit:cover;border-radius:10px;border:1px solid var(--border);background:var(--card2)">\`
+      : \`<div style="border:1px dashed var(--border);border-radius:10px;padding:16px;text-align:center;color:var(--text3);font-size:12px">
+          Zatím není uložená fotka výrobku.
+        </div>\`}
+    <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.4">
+      Fotka se uloží k výrobku a u opakované výroby se znovu zobrazí.
+    </div>
+  </div>\`;
+}
+
+function stationProgramLabel(stId) {
+  if (Number(stId) === 2) return 'Program automatu';
+  if (Number(stId) === 3) return 'Program AOI kontroly';
+  if (Number(stId) === 6) return 'Program pájení vlnou / selektivní';
+  return 'Program / nastavení stanoviště';
+}
+
+function stationHasProgram(stId) {
+  return [2, 3, 6].includes(Number(stId));
+}
+
+function stationProgramCardHtml(order, station, stInfo) {
+  if (!stationHasProgram(station.stId)) return '';
+  const program = order.stationPrograms?.[station.stId] || '';
+  const label = stationProgramLabel(station.stId);
+  return \`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
+      <div class="card-title" style="margin:0">🧠 \${label}</div>
+      <span style="font-size:11px;color:var(--text2)">\${stInfo?.icon || ''} \${escapeHtml(stInfo?.name || '')}</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input class="input" id="station-program-input" value="\${escapeHtml(program)}"
+        placeholder="zadejte číslo nebo název programu" \${can('edit_product_memory') ? '' : 'disabled'}
+        style="flex:1;margin-bottom:0">
+      \${can('edit_product_memory') ? \`<button class="btn btn-primary btn-sm" onclick="saveStationProgram()">Uložit</button>\` : ''}
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.4">
+      Program se uloží k výrobku a při opakované výrobě se znovu předvyplní.
+    </div>
+  </div>\`;
+}
+
+function editOrderInfoModal(orderId) {
+  if (!can('edit_order_info')) return;
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  openModal('Upravit údaje zakázky', \`
+    <div class="input-group">
+      <div class="input-label">Číslo objednávky</div>
+      <input class="input" id="eoi-po" value="\${escapeHtml(o.purchaseOrderNumber || '')}" placeholder="např. OBJ-2026-001">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Název výrobku</div>
+      <input class="input" id="eoi-name" value="\${escapeHtml(o.name || '')}">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Zákazník</div>
+      <input class="input" id="eoi-customer" value="\${escapeHtml(o.customer || '')}">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="input-group">
+        <div class="input-label">Počet kusů</div>
+        <input class="input" id="eoi-qty" type="number" min="1" value="\${Number(o.qty) || 1}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Priorita</div>
+        <select class="input" id="eoi-priority">
+          \${['low','normal','high','urgent'].map(p=>\`<option value="\${p}" \${o.priority===p?'selected':''}>\${priorityLabel(p)}</option>\`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="input-group">
+        <div class="input-label">Datum objednání</div>
+        <input class="input" id="eoi-order-date" type="date" value="\${escapeHtml(o.orderDate || '')}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Termín dodání</div>
+        <input class="input" id="eoi-due" type="date" value="\${escapeHtml(o.due || '')}">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="input-group">
+        <div class="input-label">Technologie</div>
+        <select class="input" id="eoi-tech">
+          <option value="bezolovo" \${o.technology !== 'olovo' ? 'selected' : ''}>BEZOLOVO</option>
+          <option value="olovo" \${o.technology === 'olovo' ? 'selected' : ''}>OLOVO</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Typ výroby</div>
+        <select class="input" id="eoi-pt">
+          \${Object.entries(PROD_TYPES).map(([k,v])=>\`<option value="\${k}" \${o.productionType===k?'selected':''}>\${v.label}</option>\`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Číslo planžety</div>
+      <input class="input" id="eoi-stencil" value="\${escapeHtml(o.stencilNumber || '')}" placeholder="např. 3/0001" inputmode="numeric" pattern="\\\\d+/\\\\d{4}">
+      <div style="font-size:10px;color:var(--text3);margin-top:5px">
+        Formát: číslo lomítko čtyři číslice, např. 3/0001.
+      </div>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Uložit', action:\`saveOrderInfo('\${orderId}')\`, cls:'btn-primary' },
+  ]);
+}
+
+function saveOrderInfo(orderId) {
+  if (!can('edit_order_info')) return;
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  const before = cloneForAudit(o);
+  const stencil = document.getElementById('eoi-stencil').value.trim();
+  if (!validStencilNumber(stencil)) {
+    showToast('⚠️ Číslo planžety musí být ve formátu 3/0001');
+    return;
+  }
+  o.purchaseOrderNumber = document.getElementById('eoi-po').value.trim();
+  o.name = document.getElementById('eoi-name').value.trim() || o.name;
+  o.customer = document.getElementById('eoi-customer').value.trim() || o.customer;
+  o.qty = Math.max(1, Number(document.getElementById('eoi-qty').value) || 1);
+  o.priority = document.getElementById('eoi-priority').value;
+  o.orderDate = document.getElementById('eoi-order-date').value || '';
+  o.due = document.getElementById('eoi-due').value || '';
+  o.technology = document.getElementById('eoi-tech').value;
+  o.productionType = document.getElementById('eoi-pt').value;
+  o.stencilNumber = stencil;
+  applyProductMemoryToOrder(o);
+  updateProductMemory(o);
+  writeAudit(
+    'order.info_updated',
+    'order',
+    o.id,
+    \`\${o.number} · údaje zakázky upraveny\`,
+    before,
+    cloneForAudit(o)
+  );
+  closeModal();
+  openOrder(orderId);
+  showToast('✅ Údaje zakázky uloženy');
+}
+
+function saveStationProgram() {
+  if (!selectedOrder || !selectedStation || !can('edit_product_memory') || !stationHasProgram(selectedStation.stId)) return;
+  const before = cloneForAudit(selectedOrder.stationPrograms || {});
+  const value = document.getElementById('station-program-input').value.trim();
+  selectedOrder.stationPrograms = selectedOrder.stationPrograms || {};
+  if (value) selectedOrder.stationPrograms[selectedStation.stId] = value;
+  else delete selectedOrder.stationPrograms[selectedStation.stId];
+  updateProductMemory(selectedOrder);
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  writeAudit(
+    'station.program_updated',
+    'order_station',
+    stationAuditId(selectedOrder, selectedStation),
+    \`\${selectedOrder.number} · \${stInfo?.name || selectedStation.stId}: program \${value || 'smazán'}\`,
+    before,
+    cloneForAudit(selectedOrder.stationPrograms || {})
+  );
+  showToast('✅ Program uložen k výrobku');
+}
+
+async function saveProductPhoto(orderId, file) {
+  if (!file || !can('edit_product_memory')) return;
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  try {
+    o.productPhotoDataUrl = await compressImageFile(file);
+    updateProductMemory(o);
+    if (detailView?.type === 'station') {
+      const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+      renderStationDetail(stInfo);
+    } else {
+      openOrder(orderId);
+    }
+    showToast('✅ Fotka výrobku uložena');
+  } catch (e) {
+    console.warn('Photo save failed:', e);
+    showToast('⚠️ Fotku se nepodařilo uložit');
+  }
+}
+
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const max = 900;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function orderDocsCardHtml(o) {
+  const docs = o.documents || [];
+  return \`<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="card-title" style="margin:0">📎 Dokumenty (\${docs.length})</div>
+      \${can('create_order') ? \`<button class="btn btn-teal btn-sm" onclick="addDocToOrder('\${o.id}')">+ Nahrát</button>\` : ''}
+    </div>
+    \${docs.length === 0
+      ? \`<div style="color:var(--text3);font-size:12px;text-align:center;padding:10px 0">Žádné dokumenty</div>\`
+      : docs.map((d,i) => \`
+        <div style="display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+          <span style="font-size:18px">\${docIcon(d.type)}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escapeHtml(d.name)}</div>
+            <div style="font-size:10px;color:var(--text2)">\${docTypeLabel(d.type)} · \${(d.size/1024).toFixed(0)} kB</div>
+          </div>
+          \${can('create_order')
+            ? \`<button class="btn btn-ghost btn-sm" onclick="removeDoc('\${o.id}',\${i})">🗑️</button>\` : ''}
+        </div>
+      \`).join('')}
+  </div>\`;
+}
+
+function stationDocumentsPanelHtml(order, station) {
+  const docs = order.documents || [];
+  const required = [
+    { type:'bom', title:'BOM', hint:'Seznam materiálů a hodnot součástek.' },
+    { type:'drawing', title:'Osazovací výkres', hint:'Rozmístění součástek na desce.' },
+    { type:'procedure', title:'Výrobní postup', hint:'Kroky operace, nastavení a kontrolní body.' },
+  ];
+  const requiredTypes = new Set(required.map(item => item.type));
+  const otherDocs = docs.filter(doc => !requiredTypes.has(doc.type));
+  const docRows = required.map(item => {
+    const matches = docs.filter(doc => doc.type === item.type);
+    return \`<div class="station-doc-item \${matches.length ? 'has-doc' : 'missing'}">
+      <span class="station-doc-icon">\${docIcon(item.type)}</span>
+      <div class="station-doc-copy">
+        <strong>\${escapeHtml(item.title)}</strong>
+        <em>\${matches.length ? \`\${matches.length} připojeno\` : item.hint}</em>
+        \${matches.map(doc => \`<span class="station-doc-file">\${escapeHtml(doc.name)} · \${(doc.size/1024).toFixed(0)} kB</span>\`).join('')}
+      </div>
+    </div>\`;
+  }).join('');
+  const otherRows = otherDocs.length ? \`
+    <div class="station-doc-extra">
+      <span>Další podklady</span>
+      \${otherDocs.map(doc => \`<div class="station-doc-file-row">
+        <b>\${docIcon(doc.type)}</b>
+        <span>\${escapeHtml(doc.name)}</span>
+        <em>\${docTypeLabel(doc.type)}</em>
+      </div>\`).join('')}
+    </div>
+  \` : '';
+
+  return \`<div class="card station-docs-card">
+    <div class="station-panel-head">
+      <div>
+        <div class="card-title" style="margin:0">📎 Dokumenty k výrobku</div>
+        <span>BOM, osazovací výkres a výrobní postup</span>
+      </div>
+      \${can('create_order') ? \`<button class="btn btn-teal btn-sm" onclick="addDocToOrder('\${order.id}', '\${station.stId}')">+ Nahrát</button>\` : ''}
+    </div>
+    <div class="station-doc-list">
+      \${docRows}
+      \${otherRows}
+    </div>
+  </div>\`;
+}
+
+function addDocToOrder(orderId, returnStationId = '') {
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  openModal('Nahrát dokument', \`
+    <div class="input-group">
+      <div class="input-label">Typ dokumentu</div>
+      <select class="input" id="ad-type">
+        <option value="bom">📊 BOM</option>
+        <option value="drawing">📐 Osazovací výkres</option>
+        <option value="procedure">🧾 Výrobní postup</option>
+        <option value="paste">🎯 GBR data pasty</option>
+        <option value="other">📄 Ostatní</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Soubor</div>
+      <input type="file" id="ad-file" class="input" style="padding:8px"
+        accept=".pdf,.xlsx,.xls,.csv,.zip,.gbr,.gbx,.txt,.docx,.dwg,image/*">
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Nahrát', action:\`saveDocToOrder('\${orderId}', '\${returnStationId}')\`, cls:'btn-primary' },
+  ]);
+}
+
+function saveDocToOrder(orderId, returnStationId = '') {
+  const f = document.getElementById('ad-file').files[0];
+  if (!f) { showToast('⚠️ Vyberte soubor'); return; }
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  o.documents = o.documents || [];
+  o.documents.push({ name:f.name, type:document.getElementById('ad-type').value, size:f.size });
+  closeModal();
+  if (returnStationId) openStation(orderId, returnStationId);
+  else openOrder(orderId);
+  showToast('✅ Dokument nahrán');
+}
+
+function manageStationsModal(orderId) {
+  if (!can('manage_order_stations')) return;
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  openModal('⚙️ Spravovat stanoviště zakázky', \`
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">
+      Zapněte / vypněte stanoviště a určete jejich postupnost. Automatické předání půjde vždy na další aktivní stanoviště v tomto pořadí.
+    </div>
+    <div id="ms-list">\${renderManageStationsList(o)}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:10px">
+      💡 Stanoviště, které již má rozpracované kusy, nejde vypnout. Pořadí lze změnit šipkami.
+    </div>
+  \`, [
+    { label:'Zavřít', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Hotovo', action:\`closeModal();openOrder('\${orderId}')\`, cls:'btn-primary' },
+  ]);
+}
+
+function renderManageStationsList(o) {
+  const activeIds = o.stations.map(s => s.stId);
+  const activeRows = o.stations.map((existing, index) => {
+    const st = STATIONS.find(x => x.id === existing.stId) || { id:existing.stId, name:'Stanoviště', icon:'🔧' };
+    return manageStationRow(o, st, existing, index, activeIds.length);
+  }).join('');
+
+  const inactiveRows = STATIONS
+    .filter(st => !activeIds.includes(st.id))
+    .map(st => manageStationRow(o, st, null, -1, activeIds.length))
+    .join('');
+
+  return \`
+    <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin:0 0 6px">
+      Aktivní postupnost
+    </div>
+    \${activeRows || '<div style="font-size:12px;color:var(--text3);padding:10px">Žádná aktivní stanoviště.</div>'}
+    \${inactiveRows ? \`
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 6px">
+        Vypnutá stanoviště
+      </div>
+      \${inactiveRows}
+    \` : ''}
+  \`;
+}
+
+function manageStationRow(o, st, existing, index, activeCount) {
+  const sum = existing ? (existing.qtyOk + existing.qtyRework + existing.qtyScrap + existing.qtyReceived) : 0;
+  const hasProgress = sum > 0;
+  const on = !!existing && existing.status !== 'skipped';
+  return \`<div style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px">
+      \${on ? \`<span style="width:20px;height:20px;border-radius:6px;background:rgba(212,160,23,.14);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800">\${index + 1}</span>\` : '<span style="width:20px"></span>'}
+      <span style="font-size:18px">\${st.icon}</span>
+      <span style="flex:1;font-size:13px;font-weight:600;color:\${on?'var(--text)':'var(--text3)'}">\${st.name}</span>
+      \${hasProgress ? \`<span style="font-size:10px;color:var(--text2)">\${existing.qtyOk} OK</span>\` : ''}
+      \${on ? \`
+        <button class="btn btn-ghost btn-sm" style="padding:5px 8px;opacity:\${index === 0 ? '.35' : '1'}" \${index === 0 ? 'disabled' : \`onclick="moveOrderStation('\${o.id}', \${st.id}, -1)"\`}>↑</button>
+        <button class="btn btn-ghost btn-sm" style="padding:5px 8px;opacity:\${index === activeCount - 1 ? '.35' : '1'}" \${index === activeCount - 1 ? 'disabled' : \`onclick="moveOrderStation('\${o.id}', \${st.id}, 1)"\`}>↓</button>
+      \` : ''}
+      <div class="toggle \${on?'on':''}" \${hasProgress && on ? 'title="Nelze vypnout – má rozpracované kusy" style="opacity:.4;cursor:not-allowed"' : \`onclick="toggleOrderStation('\${o.id}', \${st.id})"\`}></div>
+    </div>\`;
+}
+
+function toggleOrderStation(orderId, stId) {
+  if (!can('manage_order_stations')) return;
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  const existing = o.stations.find(s => s.stId === stId);
+
+  if (existing) {
+    const sum = existing.qtyOk + existing.qtyRework + existing.qtyScrap + existing.qtyReceived;
+    if (sum > 0 && existing.status !== 'skipped') {
+      showToast('⚠️ Stanoviště má rozpracované kusy, nelze vypnout');
+      return;
+    }
+    if (existing.status === 'skipped') {
+      existing.status = 'waiting';
+      showToast('✅ Stanoviště zapnuto');
+    } else {
+      // odstranit pokud je úplně prázdné, jinak označit jako skipped
+      o.stations = o.stations.filter(s => s.stId !== stId);
+      showToast('🚫 Stanoviště vypnuto');
+    }
+  } else {
+    o.stations.push({
+      stId, status:'waiting', qtyOk:0, qtyRework:0, qtyScrap:0, qtyReceived:0,
+    });
+    showToast('➕ Stanoviště přidáno');
+  }
+
+  document.getElementById('ms-list').innerHTML = renderManageStationsList(o);
+}
+
+function moveOrderStation(orderId, stId, direction) {
+  if (!can('manage_order_stations')) return;
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o) return;
+  const index = o.stations.findIndex(s => s.stId === stId);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= o.stations.length) return;
+  const [station] = o.stations.splice(index, 1);
+  o.stations.splice(target, 0, station);
+  document.getElementById('ms-list').innerHTML = renderManageStationsList(o);
+  showToast('Pořadí stanovišť změněno');
+}
+
+function removeDoc(orderId, idx) {
+  const o = ORDERS.find(x => x.id === orderId);
+  if (!o || !o.documents) return;
+  o.documents.splice(idx, 1);
+  openOrder(orderId);
+  showToast('🗑️ Dokument odebrán');
+}
+
+// ── STATION DETAIL ────────────────────────────────────
+function openStation(orderId, stId, options = {}) {
+  selectedOrder = ORDERS.find(o => o.id === orderId);
+  selectedStation = selectedOrder?.stations.find(s => s.stId === Number(stId));
+  if (!selectedOrder || !selectedStation) {
+    detailView = null;
+    if (options.fromSync) navigateTo('orders');
+    return;
+  }
+  if (!userCanAccessStation(stId)) {
+    detailView = null;
+    showToast('🚫 Toto stanoviště nemáte přiřazené.');
+    navigateTo('orders');
+    return;
+  }
+  if (syncOrderStationFlow(selectedOrder)) {
+    selectedStation = selectedOrder.stations.find(s => s.stId === Number(stId));
+    saveState();
+  }
+  detailView = { type: 'station', orderId, stId: Number(stId) };
+
+  const stInfo = STATIONS.find(x => x.id === Number(stId));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const pg = document.getElementById('page-station');
+  pg.classList.add('active');
+
+  renderStationDetail(stInfo);
+  scrollAppToTop();
+}
+
+function stationWorkPanelHtml(order, station) {
+  const canOperate = canOperateStation(station);
+  const blocked = isOrderBlocked(order);
+  const claimed = Boolean(station?.workerUserId || station?.workerLogin);
+  const claimedByOther = stationClaimedByOther(station);
+  const stInfo = STATIONS.find(x => x.id === station?.stId);
+  const status = claimed
+    ? \`\${stationWorkBadgeHtml(station)}\`
+    : \`<span class="badge" style="background:rgba(148,163,184,.14);color:var(--text2)">Volné</span>\`;
+  const detail = claimed
+    ? \`<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px">
+        Převzal: <b style="color:var(--text)">\${escapeHtml(stationWorkerLabel(station))}</b>
+        \${station.workStartedAt ? \` · start \${formatDateTime(station.workStartedAt)}\` : ''}
+        \${station.workPausedAt ? \`<br>⏸ Pozastaveno: \${formatDateTime(station.workPausedAt)}\${station.workPauseReason ? \` · \${escapeHtml(station.workPauseReason)}\` : ''}\` : ''}
+      </div>\`
+    : \`<div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:8px">Zápis počtů a změna stavu se odemkne po potvrzení hlavním tlačítkem. Mistr/TPV/vedení/admin mohou zasáhnout kdykoliv.</div>\`;
+
+  return \`<div class="card" style="border-left:4px solid \${claimedByOther ? 'var(--amber)' : canOperate ? 'var(--teal)' : 'var(--red)'}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div>
+        <div class="card-title" style="margin-bottom:6px">👤 Přístup operátora · \${stInfo?.icon || '🔧'} \${escapeHtml(stInfo?.name || 'Stanoviště')}</div>
+        \${status}
+        \${detail}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        \${blocked ? \`<span style="font-size:11px;color:var(--red);align-self:center">Zakázka je blokovaná</span>\` : ''}
+        \${!canOperate ? \`<span style="font-size:11px;color:var(--text3);align-self:center">Nemáte přiřazené stanoviště</span>\` : ''}
+        \${claimedByOther ? \`<span style="font-size:11px;color:var(--amber);align-self:center">Práci má převzatou jiný uživatel</span>\` : stationWorkActionButtons(order, station)}
+      </div>
+    </div>
+  </div>\`;
+}
+
+function stationIndexInOrder(order, station) {
+  return (order?.stations || []).findIndex(item => item === station || Number(item.stId) === Number(station?.stId));
+}
+
+function stationTaskState(order, station) {
+  const index = stationIndexInOrder(order, station);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
+  const blocked = isOrderBlocked(order);
+  const claimedByOther = stationClaimedByOther(station);
+  const claimedByCurrent = stationClaimedByCurrent(station);
+  const canOperate = canOperateStation(station);
+
+  if (blocked) {
+    return { color:'var(--red)', icon:'⛔', label:'Zakázka je blokovaná', action: orderBlockReason(order) || 'Čeká se na odblokování oprávněnou rolí.' };
+  }
+  if (!canOperate) {
+    return { color:'var(--red)', icon:'🚫', label:'Nemáte přístup ke stanovišti', action:'Otevřete své přiřazené stanoviště nebo požádejte mistra/admina.' };
+  }
+  if (claimedByOther) {
+    return { color:'var(--amber)', icon:'👤', label:'Práci má jiný operátor', action:\`Převzal \${stationWorkerLabel(station)}. Počkejte nebo požádejte mistra o uvolnění.\` };
+  }
+  if (!claimedByCurrent && !isManagerRole()) {
+    return { color:'var(--teal)', icon:'▶', label:'Práce připravena', action:'Potvrďte zahájení v bloku aktuální zakázky. Potom půjde zapisovat kusy a měnit stav.' };
+  }
+  if (index > 0 && available <= 0) {
+    return { color:'var(--amber)', icon:'⏳', label:'Čeká na předchozí krok', action:'Na toto stanoviště zatím nepřišly kusy z předchozí operace.' };
+  }
+  if (station.status === 'completed') {
+    return { color:'var(--green)', icon:'✅', label:'Stanoviště hotovo', action:'Zkontrolujte poznámky a případně pokračujte na další zakázku ve frontě.' };
+  }
+  if (station.workPausedAt) {
+    return { color:'var(--amber)', icon:'⏸', label:'Práce je pozastavená', action: station.workPauseReason || 'Obnovte práci, až bude možné pokračovat.' };
+  }
+  if (progressDisplay.overLimit) {
+    return { color:'var(--amber)', icon:'⚠️', label:'Zkontrolujte počty', action:\`Na stanovišti je zapsáno \${progressDisplay.rawProcessed} ks, vstup je \${available} ks.\` };
+  }
+  if (remaining <= 0 && available > 0) {
+    return { color:'var(--green)', icon:'✅', label:'Počty jsou kompletní', action:'Uložte počty a dokončete stanoviště, pokud je operace skutečně hotová.' };
+  }
+  if (processed > 0) {
+    return { color:'var(--blue)', icon:'◐', label:'Rozpracováno', action:\`Zbývá zpracovat \${remaining} ks. Doplňte OK/Oprava/Zmetek a uložte počty.\` };
+  }
+  return { color:'var(--teal)', icon:'▶', label:'Začít operaci', action:'Zkontrolujte poznámky, zadejte počty OK/Oprava/Zmetek a průběžně ukládejte.' };
+}
+
+function compactStationNoteHtml(note) {
+  const type = NOTE_TYPES[note.type] || NOTE_TYPES.other;
+  const flags = [
+    noteIsPrivate(note) ? '🔒 soukromá' : '',
+    note.productSticky ? '📌 k výrobku' : '',
+    note.inheritedProductNote ? '↻ z minulé zakázky' : '',
+  ].filter(Boolean).join(' · ');
+  return \`<div style="background:rgba(255,255,255,.04);border-left:3px solid \${type.color};border-radius:8px;padding:8px 10px;margin-bottom:7px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <span style="font-size:10px;font-weight:900;color:\${type.color}">\${type.icon} \${type.label}</span>
+      <span style="font-size:10px;color:var(--text3)">\${escapeHtml(note.author || '')}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text);line-height:1.35">\${escapeHtml(note.text || '')}</div>
+    \${flags ? \`<div style="font-size:10px;color:var(--text2);margin-top:4px">\${escapeHtml(flags)}</div>\` : ''}
+  </div>\`;
+}
+
+function operatorStationTaskPanelHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
+  const notes = stationNotes(order.id, station.stId).slice(0, 3);
+  const nextStation = (order.stations || [])[index + 1];
+  const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  const noteCount = stationNotes(order.id, station.stId).length;
+  const hideContext = operatorHideOrderContext();
+
+  return \`<div class="card" style="border-left:5px solid \${state.color};background:linear-gradient(135deg,rgba(34,184,158,.10),rgba(15,23,42,.02))">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;color:var(--text2);font-weight:900;text-transform:uppercase;letter-spacing:.7px;margin-bottom:3px">Aktuální úkol operátora</div>
+        <div style="font-size:21px;font-weight:900;color:var(--text);line-height:1.15">\${state.icon} \${escapeHtml(state.label)}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-top:5px">\${escapeHtml(state.action)}</div>
+      </div>
+      <span class="badge" style="background:\${state.color}22;color:\${state.color};white-space:nowrap">\${stInfo?.icon || '🔧'} \${escapeHtml(stInfo?.name || 'Stanoviště')}</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:var(--gold)">\${available}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">\${index > 0 ? 'Přišlo' : 'Objednáno'}</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:var(--green)">\${positiveQty(station.qtyOk)}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">OK</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:20px;font-weight:900;color:\${remaining ? 'var(--amber)' : 'var(--green)'}">\${remaining}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:800;text-transform:uppercase">Zbývá</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:\${notes.length ? '12px' : '0'}">
+      \${hideContext ? \`
+        <span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">🎯 pouze vaše stanoviště</span>
+      \` : \`
+        <span style="font-size:11px;color:var(--text2)">Další krok:</span>
+        <span class="badge" style="background:rgba(59,130,246,.14);color:var(--blue)">
+          \${nextInfo ? \`\${nextInfo.icon} \${escapeHtml(nextInfo.name)}\` : '🏁 poslední stanoviště'}
+        </span>
+      \`}
+      <span class="badge" style="background:rgba(34,184,158,.14);color:var(--teal2)">📝 \${noteCount} pozn.</span>
+      \${station.qtyScrap ? \`<span class="badge" style="background:rgba(239,68,68,.14);color:var(--red)">Zmetek \${positiveQty(station.qtyScrap)}</span>\` : ''}
+    </div>
+
+    \${notes.length ? \`
+      <div style="font-size:11px;font-weight:900;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px">Poslední důležité poznámky</div>
+      \${notes.map(compactStationNoteHtml).join('')}
+    \` : ''}
+  </div>\`;
+}
+
+function stationWorkSummaryHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const nextStation = (order.stations || [])[index + 1];
+  const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  const hideRoute = operatorHideOrderContext();
+  return \`<div class="station-work-summary" style="--summary-color:\${state.color}">
+    <div class="station-summary-main">
+      <span class="station-summary-icon">\${state.icon}</span>
+      <div>
+        <strong>\${escapeHtml(state.label)}</strong>
+        <span>\${escapeHtml(state.action)}</span>
+      </div>
+    </div>
+    <div class="station-summary-route">
+      \${hideRoute
+        ? \`<span class="station-route-final">🎯 Zaměřeno jen na vaše stanoviště</span>\`
+        : nextInfo
+        ? \`<button class="station-next-btn" onclick="openStation('\${escapeHtml(order.id)}','\${nextStation.stId}')">
+            <span>Další stanoviště</span>
+            <strong>\${nextInfo.icon} \${escapeHtml(nextInfo.name)}</strong>
+            <b>Otevřít →</b>
+          </button>\`
+        : \`<span class="station-route-final">🏁 Poslední stanoviště</span>\`}
+    </div>
+  </div>\`;
+}
+
+function stationFastPanelHtml(order, station, stInfo) {
+  const state = stationTaskState(order, station);
+  const noteCount = stationNotes(order.id, station.stId).length;
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const claimedByExactUser = Boolean(
+    (station.workerUserId && station.workerUserId === currentUser?.id) ||
+    (station.workerLogin && normalizeLogin(station.workerLogin) === normalizeLogin(currentUser?.login))
+  );
+  const blocked = isOrderBlocked(order);
+  const worker = stationWorkerLabel(station);
+  const claimLabel = !claimed ? 'Volné' : claimedByExactUser ? 'Převzato vámi' : \`Převzal \${worker}\`;
+  const hideContext = operatorHideOrderContext();
+  return \`<section class="station-fast-panel" style="--station-fast-color:\${state.color}">
+    <div class="station-fast-main">
+      <div class="station-fast-kicker"><span>\${state.icon}</span><strong>Aktuální zakázka</strong></div>
+      <h2>\${escapeHtml(order.number)}</h2>
+      <p>\${escapeHtml(order.name)}</p>
+      <div class="station-fast-status">
+        <span>\${stInfo?.icon ?? '🔧'} \${escapeHtml(stInfo?.name ?? 'Stanoviště')}</span>
+        <span class="station-fast-state">\${escapeHtml(state.label)}</span>
+        <span>\${escapeHtml(claimLabel)}</span>
+        \${blocked ? '<span class="danger">Blokace</span>' : ''}
+        <span>📝 \${noteCount}</span>
+      </div>
+    </div>
+    <div class="station-fast-side">
+      <div class="station-fast-actions">
+        \${stationWorkActionButtons(order, station)}
+        <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Problém</button>
+        \${hideContext ? '' : \`<button class="btn btn-ghost btn-sm" onclick="openOrder('\${order.id}')">Zakázka</button>\`}
+      </div>
+    </div>
+  </section>\`;
+}
+
+function stationContextFactHtml(label, value, tone = '') {
+  return \`<div class="station-context-fact \${tone}">
+    <span>\${escapeHtml(label)}</span>
+    <strong>\${escapeHtml(value || '—')}</strong>
+  </div>\`;
+}
+
+function stationContextPanelHtml(order, station, stInfo) {
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const meta = stationStatusMeta(station.status);
+  const nextStation = (order.stations || [])[index + 1];
+  const nextInfo = nextStation ? STATIONS.find(st => Number(st.id) === Number(nextStation.stId)) : null;
+  const hideContext = operatorHideOrderContext();
+  const pt = PROD_TYPES[order.productionType] || PROD_TYPES.new;
+  const techLabel = order.technology === 'olovo' ? 'OLOVO' : 'BEZOLOVO';
+  const noteCount = stationNotes(order.id, station.stId).length;
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const worker = claimed ? stationWorkerLabel(station) : 'Volné';
+  const blocked = isOrderBlocked(order);
+  const showOrder = operatorShowOrderIdentifier();
+  const showCustomer = operatorShowCustomerContext();
+  const showDue = operatorShowDueContext();
+  const showTech = operatorShowTechnologyContext();
+  const showNotes = operatorShowNotesContext();
+  const orderTitle = showOrder
+    ? \`\${order.number} · \${order.name}\`
+    : 'Práce na stanovišti';
+
+  return \`<section class="station-context-panel" style="--station-context-color:\${state.color}">
+    <div class="station-context-head">
+      <div class="station-context-title">
+        <div class="station-context-icon">\${stInfo?.icon ?? '🔧'}</div>
+        <div>
+          <span>\${escapeHtml(stInfo?.name ?? 'Stanoviště')}</span>
+          <strong>\${escapeHtml(orderTitle)}</strong>
+          \${showCustomer ? \`<em>\${escapeHtml(order.customer || 'Zákazník neuveden')}</em>\` : ''}
+        </div>
+      </div>
+      \${hideContext ? '' : \`<div class="station-context-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openOrder('\${order.id}')">Otevřít zakázku</button>
+      </div>\`}
+    </div>
+
+    <div class="station-context-body">
+      <div class="station-context-task">
+        <span class="station-context-state-icon">\${state.icon}</span>
+        <div>
+          <span>Co řešit teď</span>
+          <strong>\${escapeHtml(state.label)}</strong>
+          <p>\${escapeHtml(state.action)}</p>
+        </div>
+      </div>
+
+      <div class="station-context-facts">
+        \${stationContextFactHtml('Stav', meta.label, meta.action)}
+        \${stationContextFactHtml('Přístup', worker, claimed ? 'ok' : '')}
+        \${showDue ? stationContextFactHtml('Termín', formatDate(order.due || '')) : ''}
+        \${stationContextFactHtml('Priorita', priorityLabel(order.priority))}
+        \${showTech ? stationContextFactHtml('Technologie', techLabel) : ''}
+        \${showTech ? stationContextFactHtml('Typ výroby', pt.label) : ''}
+        \${showTech && order.stencilNumber ? stationContextFactHtml('Planžeta', order.stencilNumber) : ''}
+        \${showNotes ? stationContextFactHtml('Poznámky', \`\${noteCount} k tomuto kroku\`, noteCount ? 'info' : '') : ''}
+      </div>
+
+      <div class="station-context-route">
+        \${blocked ? \`<div class="station-context-warning">⛔ \${escapeHtml(orderBlockReason(order) || 'Zakázka je blokovaná')}</div>\` : ''}
+        \${hideContext
+          ? \`<span class="station-route-final">🎯 Operátor vidí jen své stanoviště</span>\`
+          : nextInfo
+          ? \`<button class="station-next-btn" onclick="openStation('\${escapeHtml(order.id)}','\${nextStation.stId}')">
+              <span>Další stanoviště</span>
+              <strong>\${nextInfo.icon} \${escapeHtml(nextInfo.name)}</strong>
+              <b>Otevřít →</b>
+            </button>\`
+          : \`<span class="station-route-final">🏁 Poslední stanoviště</span>\`}
+      </div>
+    </div>
+  </section>\`;
+}
+
+function stationStateOverviewHtml(order, station) {
+  const meta = stationStatusMeta(station.status);
+  const blocked = isOrderBlocked(order);
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const paused = Boolean(station.workPausedAt);
+  const items = [
+    { label:'Stav', value: meta.label, tone: meta.action },
+    { label:'Převzetí', value: claimed ? stationWorkerLabel(station) : 'Volné', tone: claimed ? 'ok' : '' },
+    { label:'Režim', value: blocked ? 'Blokováno' : paused ? 'Pozastaveno' : 'Aktivní', tone: blocked ? 'danger' : paused ? 'warn' : 'ok' },
+  ];
+  return \`<div class="station-state-overview">
+    \${items.map(item => \`<div class="station-state-item \${item.tone}">
+      <span>\${escapeHtml(item.label)}</span>
+      <strong>\${escapeHtml(item.value)}</strong>
+    </div>\`).join('')}
+    \${paused && station.workPauseReason ? \`<div class="station-state-note">Důvod pauzy: \${escapeHtml(station.workPauseReason)}</div>\` : ''}
+  </div>\`;
+}
+
+function stationManagerInsightHtml(order, station) {
+  if (currentUser?.role === 'operator') return '';
+  const index = stationIndexInOrder(order, station);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
+  const scrap = positiveQty(station.qtyScrap);
+  const rework = positiveQty(station.qtyRework);
+  const defectBase = progressDisplay.rawProcessed || processed;
+  const defectRate = defectBase ? Math.round((scrap + rework) / defectBase * 100) : 0;
+  const late = isOrderOverdue(order);
+  const claimed = Boolean(station.workerUserId || station.workerLogin);
+  const blocked = isOrderBlocked(order);
+  const meta = stationStatusMeta(station.status);
+  return \`<section class="station-manager-insight">
+    <div class="station-manager-tile \${blocked ? 'danger' : station.status === 'issue' ? 'danger' : 'ok'}">
+      <span>Stav operace</span>
+      <strong>\${blocked ? 'Blokováno' : meta.label}</strong>
+      <em>\${blocked ? escapeHtml(orderBlockReason(order) || 'čeká') : 'aktuální stav'}</em>
+    </div>
+    <div class="station-manager-tile \${claimed ? 'ok' : 'warn'}">
+      <span>Pracuje</span>
+      <strong>\${escapeHtml(claimed ? stationWorkerLabel(station) : 'Nikdo')}</strong>
+      <em>\${station.workStartedAt ? formatDateTime(station.workStartedAt) : 'bez převzetí'}</em>
+    </div>
+    <div class="station-manager-tile \${late ? 'danger' : 'ok'}">
+      <span>Termín</span>
+      <strong>\${late ? \`\${orderDaysLate(order)} dní skluz\` : 'V termínu'}</strong>
+      <em>\${formatDate(order.due || '')}</em>
+    </div>
+    <div class="station-manager-tile \${progressDisplay.overLimit ? 'warn' : ''}">
+      <span>Rozpracováno</span>
+      <strong>\${processed}/\${available}</strong>
+      <em>\${progressDisplay.overLimit ? \`zapsáno \${progressDisplay.rawProcessed} ks - kontrola počtů\` : \`zbývá \${remaining} ks\`}</em>
+    </div>
+    <div class="station-manager-tile \${defectRate > 5 ? 'danger' : defectRate > 0 ? 'warn' : 'ok'}">
+      <span>Chybovost</span>
+      <strong>\${defectRate}%</strong>
+      <em>oprava \${rework} · zmetek \${scrap}</em>
+    </div>
+  </section>\`;
+}
+
+function renderOperatorStationDetail(stInfo) {
+  const order = selectedOrder;
+  const station = selectedStation;
+  const index = stationIndexInOrder(order, station);
+  const state = stationTaskState(order, station);
+  const progressDisplay = stationProgressForDisplay(order, station, index);
+  const available = progressDisplay.available;
+  const processed = progressDisplay.processed;
+  const remaining = progressDisplay.remaining;
+  const notes = stationNotes(order.id, station.stId).slice(0, 4);
+  const showOrder = operatorShowOrderIdentifier();
+  const title = showOrder ? order.number : 'Aktuální operace';
+  const instructionHtml = notes.length
+    ? notes.map(compactStationNoteHtml).join('')
+    : \`<div class="operator-instruction-empty">Bez speciální poznámky. Postupujte podle pracovního postupu na pracovišti.</div>\`;
+
+  const pg = document.getElementById('page-station');
+  pg.innerHTML = \`
+    <div class="operator-work-screen">
+      <button class="station-back-link operator-back-link" type="button" onclick="navigateTo('queue')">
+        <span>←</span>
+        <span>Zpět na moji práci</span>
+      </button>
+
+      <section class="operator-work-hero" style="--operator-work-color:\${state.color}">
+        <div class="operator-work-status">
+          <span>\${state.icon}</span>
+          <strong>\${escapeHtml(state.label)}</strong>
+        </div>
+        <div class="operator-work-title">
+          <span>\${stInfo?.icon ?? '🔧'} \${escapeHtml(stInfo?.name ?? 'Stanoviště')}</span>
+          <h1>\${escapeHtml(title)}</h1>
+          <p>\${escapeHtml(order.name)}</p>
+        </div>
+        <div class="operator-work-facts">
+          <div><span>Počet</span><strong>\${available}</strong><em>ks</em></div>
+          <div><span>OK</span><strong>\${positiveQty(station.qtyOk)}</strong><em>ks</em></div>
+          <div><span>Zbývá</span><strong>\${remaining}</strong><em>ks</em></div>
+        </div>
+        <div class="operator-work-actions">
+          \${stationWorkActionButtons(order, station)}
+          <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Nahlásit problém</button>
+        </div>
+      </section>
+
+      <section class="operator-work-card operator-instructions">
+        <div class="operator-card-head">
+          <strong>Pracovní instrukce</strong>
+          <span>\${notes.length} pozn.</span>
+        </div>
+        \${instructionHtml}
+      </section>
+
+      <section class="operator-work-card operator-qty-entry">
+        <div class="operator-card-head">
+          <strong>Kusy</strong>
+          <span>\${processed}/\${available} zapsáno</span>
+        </div>
+        <div class="qty-grid" id="qty-grid">
+          \${qtyFieldHtml('ok',     'OK',      station.qtyOk,     'ok-color')}
+          \${qtyFieldHtml('rework', 'Oprava',  station.qtyRework, 'rework-color')}
+          \${qtyFieldHtml('scrap',  'Zmetek',  station.qtyScrap,  'scrap-color')}
+        </div>
+        <div id="qty-summary"></div>
+        <button class="btn btn-teal operator-save-btn" id="qty-save-btn" onclick="saveQty()">Uložit počty</button>
+        \${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
+      </section>
+    </div>
+  \`;
+  updateQtySummary();
+}
+
+function renderStationDetail(stInfo) {
+  if (currentUser?.role === 'operator' && operatorSimpleMode()) {
+    renderOperatorStationDetail(stInfo);
+    return;
+  }
+  const s = selectedStation;
+  const hideContext = operatorHideOrderContext();
+  const stationSupportCards = \`
+    \${featureEnabled('featureOrderBlocking') ? orderBlockCardHtml(selectedOrder) : ''}
+  \`;
+  const stationSupportHtml = advancedPanelHtml('Upozornění zakázky', stationSupportCards, { subtitle: 'blokace' });
+  const stationNotesCard = \`
+    <div class="card station-notes-card">
+      <div class="station-panel-head">
+        <div class="card-title" style="margin:0">📝 Poznámky k výrobě (\${stationNotes(selectedOrder.id, selectedStation.stId).length})</div>
+        <button class="btn btn-teal btn-sm" onclick="addNoteModal()">+ Přidat</button>
+      </div>
+      \${renderStationNotes()}
+    </div>
+  \`;
+  const stationNotesHtml = stationNotesCard;
+  const stationProgramPhotoContent = \`
+    \${stationDocumentsPanelHtml(selectedOrder, selectedStation)}
+    \${featureEnabled('featureProductMemory') ? \`
+      \${stationProgramCardHtml(selectedOrder, selectedStation, stInfo)}
+      \${productPhotoCardHtml(selectedOrder, true)}
+    \` : ''}
+  \`;
+  const stationProgramPhotoHtml = stationProgramPhotoContent.trim()
+    ? \`<section class="station-side-panel station-program-panel">
+        <div class="station-panel-head">
+          <div>
+            <div class="card-title" style="margin:0">Výrobní podklady</div>
+            <span>dokumenty, program a foto</span>
+          </div>
+        </div>
+        <div class="station-panel-body">\${stationProgramPhotoContent}</div>
+      </section>\`
+    : '';
+
+  const pg = document.getElementById('page-station');
+  pg.innerHTML = \`
+    <div class="station-desktop-console">
+      <div class="station-back-link"
+           onclick="\${hideContext ? "navigateTo('queue')" : \`openOrder('\${selectedOrder.id}')\`}">
+        <span style="color:var(--text2);font-size:20px">←</span>
+        <span style="font-size:12px;color:var(--text2)">\${hideContext ? 'Zpět na moji frontu' : 'Zpět na zakázku'}</span>
+      </div>
+
+      \${stationContextPanelHtml(selectedOrder, selectedStation, stInfo)}
+      \${stationManagerInsightHtml(selectedOrder, selectedStation)}
+
+      <div class="station-workspace-grid">
+        <div class="station-workspace-main">
+          <div class="card station-primary-card station-qty-card">
+            <div class="card-title">📦 Zapsat kusy</div>
+            <div class="qty-grid" id="qty-grid">
+              \${qtyFieldHtml('ok',     'OK',      s.qtyOk,     'ok-color')}
+              \${qtyFieldHtml('rework', 'Oprava',  s.qtyRework, 'rework-color')}
+              \${qtyFieldHtml('scrap',  'Zmetek',  s.qtyScrap,  'scrap-color')}
+            </div>
+            <div id="qty-summary"></div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-teal" id="qty-save-btn" style="width:100%" onclick="saveQty()">💾 Uložit počty</button>
+            </div>
+            \${featureEnabled('featureScrapManagement') ? scrapControlHtml() : ''}
+          </div>
+
+          <div class="card station-primary-card station-status-card">
+            <div class="card-title">🔄 Stav práce</div>
+            <div class="station-work-actions">
+              <div class="station-work-actions-head">
+                <strong>Pracovní akce</strong>
+                <span>Převzetí, pauza, dokončení a problém</span>
+              </div>
+              <div class="station-work-actions-buttons">
+                \${stationWorkActionButtons(selectedOrder, selectedStation)}
+                <button class="btn btn-ghost btn-sm" onclick="reportIssueModal()">Nahlásit problém</button>
+              </div>
+            </div>
+            \${stationStateOverviewHtml(selectedOrder, selectedStation)}
+          </div>
+
+          \${stationNotesHtml}
+        </div>
+
+        <div class="station-workspace-side">
+          \${stationProgramPhotoHtml}
+          \${stationSupportHtml}
+        </div>
+      </div>
+    </div>
+  \`;
+  updateQtySummary();
+}
+
+function stationStatusButton(status, label) {
+  const active = selectedStation?.status === status;
+  const meta = stationStatusMeta(status);
+  const disabled = !canOperateStationNow(selectedStation, selectedOrder);
+  return \`<button class="action-btn \${meta.action}" onclick="setStatus('\${status}')"
+    style="\${active ? 'border-color:var(--gold);color:var(--gold);background:rgba(212,160,23,.12);' : ''}\${disabled ? 'opacity:.45' : ''}">
+    \${label}
+  </button>\`;
+}
+
+function qtyFieldHtml(field, label, val, colorClass) {
+  const disabled = !canOperateStationNow(selectedStation, selectedOrder);
+  return \`<div class="qty-field" onclick="openNumpad('\${field}','\${label}',\${val})" id="qtf-\${field}">
+    <div class="qty-field-label" style="color:var(--text2)">\${label}</div>
+    <div class="qty-field-val \${colorClass}" id="qtv-\${field}">\${val}</div>
+    <div style="font-size:9px;color:var(--text3);margin-top:3px">\${disabled ? 'nejdřív potvrdit' : 'klikni pro zadání'}</div>
+  </div>\`;
+}
+
+function scrapControlHtml() {
+  const scrap = positiveQty(selectedStation?.qtyScrap);
+  if (!scrap) return '';
+  const canRemove = can('manage_scrap');
+  return \`<div style="margin-top:12px;background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:10px 12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:var(--red)">Vadné desky ve zmetku: \${scrap} ks</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">
+          Zmetek se automaticky přenáší do dalších stanovišť, dokud ho oprávněná role nevyjme s důvodem.
+        </div>
+      </div>
+      \${canRemove
+        ? \`<button class="btn btn-danger btn-sm" onclick="removeScrapModal()">Vyjmout ze zmetku</button>\`
+        : \`<span style="font-size:11px;color:var(--text3)">Vyjmout může jen vedení, TPV, mistr nebo admin.</span>\`}
+    </div>
+  </div>\`;
+}
+
+function qtyAvailable() {
+  const index = stationIndexInOrder(selectedOrder, selectedStation);
+  return window.EZOP_FLOW?.stationInputQty(selectedOrder, selectedStation, index)
+    ?? window.EZOP_FLOW?.qtyAvailable(selectedOrder, selectedStation)
+    ?? 0;
+}
+
+function qtyValidation() {
+  const index = stationIndexInOrder(selectedOrder, selectedStation);
+  return window.EZOP_FLOW?.qtyValidationForStation(selectedOrder, selectedStation, index) ?? {
+    sum: 0, available: 0, exceed: false, remaining: 0,
+  };
+}
+
+function updateQtySummary() {
+  const el = document.getElementById('qty-summary');
+  const btn = document.getElementById('qty-save-btn');
+  if (!el) return;
+  const v = qtyValidation();
+  const canSaveQty = canOperateStationNow(selectedStation, selectedOrder);
+
+  // Highlight červeně každé pole, pokud součet přesahuje
+  ['ok','rework','scrap'].forEach(f => {
+    const node = document.getElementById('qtf-' + f);
+    if (node) node.style.borderColor = v.exceed ? 'var(--red)' : '';
+  });
+
+  if (v.exceed) {
+    el.innerHTML = \`
+      <div style="margin-top:12px;background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:10px;padding:10px 12px">
+        <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:4px">
+          ⛔ Chyba: součet kusů přesahuje vydaný počet ze skladu
+        </div>
+        <div style="font-size:12px;color:var(--text)">
+          Součet <b>OK \${selectedStation.qtyOk} + Oprava \${selectedStation.qtyRework} + Zmetek \${selectedStation.qtyScrap}</b>
+          = <b style="color:var(--red)">\${v.sum} ks</b>, k dispozici je ale pouze
+          <b style="color:var(--gold)">\${v.available} ks</b>
+          (\${selectedStation.qtyReceived > 0 ? 'přišlo z předchozího stanoviště' : 'objednáno do výroby'}).
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:5px">
+          ⚠️ Sklad nemůže vydat víc desek – zkontrolujte zadané hodnoty.
+        </div>
+      </div>\`;
+    if (btn) {
+      btn.style.opacity = '0.4';
+      btn.style.cursor = 'not-allowed';
+      btn.disabled = true;
+    }
+  } else {
+    el.innerHTML = \`
+      <div style="margin-top:12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:12px;color:var(--text2)">
+          Součet zpracovaných: <b style="color:var(--text)">\${v.sum} ks</b>
+          <span style="color:var(--text3)"> / \${v.available} ks \${selectedStation.qtyReceived > 0 ? 'přišlo' : 'objednáno'}</span>
+        </div>
+        <div style="font-size:12px;color:\${v.remaining===0?'var(--green)':'var(--amber)'};font-weight:700">
+          \${v.remaining === 0 ? '✅ kompletní' : \`zbývá \${v.remaining} ks\`}
+        </div>
+      </div>\`;
+    if (btn) {
+      btn.style.opacity = canSaveQty ? '' : '0.4';
+      btn.style.cursor = canSaveQty ? '' : 'not-allowed';
+      btn.disabled = !canSaveQty;
+    }
+  }
+}
+
+function saveQty() {
+  if (!selectedStation) return;
+  const result = persistStationCounts();
+  if (result?.ok) {
+    showToast(result.message || '✅ Počty uloženy');
+  }
+}
+
+function persistStationCounts(options = {}) {
+  if (!canOperateStation(selectedStation)) {
+    showToast('🚫 Toto stanoviště nemáte přiřazené.');
+    return { ok: false };
+  }
+  if (stationClaimedByOther(selectedStation)) {
+    showToast(\`⚠️ Stanoviště má převzaté \${stationWorkerLabel(selectedStation)}.\`);
+    return { ok: false };
+  }
+  if (!stationClaimedByCurrent(selectedStation)) {
+    showToast('👤 Nejdřív si práci převezměte.');
+    return { ok: false };
+  }
+  if (isOrderBlocked(selectedOrder)) {
+    showToast('⛔ Zakázka je blokovaná. Nejdřív ji odblokujte.');
+    return { ok: false };
+  }
+  const before = cloneForAudit(selectedStation);
+  const v = qtyValidation();
+  if (v.exceed) {
+    showToast(\`⛔ Nelze uložit: součet \${v.sum} ks > vydáno \${v.available} ks\`);
+    return { ok: false };
+  }
+  if (options.forceCompleted) selectedStation.status = 'completed';
+  else updateStationStatusFromQty(v);
+  const missingCheckMessage = createMissingPreviousCheckAlert();
+  const releaseMessage = autoReleaseToNextStation();
+  syncOrderStationFlow(selectedOrder);
+  const readinessBefore = cloneForAudit(selectedOrder.readiness?.material || null);
+  const materialReadinessSynced = syncMaterialReadinessFromWarehouse(selectedOrder, {
+    updatedByName: currentUser?.name || selectedStation.workerName || 'Sklad',
+    updatedAt: new Date().toISOString(),
+  });
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  const after = cloneForAudit(selectedStation);
+  if (JSON.stringify(before) !== JSON.stringify(after)) {
+    writeAudit(
+      options.forceCompleted ? 'station.completed' : 'station.counts_saved',
+      'order_station',
+      stationAuditId(selectedOrder, selectedStation),
+      \`\${selectedOrder.number} · \${stInfo?.name || selectedStation.stId}: OK \${selectedStation.qtyOk}, oprava \${selectedStation.qtyRework}, zmetek \${selectedStation.qtyScrap}\`,
+      before,
+      after
+    );
+  }
+  if (materialReadinessSynced) {
+    writeAudit(
+      'order.readiness.auto_material_ready',
+      'order',
+      selectedOrder.id,
+      \`\${selectedOrder.number} · materiál potvrzen ze skladu\`,
+      readinessBefore,
+      cloneForAudit(selectedOrder.readiness?.material || null),
+    );
+  }
+  renderStationDetail(stInfo);
+  const parts = [options.message || '✅ Počty uloženy', releaseMessage, missingCheckMessage].filter(Boolean);
+  return { ok: true, message: parts.join(' ') };
+}
+
+function resetQty() {
+  if (!selectedStation) return;
+  const before = cloneForAudit(selectedStation);
+  selectedStation.qtyOk = 0; selectedStation.qtyRework = 0; selectedStation.qtyScrap = 0;
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  writeAudit(
+    'station.counts_reset',
+    'order_station',
+    stationAuditId(selectedOrder, selectedStation),
+    \`\${selectedOrder.number} · \${stInfo?.name || selectedStation.stId}: reset počtů\`,
+    before,
+    cloneForAudit(selectedStation)
+  );
+  renderStationDetail(stInfo);
+}
+
+function removeScrapModal() {
+  if (!selectedStation || !selectedOrder) return;
+  if (!can('manage_scrap')) {
+    showToast('🚫 Zmetek může vyjmout jen vedení, TPV, mistr nebo admin.');
+    return;
+  }
+  const scrap = positiveQty(selectedStation.qtyScrap);
+  if (!scrap) {
+    showToast('Zde není žádný zmetek k vyjmutí.');
+    return;
+  }
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  openModal('Vyjmout desku ze zmetku', \`
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:800;color:var(--red);margin-bottom:5px">Zmetek na stanovišti \${stInfo?.name || selectedStation.stId}: \${scrap} ks</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Vyjmutí sníží zmetky i na navazujících stanovištích. Důvod je povinný pro audit zakázky.
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Počet vyjímaných desek</div>
+      <input class="input" id="rs-count" type="number" min="1" max="\${scrap}" value="1">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Odůvodnění *</div>
+      <textarea class="input" id="rs-reason" rows="4" placeholder="např. deska předána na analýzu, zákazník schválil vyřazení, fyzicky odstraněna z dávky"
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Vyjmout', action:'submitScrapRemoval()', cls:'btn-danger' },
+  ]);
+  setTimeout(() => document.getElementById('rs-reason')?.focus(), 50);
+}
+
+function reduceDownstreamScrap(order, fromIndex, amount) {
+  for (let index = fromIndex + 1; index < order.stations.length; index++) {
+    const station = order.stations[index];
+    const beforeScrap = positiveQty(station.qtyScrap);
+    if (beforeScrap > 0) station.qtyScrap = Math.max(0, beforeScrap - amount);
+    const beforeReceived = positiveQty(station.qtyReceived);
+    if (beforeReceived > 0) station.qtyReceived = Math.max(0, beforeReceived - amount);
+  }
+}
+
+function submitScrapRemoval() {
+  if (!selectedStation || !selectedOrder) return;
+  if (!can('manage_scrap')) {
+    showToast('🚫 Nemáte oprávnění vyjmout zmetek.');
+    return;
+  }
+  const availableScrap = positiveQty(selectedStation.qtyScrap);
+  const count = Math.max(0, Number(document.getElementById('rs-count')?.value) || 0);
+  const reason = document.getElementById('rs-reason')?.value.trim() || '';
+  if (count < 1 || count > availableScrap) {
+    showToast(\`⚠️ Zadejte počet 1 až \${availableScrap}\`);
+    return;
+  }
+  if (!reason) {
+    showToast('⚠️ Vyplňte odůvodnění vyjmutí zmetku.');
+    return;
+  }
+
+  const before = cloneForAudit(selectedOrder);
+  const stationIndex = selectedOrder.stations.findIndex(s => s === selectedStation || s.stId === selectedStation.stId);
+  selectedStation.qtyScrap = Math.max(0, availableScrap - count);
+  reduceDownstreamScrap(selectedOrder, stationIndex, count);
+  syncOrderStationFlow(selectedOrder);
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  const note = {
+    id: 'pn-scrap-' + Date.now(),
+    orderId: selectedOrder.id,
+    stationId: selectedStation.stId,
+    stationIds: [selectedStation.stId],
+    sourceStationId: selectedStation.stId,
+    targetScope: 'stations',
+    type: 'change',
+    text: \`Vyjmuto ze zmetku: \${count} ks. Důvod: \${reason}\`,
+    author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
+    authorRole: currentUser.role,
+    createdAt: new Date().toISOString(),
+  };
+  PROD_NOTES.unshift(note);
+  writeAudit(
+    'scrap.removed',
+    'order',
+    selectedOrder.id,
+    \`\${selectedOrder.number} · \${stInfo?.name || selectedStation.stId}: vyjmuto ze zmetku \${count} ks\`,
+    before,
+    cloneForAudit(selectedOrder),
+  );
+  closeModal();
+  saveState();
+  renderStationDetail(stInfo);
+  buildNav();
+  showToast(\`✅ Vyjmuto ze zmetku: \${count} ks\`, { skipSave: true });
+}
+
+function setStatus(newStatus) {
+  if (!selectedStation) return;
+  if (newStatus === 'issue') { reportIssueModal(); return; }
+  if (!canOperateStation(selectedStation)) {
+    showToast('🚫 Toto stanoviště nemáte přiřazené.');
+    return;
+  }
+  if (stationClaimedByOther(selectedStation)) {
+    showToast(\`⚠️ Stanoviště má převzaté \${stationWorkerLabel(selectedStation)}.\`);
+    return;
+  }
+  if (!stationClaimedByCurrent(selectedStation)) {
+    showToast('👤 Nejdřív si práci převezměte.');
+    return;
+  }
+  if (isOrderBlocked(selectedOrder)) {
+    showToast('⛔ Zakázka je blokovaná. Stav nelze změnit.');
+    return;
+  }
+  if (newStatus === 'completed') {
+    selectedStation.qtyOk = Math.max(0, qtyAvailable() - positiveQty(selectedStation.qtyScrap));
+    selectedStation.qtyRework = 0;
+    const result = persistStationCounts({
+      forceCompleted: true,
+      message: '✅ Stanoviště dokončeno. Doplněn dostupný počet OK kusů.',
+    });
+    if (result?.ok) showToast(result.message);
+    return;
+  }
+  const before = cloneForAudit(selectedStation);
+  selectedStation.status = newStatus;
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  writeAudit(
+    'station.status_changed',
+    'order_station',
+    stationAuditId(selectedOrder, selectedStation),
+    \`\${selectedOrder.number} · \${stInfo?.name || selectedStation.stId}: stav \${stationStatusMeta(newStatus).label}\`,
+    before,
+    cloneForAudit(selectedStation)
+  );
+  renderStationDetail(stInfo);
+  showToast('Stav změněn: ' + stationStatusMeta(newStatus).label);
+}
+
+function updateStationStatusFromQty(validation = qtyValidation()) {
+  if (!selectedStation) return;
+  selectedStation.status = window.EZOP_FLOW?.statusFromQty(validation)
+    || (validation.sum === 0 ? 'waiting' : validation.remaining === 0 ? 'completed' : 'partial');
+}
+
+function nextStationAfterCurrent() {
+  if (!selectedOrder || !selectedStation) return null;
+  const idx = selectedOrder.stations.findIndex(s => s.stId === selectedStation.stId);
+  return idx >= 0 ? selectedOrder.stations[idx + 1] : null;
+}
+
+function previousStationBeforeCurrent() {
+  if (!selectedOrder || !selectedStation) return null;
+  const idx = selectedOrder.stations.findIndex(s => s.stId === selectedStation.stId);
+  return idx > 0 ? selectedOrder.stations[idx - 1] : null;
+}
+
+function processedQty(station) {
+  return (Number(station?.qtyOk) || 0) + (Number(station?.qtyRework) || 0) + (Number(station?.qtyScrap) || 0);
+}
+
+function createMissingPreviousCheckAlert() {
+  if ((Number(selectedStation?.qtyOk) || 0) <= 0) return '';
+  const previous = previousStationBeforeCurrent();
+  if (!previous || processedQty(previous) > 0) return '';
+  const key = \`missing-prev-check:\${selectedOrder.id}:\${previous.stId}:\${selectedStation.stId}\`;
+  if (ISSUES.some(issue => issue.autoKey === key && !issue.resolved)) return '⚠️ Upozornění na chybějící předchozí kontrolu už bylo odesláno.';
+
+  const prevInfo = STATIONS.find(x => x.id === previous.stId);
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  ISSUES.unshift({
+    id: 'iss' + Date.now(),
+    autoKey: key,
+    orderId: selectedOrder.id,
+    orderName: selectedOrder.name,
+    orderNumber: selectedOrder.number,
+    stationId: selectedStation.stId,
+    stationName: stInfo?.name ?? '',
+    stationIcon: stInfo?.icon ?? '⚠️',
+    severity: 'medium',
+    description: \`Na stanovišti \${stInfo?.name || selectedStation.stId} byly zapsány OK kusy, ale předchozí stanoviště \${prevInfo?.name || previous.stId} nemá zapsanou kontrolu.\`,
+    reportedBy: 'Systém',
+    reportedByRole: 'admin',
+    targetRoles: ['admin','dispatcher','management','tpv'],
+    reportedAt: new Date().toISOString(),
+    resolved: false,
+  });
+  buildNav();
+  return '⚠️ Odesláno upozornění: předchozí stanoviště nemá zapsanou kontrolu.';
+}
+
+function notifyNextStation(nextStation, qtyReady) {
+  const source = STATIONS.find(x => x.id === selectedStation.stId);
+  const target = STATIONS.find(x => x.id === nextStation.stId);
+  const autoKey = \`auto-ready:\${selectedOrder.id}:\${selectedStation.stId}:\${nextStation.stId}:\${qtyReady}\`;
+  if (PROD_NOTES.some(n => n.autoKey === autoKey)) return;
+  PROD_NOTES.unshift({
+    id: 'pn' + Date.now(),
+    autoKey,
+    orderId: selectedOrder.id,
+    stationId: nextStation.stId,
+    type: 'info',
+    text: \`\${qtyReady} kusů ze stanoviště \${source?.name || selectedStation.stId} je připraveno. Lze pokračovat na stanovišti \${target?.name || nextStation.stId}.\`,
+    author: 'Systém',
+    authorRole: 'admin',
+    createdAt: new Date().toISOString(),
+  });
+}
+
+function autoReleaseToNextStation() {
+  const qtyReady = window.EZOP_FLOW?.readyForNextStation(selectedStation) ?? 0;
+  if (!qtyReady) return '';
+  const next = nextStationAfterCurrent();
+  if (!next) return 'Zakázka nemá další stanoviště.';
+  const previousReceived = Number(next.qtyReceived) || 0;
+  if (qtyReady <= previousReceived) return '';
+  next.qtyReceived = qtyReady;
+  if (next.status === 'skipped') next.status = 'waiting';
+  notifyNextStation(next, qtyReady);
+  const target = STATIONS.find(x => x.id === next.stId);
+  return \`\${target?.name || 'další stanoviště'} dostalo upozornění (\${qtyReady} ks).\`;
+}
+
+// ── PRODUCTION NOTES ──────────────────────────────────
+const NOTE_TYPES = {
+  info:     { label:'Informace',         icon:'ℹ️', color:'#3b82f6' },
+  storage:  { label:'Umístění / sklad',  icon:'📍', color:'#22c55e' },
+  material: { label:'Materiál / náhrada',icon:'🔧', color:'#a855f7' },
+  message:  { label:'Vzkaz',             icon:'💬', color:'#22b8a6' },
+  change:   { label:'Změna výroby',      icon:'🔁', color:'#f59e0b' },
+  other:    { label:'Ostatní',           icon:'📝', color:'#999' },
+};
+
+function normalizeNoteVisibility(value) {
+  return value === 'private' ? 'private' : 'public';
+}
+
+function noteVisibilityLabel(note) {
+  return normalizeNoteVisibility(note?.visibility) === 'private' ? '🔒 Soukromá' : '🌐 Veřejná';
+}
+
+function noteIsPrivate(note) {
+  return normalizeNoteVisibility(note?.visibility) === 'private';
+}
+
+function normalizeProductionNote(note) {
+  if (!note || typeof note !== 'object') return null;
+  note.visibility = normalizeNoteVisibility(note.visibility);
+  note.stationIds = Array.isArray(note.stationIds)
+    ? [...new Set(note.stationIds.map(Number).filter(Boolean))]
+    : undefined;
+  note.productSticky = Boolean(note.productSticky);
+  note.productKey ||= '';
+  note.productMemoryNoteId ||= '';
+  return note;
+}
+
+function productMemoryKeyForOrder(order) {
+  if (!order) return '';
+  const key = productKey(order.customer, order.name);
+  return key.replace('::', '') ? key : '';
+}
+
+function productMemoryEntryForOrder(order) {
+  const key = productMemoryKeyForOrder(order);
+  return key ? PRODUCT_MEMORY[key] || null : null;
+}
+
+function normalizeReusableProductNote(note) {
+  if (!note || typeof note !== 'object') return null;
+  return normalizeProductionNote({
+    ...note,
+    id: String(note.id || ('pmn' + Date.now())),
+    createdAt: note.createdAt || new Date().toISOString(),
+  });
+}
+
+function productNotesForOrder(order) {
+  const memory = productMemoryEntryForOrder(order);
+  if (!order || !memory || !Array.isArray(memory.reusableNotes)) return [];
+  const key = productMemoryKeyForOrder(order);
+  return memory.reusableNotes
+    .map(normalizeReusableProductNote)
+    .filter(Boolean)
+    .filter(note => note.sourceOrderId !== order.id)
+    .map(note => ({
+      ...note,
+      id: \`pm-\${note.id}-\${order.id}\`,
+      orderId: order.id,
+      productKey: key,
+      productSticky: true,
+      inheritedProductNote: true,
+      productMemoryNoteId: note.id,
+    }));
+}
+
+function noteVisibleToCurrentUser(note) {
+  const isAuthor = noteAuthoredByCurrentUser(note);
+  if (noteIsPrivate(note) && !isAuthor) return false;
+  if (Array.isArray(note.targetRoles) && !note.targetRoles.includes(currentUser?.role) && !isAuthor) return false;
+  return true;
+}
+
+function noteMatchesStation(note, stationId) {
+  const targetStationIds = Array.isArray(note.stationIds) ? note.stationIds.map(Number) : [];
+  return note.targetScope === 'all'
+    || targetStationIds.includes(Number(stationId))
+    || Number(note.stationId) === Number(stationId)
+    || Number(note.sourceStationId) === Number(stationId);
+}
+
+function stationNotes(orderId, stationId) {
+  const order = ORDERS.find(o => o.id === orderId);
+  const directNotes = PROD_NOTES.filter(n => n.orderId === orderId);
+  return [...directNotes, ...productNotesForOrder(order)]
+    .map(normalizeProductionNote)
+    .filter(Boolean)
+    .filter(n => noteVisibleToCurrentUser(n) && noteMatchesStation(n, stationId))
+    .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function noteAuthoredByCurrentUser(note) {
+  if (!currentUser || !note) return false;
+  if (note.authorUserId && note.authorUserId === currentUser.id) return true;
+  if (note.authorLogin && normalizeLogin(note.authorLogin) === normalizeLogin(currentUser.login)) return true;
+  return note.author === currentUser.name && note.authorRole === currentUser.role;
+}
+
+function noteRecipientLabel(note) {
+  if (note.targetScope === 'all') return 'Všem stanovištím';
+  if (Array.isArray(note.targetRoles)) return 'Role: ' + note.targetRoles.map(r => ROLE_LABELS[r] || r).join(', ');
+  if (Array.isArray(note.stationIds) && note.stationIds.length) {
+    return 'Pro: ' + note.stationIds
+      .map(id => STATIONS.find(x => x.id === Number(id)))
+      .filter(Boolean)
+      .map(st => \`\${st.icon} \${st.name}\`)
+      .join(', ');
+  }
+  const st = STATIONS.find(x => x.id === Number(note.stationId));
+  return st ? \`Pro: \${st.icon} \${st.name}\` : '';
+}
+
+function noteDefaultTargetIds() {
+  const next = nextStationAfterCurrent();
+  return next ? [Number(next.stId)] : [];
+}
+
+function noteTargetLabel(targetScope, stationIds = []) {
+  if (targetScope === 'all') return 'všem stanovištím';
+  const labels = stationIds
+    .map(id => STATIONS.find(x => x.id === Number(id)))
+    .filter(Boolean)
+    .map(st => \`\${st.icon} \${st.name}\`);
+  return labels.length ? labels.join(', ') : 'vybraným stanovištím';
+}
+
+function createNoteNotification(note, sourceStationId, targetStationId, index = 0) {
+  if (!note || !targetStationId) return null;
+  const source = STATIONS.find(x => x.id === Number(sourceStationId));
+  const target = STATIONS.find(x => x.id === Number(targetStationId));
+  if (!target) return null;
+  const issue = {
+    id: \`iss-note-\${Date.now()}-\${target.id}-\${index}\`,
+    autoKey: \`note:\${note.id}:\${target.id}\`,
+    orderId: selectedOrder.id,
+    orderName: selectedOrder.name,
+    orderNumber: selectedOrder.number,
+    stationId: Number(target.id),
+    stationName: target.name,
+    stationIcon: target.icon || '📝',
+    severity: 'low',
+    description: \`Nová poznámka od \${source?.name || 'stanoviště'}: \${note.text}\`,
+    reportedBy: currentUser.name,
+    reportedByUserId: currentUser.id,
+    reportedByLogin: currentUser.login,
+    reportedByRole: currentUser.role,
+    targetScope: 'station',
+    targetStationId: Number(target.id),
+    targetLabel: \`\${target.icon || ''} \${target.name}\`,
+    reportedAt: new Date().toISOString(),
+    resolved: false,
+  };
+  ISSUES.unshift(issue);
+  return issue;
+}
+
+function renderStationNotes() {
+  const list = stationNotes(selectedOrder.id, selectedStation.stId);
+  if (list.length === 0) {
+    return \`<div style="text-align:center;color:var(--text3);font-size:12px;padding:14px 0">
+      Zatím žádné poznámky. Přidejte info o umístění, náhradách součástek nebo změnách.
+    </div>\`;
+  }
+  return list.map(n => {
+    const t = NOTE_TYPES[n.type] || NOTE_TYPES.other;
+    const time = new Date(n.createdAt);
+    const ago = Math.round((Date.now()-time)/60000);
+    const agoTxt = ago<1?'právě teď':ago<60?\`před \${ago} min\`:ago<1440?\`před \${Math.round(ago/60)} h\`:\`\${time.toLocaleDateString('cs-CZ')}\`;
+    return \`<div style="background:var(--card2);border-left:3px solid \${t.color};border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:\${t.color}">\${t.icon} \${t.label}</span>
+        <span style="font-size:10px;color:var(--text3)">\${agoTxt}</span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="badge" style="font-size:9px;background:\${noteIsPrivate(n) ? 'rgba(245,158,11,.14)' : 'rgba(34,197,94,.14)'};color:\${noteIsPrivate(n) ? 'var(--amber)' : 'var(--green)'}">\${noteVisibilityLabel(n)}</span>
+        \${n.productSticky ? \`<span class="badge" style="font-size:9px;background:rgba(34,184,158,.14);color:var(--teal2)">📌 K výrobku</span>\` : ''}
+        \${n.inheritedProductNote ? \`<span class="badge" style="font-size:9px;background:rgba(59,130,246,.14);color:var(--blue)">↻ Z minulé zakázky</span>\` : ''}
+      </div>
+      \${noteRecipientLabel(n) ? \`<div style="font-size:10px;color:var(--text2);margin-bottom:5px">\${escapeHtml(noteRecipientLabel(n))}</div>\` : ''}
+      <div style="font-size:13px;color:var(--text);line-height:1.4;margin-bottom:6px">\${escapeHtml(n.text)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text2)">
+        <span>👤 \${n.author}</span>
+        \${noteAuthoredByCurrentUser(n) || ['admin','dispatcher'].includes(currentUser.role)
+          ? \`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="deleteNote('\${n.id}')">🗑️</button>\`
+          : ''}
+      </div>
+    </div>\`;
+  }).join('');
+}
+
+function addNoteModal() {
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  const defaultTargetIds = noteDefaultTargetIds();
+  openModal('📝 Přidat poznámku k výrobě', \`
+    <div style="background:var(--card2);border-radius:8px;padding:8px 10px;margin-bottom:14px;font-size:12px;color:var(--text2)">
+      \${stInfo?.icon} <b style="color:var(--text)">\${stInfo?.name}</b>
+      &nbsp;·&nbsp; \${selectedOrder.number} \${selectedOrder.name}
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Typ poznámky</div>
+      <select class="input" id="an-type">
+        \${Object.entries(NOTE_TYPES).map(([k,v]) =>
+          \`<option value="\${k}" \${k==='message'?'selected':''}>\${v.icon} \${v.label}</option>\`).join('')}
+      </select>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Viditelnost</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+          <input type="radio" name="an-visibility" value="public" checked>
+          <span>🌐 Veřejná pro adresáty</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+          <input type="radio" name="an-visibility" value="private">
+          <span>🔒 Soukromá jen pro mě</span>
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">
+        Soukromá poznámka se nepošle jako upozornění a uvidí ji jen autor. Veřejná se zobrazí vybraným adresátům.
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label style="display:flex;align-items:flex-start;gap:8px;background:rgba(34,184,158,.10);border:1px solid rgba(34,184,158,.35);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="an-product-sticky" style="margin-top:2px">
+        <span>
+          <b>📌 Uložit k výrobku</b><br>
+          <span style="font-size:11px;color:var(--text2)">Poznámka se automaticky zobrazí i u dalších zakázek stejného zákazníka a výrobku.</span>
+        </span>
+      </label>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Adresáti</div>
+      <label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="an-target-all" onchange="toggleNoteAllTargets(this.checked)">
+        Všem stanovištím zakázky
+      </label>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+        \${selectedOrder.stations.map(station => {
+          const st = STATIONS.find(x => x.id === station.stId);
+          const checked = defaultTargetIds.includes(Number(station.stId)) ? 'checked' : '';
+          return \`<label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text)">
+            <input type="checkbox" class="an-target-station" value="\${station.stId}" \${checked}>
+            <span>\${st?.icon || ''} \${escapeHtml(st?.name || 'Stanoviště')}</span>
+          </label>\`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">
+        Lze vybrat více adresátů. Poznámka se zobrazí odesílateli na tomto stanovišti a zároveň všem vybraným stanovištím.
+      </div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Text poznámky *</div>
+      <textarea class="input" id="an-text" rows="4" placeholder="např. Polotovary v sušce, budova C, regál 4 nebo zákazník dodal náhradu R7 = 12k namísto 10k"
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+
+    <div style="font-size:11px;color:var(--text3)">
+      💡 Příklady: kde jsou desky uložené, jaká součástka byla nahrazena za jinou,
+      změna pájecího programu, instrukce pro další směnu.
+    </div>
+  \`, [
+    { label:'Zrušit',  action:'closeModal()',  cls:'btn-ghost'   },
+    { label:'Uložit',  action:'submitNote()',  cls:'btn-primary' },
+  ]);
+  setTimeout(() => document.getElementById('an-text')?.focus(), 50);
+}
+
+function toggleNoteAllTargets(checked) {
+  document.querySelectorAll('.an-target-station').forEach(input => {
+    input.checked = checked;
+    input.disabled = checked;
+  });
+}
+
+function storeReusableProductNote(order, note) {
+  const memory = productMemoryForOrder(order);
+  const productKeyValue = productMemoryKeyForOrder(order);
+  if (!memory || !productKeyValue) return null;
+  memory.reusableNotes = Array.isArray(memory.reusableNotes) ? memory.reusableNotes : [];
+  const memoryNote = {
+    id: 'pmn' + Date.now(),
+    sourceNoteId: note.id,
+    sourceOrderId: order.id,
+    sourceOrderNumber: order.number,
+    productKey: productKeyValue,
+    stationId: note.stationId,
+    stationIds: note.stationIds,
+    sourceStationId: note.sourceStationId,
+    targetScope: note.targetScope,
+    visibility: normalizeNoteVisibility(note.visibility),
+    type: note.type,
+    text: note.text,
+    author: note.author,
+    authorUserId: note.authorUserId,
+    authorLogin: note.authorLogin,
+    authorRole: note.authorRole,
+    createdAt: note.createdAt,
+  };
+  memory.reusableNotes.unshift(memoryNote);
+  memory.updatedAt = new Date().toISOString();
+  note.productSticky = true;
+  note.productKey = productKeyValue;
+  note.productMemoryNoteId = memoryNote.id;
+  return memoryNote;
+}
+
+function submitNote() {
+  const text = document.getElementById('an-text').value.trim();
+  if (!text) { showToast('⚠️ Vyplňte text poznámky'); return; }
+  const sourceStationId = selectedStation.stId;
+  const targetAll = document.getElementById('an-target-all')?.checked;
+  const visibility = normalizeNoteVisibility(document.querySelector('input[name="an-visibility"]:checked')?.value);
+  const productSticky = Boolean(document.getElementById('an-product-sticky')?.checked);
+  const selectedTargetIds = Array.from(document.querySelectorAll('.an-target-station:checked'))
+    .map(input => Number(input.value))
+    .filter(Boolean);
+  const targetStationIds = targetAll
+    ? selectedOrder.stations.map(station => Number(station.stId)).filter(Boolean)
+    : selectedTargetIds;
+  if (!targetStationIds.length) {
+    showToast('⚠️ Vyberte alespoň jedno cílové stanoviště');
+    return;
+  }
+  const note = {
+    id: 'pn' + Date.now(),
+    orderId: selectedOrder.id,
+    stationId: targetStationIds[0],
+    stationIds: targetStationIds,
+    sourceStationId,
+    targetScope: targetAll ? 'all' : 'stations',
+    visibility,
+    productSticky: false,
+    type: document.getElementById('an-type').value,
+    text,
+    author: currentUser.name,
+    authorUserId: currentUser.id,
+    authorLogin: currentUser.login,
+    authorRole: currentUser.role,
+    createdAt: new Date().toISOString(),
+  };
+  const memoryNote = productSticky ? storeReusableProductNote(selectedOrder, note) : null;
+  PROD_NOTES.unshift(note);
+  const notificationTargets = visibility === 'public'
+    ? targetStationIds.filter(id => Number(id) !== Number(sourceStationId))
+    : [];
+  const notifications = notificationTargets
+    .map((stationId, index) => createNoteNotification(note, sourceStationId, stationId, index))
+    .filter(Boolean);
+  writeAudit(
+    'note.created',
+    'production_note',
+    note.id,
+    \`\${selectedOrder.number} · poznámka přidána\`,
+    null,
+    cloneForAudit(note),
+  );
+  notifications.forEach(notification => {
+    writeAudit(
+      'note.notification_created',
+      'issue',
+      notification.id,
+      \`\${selectedOrder.number} · poznámka odeslána pro \${notification.targetLabel}\`,
+      null,
+      cloneForAudit(notification),
+    );
+  });
+  saveState();
+  closeModal();
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  renderStationDetail(stInfo);
+  buildNav();
+  const visibilityText = visibility === 'private' ? 'soukromě uložena' : \`odeslána pro \${noteTargetLabel(note.targetScope, targetStationIds)}\`;
+  const stickyText = memoryNote ? ' a připnuta k výrobku' : '';
+  showToast(\`✅ Poznámka \${visibilityText}\${stickyText}\`, { skipSave: true });
+}
+
+function removeReusableProductNote(productKeyValue, memoryNoteId) {
+  const memory = PRODUCT_MEMORY?.[productKeyValue];
+  if (!memory || !Array.isArray(memory.reusableNotes) || !memoryNoteId) return null;
+  const before = memory.reusableNotes.length;
+  const removed = memory.reusableNotes.find(note => String(note.id) === String(memoryNoteId)) || null;
+  memory.reusableNotes = memory.reusableNotes.filter(note => String(note.id) !== String(memoryNoteId));
+  if (memory.reusableNotes.length !== before) memory.updatedAt = new Date().toISOString();
+  return removed;
+}
+
+function deleteNote(id) {
+  const note = PROD_NOTES.find(n => n.id === id);
+  const inherited = !note && String(id).startsWith('pm-')
+    ? stationNotes(selectedOrder.id, selectedStation.stId).find(n => n.id === id)
+    : null;
+  if (inherited?.inheritedProductNote) {
+    const removed = removeReusableProductNote(inherited.productKey, inherited.productMemoryNoteId);
+    if (removed) {
+      writeAudit(
+        'product_note.deleted',
+        'product_memory',
+        inherited.productKey,
+        \`\${selectedOrder?.number || 'zakázka'} · produktová poznámka smazána\`,
+        cloneForAudit(removed),
+        null,
+      );
+      saveState();
+    }
+    const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+    renderStationDetail(stInfo);
+    showToast('🗑️ Produktová poznámka smazána');
+    return;
+  }
+  PROD_NOTES = PROD_NOTES.filter(n => n.id !== id);
+  if (note?.productSticky && note.productKey && note.productMemoryNoteId) {
+    removeReusableProductNote(note.productKey, note.productMemoryNoteId);
+  }
+  if (note) {
+    writeAudit(
+      'note.deleted',
+      'production_note',
+      id,
+      \`\${selectedOrder?.number || 'zakázka'} · poznámka smazána\`,
+      cloneForAudit(note),
+      null,
+    );
+  }
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  renderStationDetail(stInfo);
+  showToast('🗑️ Poznámka smazána');
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── REPORT ISSUE ──────────────────────────────────────
+function reportIssueModal() {
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+  openModal('⚠️ Nahlásit problém vedoucímu', \`
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px;margin-bottom:14px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Stanoviště</div>
+      <div style="font-size:14px;font-weight:700;color:var(--red)">\${stInfo?.icon ?? ''} \${stInfo?.name ?? ''} · \${selectedOrder.name}</div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Závažnost</div>
+      <select class="input" id="ri-severity">
+        <option value="low">🟡 Nízká – nezastaví výrobu</option>
+        <option value="medium" selected>🟠 Střední – pozor na další kusy</option>
+        <option value="high">🔴 Vysoká – výroba zastavena</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Komu poslat upozornění</div>
+      <select class="input" id="ri-target">
+        \${issueRecipientOptionsHtml()}
+      </select>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Popis problému *</div>
+      <textarea class="input" id="ri-desc" rows="4" placeholder="Popište, co se stalo (povinné)..."
+        style="resize:vertical;min-height:90px;font-family:inherit"></textarea>
+    </div>
+
+    <div style="background:var(--card2);border-radius:8px;padding:10px;font-size:11px;color:var(--text2);margin-top:6px">
+      ℹ️ Hlášení uvidí odesílatel a vybraný adresát. Pokud vyberete roli, upozornění se zobrazí všem uživatelům v dané roli.
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'⚠️ Nahlásit problém', action:'submitIssue()', cls:'btn-danger' },
+  ]);
+  setTimeout(() => document.getElementById('ri-desc')?.focus(), 50);
+}
+
+function submitIssue() {
+  const desc = document.getElementById('ri-desc').value.trim();
+  if (!desc && APP_SETTINGS.requireNoteOnIssue) {
+    showToast('⚠️ Vyplňte popis problému');
+    return;
+  }
+  const severity = document.getElementById('ri-severity').value;
+  const target = parseIssueTarget(document.getElementById('ri-target')?.value);
+  const stInfo = STATIONS.find(x => x.id === selectedStation.stId);
+
+  const issue = {
+    id: 'iss' + Date.now(),
+    orderId: selectedOrder.id,
+    orderName: selectedOrder.name,
+    orderNumber: selectedOrder.number,
+    stationId: selectedStation.stId,
+    stationName: stInfo?.name ?? '',
+    stationIcon: stInfo?.icon ?? '⚠️',
+    severity,
+    description: desc || '(bez popisu)',
+    reportedBy: currentUser.name,
+    reportedByUserId: currentUser.id,
+    reportedByLogin: currentUser.login,
+    reportedByRole: currentUser.role,
+    ...target,
+    reportedAt: new Date().toISOString(),
+    resolved: false,
+  };
+  ISSUES.unshift(issue);
+
+  const beforeStation = cloneForAudit(selectedStation);
+  selectedStation.status = 'issue';
+  writeAudit(
+    'issue.created',
+    'issue',
+    issue.id,
+    \`\${selectedOrder.number} · problém nahlášen pro \${target.targetLabel}\`,
+    null,
+    cloneForAudit(issue),
+  );
+  writeAudit(
+    'station.status_changed',
+    'order_station',
+    stationAuditId(selectedOrder, selectedStation),
+    \`\${selectedOrder.number} · \${stInfo?.name || 'stanoviště'}: problém\`,
+    beforeStation,
+    cloneForAudit(selectedStation),
+  );
+  closeModal();
+  renderStationDetail(stInfo);
+  buildNav();
+  showToast('✅ Problém odeslán: ' + target.targetLabel + ' (' + sevLabel(severity) + ')');
+}
+
+function sevLabel(s) {
+  return { low:'🟡 Nízká', medium:'🟠 Střední', high:'🔴 Vysoká' }[s] || s;
+}
+
+function resolveIssue(id) {
+  const i = ISSUES.find(x => x.id === id);
+  if (!i) return;
+  const before = cloneForAudit(i);
+  i.resolved = true;
+  i.resolvedBy = currentUser.name;
+  i.resolvedAt = new Date().toISOString();
+  writeAudit(
+    'issue.resolved',
+    'issue',
+    id,
+    \`\${i.orderNumber || 'zakázka'} · problém vyřešen\`,
+    before,
+    cloneForAudit(i),
+  );
+  showToast('✅ Problém vyřešen');
+  markNotificationRead(\`issue:\${id}\`);
+  refreshNotificationBadge();
+  buildNav();
+  if (currentPage === 'dashboard') renderDashboard();
+  if (currentPage === 'issues')    renderIssues();
+}
+
+function resolveIssueFromNotification(id, filter = 'new') {
+  resolveIssue(id);
+  openNotificationsModal(filter);
+}
+
+function resolveIssueFromDetail(id) {
+  resolveIssue(id);
+  openIssueDetail(id);
+}
+
+function forwardQtyModal() {
+  openModal('Předat kusy', \`
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+      Předat \${selectedStation.qtyOk} OK kusů na další stanoviště výroby.
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:40px;font-weight:800;color:var(--gold)">\${selectedStation.qtyOk} ks</div>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Potvrdit předání', action:'doForward()', cls:'btn-primary' },
+  ]);
+}
+
+function doForward() {
+  closeModal();
+  showToast('✅ Kusy předány dál');
+}
+
+// ── NUMPAD ────────────────────────────────────────────
+function openNumpad(field, title, currentVal) {
+  if (!canOperateStation(selectedStation)) {
+    showToast('🚫 Toto stanoviště nemáte přiřazené.');
+    return;
+  }
+  if (stationClaimedByOther(selectedStation)) {
+    showToast(\`⚠️ Stanoviště má převzaté \${stationWorkerLabel(selectedStation)}.\`);
+    return;
+  }
+  if (!stationClaimedByCurrent(selectedStation)) {
+    showToast('👤 Nejdřív si práci převezměte.');
+    return;
+  }
+  if (isOrderBlocked(selectedOrder)) {
+    showToast('⛔ Zakázka je blokovaná. Počty nelze měnit.');
+    return;
+  }
+  numpadField = field;
+  numpadValue = String(currentVal || 0);
+  document.getElementById('numpad-title').textContent = title + ' (ks)';
+  document.getElementById('numpad-display').textContent = numpadValue;
+  document.getElementById('numpad-overlay').classList.add('visible');
+
+  // Highlight active field
+  document.querySelectorAll('.qty-field').forEach(f => f.classList.remove('active'));
+  const el = document.getElementById('qtf-' + field);
+  if (el) el.classList.add('active');
+}
+
+function closeNumpad() {
+  document.getElementById('numpad-overlay').classList.remove('visible');
+  document.querySelectorAll('.qty-field').forEach(f => f.classList.remove('active'));
+  numpadField = null;
+  numpadValue = '';
+}
+
+function numInput(digit) {
+  if (numpadValue === '0') numpadValue = digit;
+  else numpadValue += digit;
+  if (numpadValue.length > 5) numpadValue = numpadValue.slice(0,5);
+  document.getElementById('numpad-display').textContent = numpadValue;
+}
+
+function numDelete() {
+  numpadValue = numpadValue.slice(0, -1) || '0';
+  document.getElementById('numpad-display').textContent = numpadValue;
+}
+
+function numConfirm() {
+  if (!selectedStation || !numpadField) { closeNumpad(); return; }
+  const val = parseInt(numpadValue, 10) || 0;
+  const fieldMap = { ok:'qtyOk', rework:'qtyRework', scrap:'qtyScrap' };
+
+  // Validace: pole samotné nesmí překročit dostupné množství
+  const available = qtyAvailable();
+  if (val > available) {
+    showToast(\`⛔ Nelze: \${val} > \${available} ks vydaných\`);
+    return;
+  }
+
+  if (numpadField === 'scrap' && val < positiveQty(selectedStation.qtyScrap)) {
+    closeNumpad();
+    showToast('⚠️ Snížení zmetku musí mít odůvodnění.');
+    removeScrapModal();
+    return;
+  }
+
+  selectedStation[fieldMap[numpadField]] = val;
+  const valEl = document.getElementById('qtv-' + numpadField);
+  if (valEl) valEl.textContent = val;
+  closeNumpad();
+  updateQtySummary();
+  const v = qtyValidation();
+  if (v.exceed) {
+    showToast(\`⚠️ Pozor: součet \${v.sum} přesahuje \${v.available} ks!\`);
+  } else {
+    showToast(\`\${numpadField === 'ok' ? 'OK' : numpadField === 'rework' ? 'Oprava' : 'Zmetek'}: \${val} ks\`);
+  }
+}
+
+// ── KPI ───────────────────────────────────────────────
+let kpiFilters = { customer:'', product:'', number:'' };
+
+function renderKpi() {
+  document.getElementById('page-kpi').innerHTML = renderKpiHtml();
+}
+
+function renderKpiHtml() {
+  const kpiOrders = filteredKpiOrders();
+  const totalOk = kpiOrders.reduce((a,o) => a + orderGoodQty(o),0);
+  const totalScrap = kpiOrders.reduce((a,o) => a + o.stations.reduce((b,s) => b+s.qtyScrap,0),0);
+  const totalRework = kpiOrders.reduce((a,o) => a + o.stations.reduce((b,s) => b+s.qtyRework,0),0);
+  const totalQty = kpiOrders.reduce((a,o) => a+o.qty,0);
+  const yield_ = totalQty > 0 ? Math.round(totalOk/(totalQty)*100) : 0;
+  const activeOrders = kpiOrders.filter(o => o.stations.some(s => ['in_progress','partial','issue'].includes(s.status)));
+  const overdueOrders = kpiOrders.filter(isOrderOverdue);
+  const blockedOrders = kpiOrders.filter(isOrderBlocked);
+  const issueOrders = kpiOrders.filter(o => o.stations.some(s => s.status === 'issue'));
+  const finishedOrders = kpiOrders.filter(orderIsClosed);
+  const completion = kpiOrders.length ? Math.round(finishedOrders.length / kpiOrders.length * 100) : 0;
+  const reworkRate = totalQty > 0 ? Math.round(totalRework / totalQty * 100) : 0;
+  const scrapRate = totalQty > 0 ? Math.round(totalScrap / totalQty * 100) : 0;
+  const focusOrder = blockedOrders[0] || overdueOrders[0] || issueOrders[0] || activeOrders[0] || kpiOrders[0];
+
+  const stationStats = STATIONS.map(st => {
+    const allSt = kpiOrders.flatMap(o => o.stations.filter(s=>s.stId===st.id));
+    const stOk = allSt.reduce((a,s)=>a+s.qtyOk,0);
+    const stAll = allSt.reduce((a,s)=>a+s.qtyOk+s.qtyRework+s.qtyScrap,0);
+    return { ...st, ok:stOk, total:stAll, pct:stAll>0?Math.round(stOk/stAll*100):null };
+  }).filter(s => s.total > 0).sort((a,b) => (a.pct ?? 0) - (b.pct ?? 0));
+
+  return \`
+    <div class="app-list-toolbar">
+      <div>
+        <div class="app-page-title"><strong>📊 KPI</strong></div>
+        <div class="app-page-subtitle">Výkon, kvalita a rizika výroby podle aktuálního filtru.</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="clearKpiFilters()">Vymazat filtr</button>
+    </div>
+
+    <section class="kpi-command">
+      <div class="kpi-command-main">
+        <div class="app-shift-label"><span>📊</span><strong>Výrobní výkon</strong></div>
+        <h2>\${yield_}%</h2>
+        <p>\${kpiOrders.length ? \`\${totalOk} OK ks z \${totalQty} plánovaných kusů · \${kpiOrders.length} zakázek ve výběru\` : 'Vybraný filtr nemá žádná data.'}</p>
+        <div class="kpi-command-metrics">
+          <button type="button" onclick="showOrdersFiltered(null)"><span>\${kpiOrders.length}</span><strong>Zakázky</strong></button>
+          <button type="button" onclick="showOrdersFiltered('in_progress')"><span>\${activeOrders.length}</span><strong>Ve výrobě</strong></button>
+          <button type="button" onclick="showOrdersFiltered('overdue')"><span>\${overdueOrders.length}</span><strong>Po termínu</strong></button>
+          <button type="button" onclick="navigateTo('issues')"><span>\${issueOrders.length}</span><strong>Problémy</strong></button>
+        </div>
+      </div>
+      <div class="kpi-command-side">
+        \${focusOrder ? \`
+          <button class="kpi-focus-card" type="button" onclick="openOrder('\${focusOrder.id}')">
+            <span>\${isOrderBlocked(focusOrder) ? '⛔' : isOrderOverdue(focusOrder) ? '⏰' : '📋'}</span>
+            <div>
+              <strong>\${escapeHtml(focusOrder.number)} · \${escapeHtml(focusOrder.name)}</strong>
+              <em>\${isOrderOverdue(focusOrder) ? \`\${orderDaysLate(focusOrder)} dní po termínu\` : \`\${positiveQty(focusOrder.qty)} ks · \${escapeHtml(focusOrder.customer || '')}\`}</em>
+            </div>
+            <b>Otevřít</b>
+          </button>
+        \` : \`<div class="kpi-focus-card kpi-focus-empty">Bez zakázky ve výběru</div>\`}
+        <div class="kpi-quality-grid">
+          <div><span>\${completion}%</span><em>dokončení</em></div>
+          <div><span>\${reworkRate}%</span><em>opravy</em></div>
+          <div><span>\${scrapRate}%</span><em>zmetky</em></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="card app-filter-card kpi-filter-panel">
+      <div class="kpi-filter-head">
+        <div>
+          <strong>Filtr KPI</strong>
+          <span>Zobrazeno \${kpiOrders.length} z \${ORDERS.length} zakázek</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="clearKpiFilters()">Reset</button>
+      </div>
+      <div class="kpi-filter-grid">
+        <div>
+          <div class="input-label">Zákazník</div>
+          <select class="input" onchange="setKpiFilter('customer', this.value)">
+            <option value="">Všichni zákazníci</option>
+            \${knownCustomers().map(customer => \`<option value="\${escapeHtml(customer)}" \${kpiFilters.customer===customer?'selected':''}>\${escapeHtml(customer)}</option>\`).join('')}
+          </select>
+        </div>
+        <div>
+          <div class="input-label">Výrobek</div>
+          <input class="input" value="\${escapeHtml(kpiFilters.product)}" placeholder="název výrobku" oninput="setKpiFilter('product', this.value)">
+        </div>
+        <div>
+          <div class="input-label">Číslo zakázky</div>
+          <input class="input" value="\${escapeHtml(kpiFilters.number)}" placeholder="např. 261100" oninput="setKpiFilter('number', this.value)">
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-metric-grid">
+      <div class="kpi-metric-card success"><span>Výtěžnost</span><strong>\${yield_}%</strong><em>\${totalOk} OK ks</em></div>
+      <div class="kpi-metric-card"><span>Plán</span><strong>\${totalQty}</strong><em>kusů celkem</em></div>
+      <div class="kpi-metric-card warning"><span>Opravy</span><strong>\${totalRework}</strong><em>\${reworkRate}% z plánu</em></div>
+      <div class="kpi-metric-card danger"><span>Zmetky</span><strong>\${totalScrap}</strong><em>\${scrapRate}% z plánu</em></div>
+    </div>
+
+    <div class="kpi-layout">
+      <div class="card kpi-panel">
+        <div class="card-title">📈 Výtěžnost podle stanovišť</div>
+        \${stationStats.length ? stationStats.map(s => \`
+          <div class="kpi-bar-row">
+            <div class="kpi-bar-lbl">\${s.icon} \${escapeHtml(s.name)}</div>
+            <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:\${s.pct}%"></div></div>
+            <div class="kpi-bar-val">\${s.pct}%</div>
+          </div>\`).join('') : \`<div class="app-empty">Pro vybraný filtr nejsou data stanovišť.</div>\`}
+      </div>
+
+      <div class="card kpi-panel">
+        <div class="card-title">🚦 Rizika výběru</div>
+        <div class="kpi-risk-list">
+          <button type="button" onclick="showOrdersFiltered('overdue')"><span>\${overdueOrders.length}</span><strong>Po termínu</strong><em>zakázky mimo plán</em></button>
+          <button type="button" onclick="showOrdersFiltered('blocked')"><span>\${blockedOrders.length}</span><strong>Blokace</strong><em>zastavená výroba</em></button>
+          <button type="button" onclick="navigateTo('issues')"><span>\${issueOrders.length}</span><strong>Problémy</strong><em>aktivní hlášení</em></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card kpi-table-card">
+      <div class="card-title">📋 Přehled zakázek</div>
+      <table class="tbl">
+        <thead><tr><th>Zakázka</th><th>Plán</th><th>OK</th><th>Oprava</th><th>Zmetek</th></tr></thead>
+        <tbody>
+          \${kpiOrders.length ? kpiOrders.map(o => {
+            const ok = orderGoodQty(o);
+            const rw = o.stations.reduce((a,s)=>a+s.qtyRework,0);
+            const sc = o.stations.reduce((a,s)=>a+s.qtyScrap,0);
+            return \`<tr>
+              <td style="font-size:12px;font-weight:600">
+                <div>\${escapeHtml(o.name)}</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">\${escapeHtml(o.number)} · \${escapeHtml(o.customer)}</div>
+              </td>
+              <td>\${o.qty}</td>
+              <td style="color:var(--green);font-weight:700">\${ok}</td>
+              <td style="color:var(--amber)">\${rw}</td>
+              <td style="color:var(--red)">\${sc}</td>
+            </tr>\`;
+          }).join('') : \`<tr><td colspan="5" style="font-size:12px;color:var(--text2);padding:14px">Žádná zakázka neodpovídá filtru.</td></tr>\`}
+        </tbody>
+      </table>
+    </div>
+  \`;
+}
+
+function filteredKpiOrders() {
+  const customer = normalizeSearch(kpiFilters.customer);
+  const product = normalizeSearch(kpiFilters.product);
+  const number = normalizeSearch(kpiFilters.number);
+  return ORDERS.filter(order => {
+    const byCustomer = !customer || normalizeSearch(order.customer) === customer;
+    const byProduct = !product || normalizeSearch(order.name).includes(product);
+    const byNumber = !number || normalizeSearch(order.number).includes(number);
+    return byCustomer && byProduct && byNumber;
+  });
+}
+
+function normalizeSearch(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function setKpiFilter(key, value) {
+  kpiFilters[key] = value || '';
+  rerenderKpiLocation();
+}
+
+function clearKpiFilters() {
+  kpiFilters = { customer:'', product:'', number:'' };
+  rerenderKpiLocation();
+}
+
+function rerenderKpiLocation() {
+  if (currentPage === 'admin' && adminTab === 'kpi_report') {
+    document.getElementById('adm-kpi').innerHTML = renderKpiHtml();
+    return;
+  }
+  renderKpi();
+}
+
+// ── ADMIN ─────────────────────────────────────────────
+let adminTab = 'users';
+let adminGroup = 'people';
+let adminUserFilter = 'all';
+let adminPermissionUserId = '';
+
+function adminGroups() {
+  return [
+    { id:'people', label:'Uživatelé', icon:'👥', tabs:[
+      { id:'users', label:'Uživatelé', icon:'👥' },
+      { id:'role_permissions', label:'Role a práva', icon:'🛡️' },
+      { id:'login_logs', label:'Přihlášení', icon:'🔐' },
+      ...(featureEnabled('featureAttendance') ? [{ id:'team_attendance', label:'Docházka týmu', icon:'🕐' }] : []),
+    ] },
+    { id:'production', label:'Výroba', icon:'🏭', tabs:[
+      { id:'orders_mgmt', label:'Zakázky', icon:'📋' },
+      { id:'stations', label:'Stanoviště', icon:'🏭' },
+      { id:'kpi_report', label:'KPI', icon:'📊' },
+      { id:'announcements', label:'Oznámení', icon:'📢' },
+    ] },
+    { id:'data', label:'Data', icon:'🧾', tabs:[
+      { id:'audit', label:'Audit', icon:'🧾' },
+      { id:'cloud', label:'Cloud', icon:'☁️' },
+    ] },
+    { id:'integrations', label:'Integrace', icon:'🔌', tabs:[
+      ...(featureEnabled('featureLupaNet') ? [{ id:'lupanet', label:'Lupa NET', icon:'🔌' }] : []),
+    ] },
+    { id:'system', label:'Systém', icon:'⚙️', tabs:[
+      { id:'settings', label:'Nastavení', icon:'⚙️' },
+      { id:'ezop4', label:'Ezop4', icon:'🚀' },
+    ] },
+  ].filter(group => group.tabs.length);
+}
+
+function adminTabGroupId(tab = adminTab) {
+  return adminGroups().find(group => group.tabs.some(item => item.id === tab))?.id || 'people';
+}
+
+function normalizeAdminSelection() {
+  const groups = adminGroups();
+  const currentGroup = groups.find(group => group.id === adminGroup) || groups[0];
+  if (!currentGroup) return;
+  adminGroup = currentGroup.id;
+  if (!currentGroup.tabs.some(item => item.id === adminTab)) {
+    adminTab = currentGroup.tabs[0]?.id || 'users';
+  }
+}
+
+function renderAdminGroupTabs() {
+  return \`<div class="admin-group-tabs">
+    \${adminGroups().map(group => \`
+      <div class="admin-group-section \${adminGroup === group.id ? 'active' : ''}">
+        <button class="admin-group-tab \${adminGroup === group.id ? 'active' : ''}" onclick="switchAdminGroup('\${group.id}')">
+          <span>\${group.icon}</span><b>\${group.label}</b>
+        </button>
+        \${adminGroup === group.id ? renderAdminSubTabs(group) : ''}
+      </div>
+    \`).join('')}
+  </div>\`;
+}
+
+function renderAdminSubTabs(group = adminGroups().find(item => item.id === adminGroup)) {
+  return \`<div class="admin-tabs admin-tabs-nested">
+    \${(group?.tabs || []).map(tab => \`
+      <div class="admin-tab \${adminTab === tab.id ? 'active' : ''}" onclick="switchAdminTab('\${tab.id}')">\${tab.icon} \${tab.label}</div>
+    \`).join('')}
+  </div>\`;
+}
+
+function activeAdminNav() {
+  const group = adminGroups().find(item => item.id === adminGroup) || adminGroups()[0];
+  const tab = group?.tabs?.find(item => item.id === adminTab) || group?.tabs?.[0] || { icon:'⚙️', label:'Správa aplikace' };
+  return { group, tab };
+}
+
+// ── OZNÁMENÍ ──────────────────────────────────────────
+const ANNOUNCE_TYPES = {
+  info:    { label: 'Informace', color: 'var(--blue,#60a5fa)', icon: 'ℹ️'  },
+  warning: { label: 'Upozornění', color: 'var(--amber)',        icon: '⚠️' },
+  urgent:  { label: 'Urgentní',  color: 'var(--red)',           icon: '🚨' },
+};
+
+function visibleAnnouncements() {
+  const uid = currentUser?.id;
+  if (!uid) return [];
+  return ANNOUNCEMENTS
+    .filter(a => !Array.isArray(a.dismissedBy) || !a.dismissedBy.includes(uid))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+function dismissAnnouncement(id) {
+  const a = ANNOUNCEMENTS.find(x => x.id === id);
+  if (!a || !currentUser) return;
+  if (!Array.isArray(a.dismissedBy)) a.dismissedBy = [];
+  if (!a.dismissedBy.includes(currentUser.id)) a.dismissedBy.push(currentUser.id);
+  saveState();
+  if (typeof renderDashboard === 'function') renderDashboard();
+}
+
+function announcementsBannerHtml() {
+  const list = visibleAnnouncements();
+  if (list.length === 0) return '';
+  return list.slice(0, 3).map(a => {
+    const t = ANNOUNCE_TYPES[a.type] || ANNOUNCE_TYPES.info;
+    return \`
+      <div class="card" style="border-left:4px solid \${t.color};margin-bottom:10px;position:relative">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="font-size:22px">\${t.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:700;color:\${t.color};text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
+              \${t.label}\${a.title ? ' · ' + escapeHtml(a.title) : ''}
+            </div>
+            <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.5">\${escapeHtml(a.text)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:6px">
+              \${escapeHtml(a.createdByName || 'Admin')} · \${formatDateTime(a.createdAt)}
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:14px;color:var(--text3)"
+            title="Skrýt"
+            onclick="dismissAnnouncement('\${escapeHtml(a.id)}')">✕</button>
+        </div>
+      </div>\`;
+  }).join('');
+}
+
+function renderAdminAnnouncements() {
+  if (!can('app_settings')) return '';
+  const list = [...ANNOUNCEMENTS].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return \`
+    <div class="card">
+      <div class="card-title">📢 Oznámení pro tým</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px">
+        Vytvořené oznámení se zobrazí všem uživatelům na úvodní obrazovce. Každý si může
+        oznámení skrýt tlačítkem ✕. Smazáním v této tabulce zmizí všem.
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openAddAnnouncementModal()">＋ Nové oznámení</button>
+    </div>
+    \${list.length === 0 ? \`
+      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
+        <div style="font-size:32px;margin-bottom:8px">📢</div>
+        <div>Zatím žádná oznámení.</div>
+      </div>\` : list.map(a => {
+        const t = ANNOUNCE_TYPES[a.type] || ANNOUNCE_TYPES.info;
+        const totalUsers = (USERS || []).length;
+        const dismissed = Array.isArray(a.dismissedBy) ? a.dismissedBy.length : 0;
+        return \`
+        <div class="card" style="border-left:4px solid \${t.color};margin-bottom:10px">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <div style="font-size:22px">\${t.icon}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:700;color:\${t.color};text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">
+                \${t.label}\${a.title ? ' · ' + escapeHtml(a.title) : ''}
+              </div>
+              <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.5;margin-bottom:6px">\${escapeHtml(a.text)}</div>
+              <div style="font-size:11px;color:var(--text3)">
+                \${escapeHtml(a.createdByName || 'Admin')} · \${formatDateTime(a.createdAt)}
+                · Skryto: \${dismissed}/\${totalUsers}
+              </div>
+            </div>
+            <button class="btn btn-danger btn-sm" style="padding:4px 8px"
+              onclick="deleteAnnouncement('\${escapeHtml(a.id)}')">🗑️</button>
+          </div>
+        </div>\`;
+      }).join('')}
+  \`;
+}
+
+function openAddAnnouncementModal() {
+  openModal('📢 Nové oznámení', \`
+    <div class="input-group">
+      <div class="input-label">Typ</div>
+      <select class="input" id="ann-type">
+        \${Object.entries(ANNOUNCE_TYPES).map(([v, t]) => \`<option value="\${v}">\${t.icon} \${t.label}</option>\`).join('')}
+      </select>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Nadpis (volitelné)</div>
+      <input class="input" id="ann-title" maxlength="80" placeholder="např. Servisní okno v sobotu">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Text oznámení</div>
+      <textarea class="input" id="ann-text" rows="5" placeholder="Napiš obsah oznámení…"
+        style="resize:vertical;min-height:120px"></textarea>
+    </div>
+  \`, [
+    { label: '✕ Zrušit',     cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '📢 Publikovat', cls: 'btn-primary', action: 'saveAnnouncement()' },
+  ]);
+}
+
+function saveAnnouncement() {
+  const text = document.getElementById('ann-text')?.value?.trim();
+  if (!text) { showToast('⚠️ Text je prázdný'); return; }
+  const type  = document.getElementById('ann-type')?.value || 'info';
+  const title = document.getElementById('ann-title')?.value?.trim() || '';
+  ANNOUNCEMENTS.push({
+    id: 'ann' + Date.now() + Math.random().toString(36).slice(2,6),
+    type, title, text,
+    createdBy: currentUser?.id || null,
+    createdByName: currentUser?.name || 'Admin',
+    createdAt: new Date().toISOString(),
+    dismissedBy: [],
+  });
+  saveState();
+  closeModal();
+  showToast('📢 Oznámení publikováno');
+  renderAdmin();
+}
+
+function deleteAnnouncement(id) {
+  if (!confirm('Smazat oznámení? Zmizí všem uživatelům.')) return;
+  ANNOUNCEMENTS = ANNOUNCEMENTS.filter(a => a.id !== id);
+  saveState();
+  showToast('🗑️ Oznámení smazáno');
+  renderAdmin();
+}
+
+// ── DOCHÁZKA TÝMU (admin) ────────────────────────────
+function renderAdminTeamAttendance() {
+  if (!can('app_settings')) return '';
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthStr = monthStart.toISOString().slice(0, 7);
+
+  const stats = (USERS || []).map(u => {
+    const ws  = USER_WORKSPACE[u.id] || {};
+    const att = (ws.attendance || []).filter(a => a.date >= monthStr + '-01');
+    let totalMin = 0;
+    let openShift = null;
+    let lastDate  = null;
+    att.forEach(a => {
+      if (a.checkIn && a.checkOut) {
+        totalMin += attendanceMinutes(a) || 0;
+      } else if (a.checkIn && !a.checkOut) {
+        openShift = a;
+      }
+      if (!lastDate || a.date > lastDate) lastDate = a.date;
+    });
+    return { user: u, totalMin, days: att.length, openShift, lastDate };
+  }).sort((a, b) => b.totalMin - a.totalMin);
+
+  return \`
+    <div class="card">
+      <div class="card-title">🕐 Docházka týmu – \${monthStart.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' })}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+        Sumář odpracovaných hodin v aktuálním měsíci. Klikni na uživatele pro detail
+        a možnost opravy chybných záznamů.
+      </div>
+    </div>
+
+    \${stats.length === 0 ? \`
+      <div class="card" style="text-align:center;color:var(--text2);padding:32px 16px">
+        Žádní uživatelé.
+      </div>\` : stats.map(s => \`
+      <div class="card" style="margin-bottom:8px;cursor:pointer" onclick="openUserAttendanceDetail('\${escapeHtml(s.user.id)}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:24px">\${escapeHtml(s.user.avatar || '👤')}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700;color:var(--text)">\${escapeHtml(s.user.name)}</div>
+            <div style="font-size:11px;color:var(--text3)">
+              \${ROLE_LABELS[s.user.role] || s.user.role}
+              \${s.openShift ? ' · <span style="color:var(--green)">🟢 Právě přihlášen</span>' : ''}
+              \${s.lastDate ? ' · poslední: ' + formatDate(s.lastDate) : ' · bez záznamu'}
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:800;color:var(--gold)">
+              \${Math.floor(s.totalMin / 60)}h \${s.totalMin % 60}m
+            </div>
+            <div style="font-size:11px;color:var(--text3)">\${s.days} \${s.days === 1 ? 'den' : s.days < 5 ? 'dny' : 'dní'}</div>
+          </div>
+        </div>
+      </div>\`).join('')}
+
+    <div class="card" style="margin-top:10px">
+      <button class="btn btn-ghost" style="width:100%" onclick="exportTeamAttendanceCsv()">📥 Stáhnout CSV (celý měsíc)</button>
+    </div>
+  \`;
+}
+
+function openUserAttendanceDetail(userId) {
+  const u = (USERS || []).find(x => x.id === userId);
+  if (!u) return;
+  const ws  = USER_WORKSPACE[userId] || {};
+  const att = [...(ws.attendance || [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 60);
+
+  const rows = att.map(a => {
+    const mins = a.checkIn && a.checkOut
+      ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000)
+      : null;
+    return \`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text)">\${formatDate(a.date)}</div>
+          <div style="font-size:11px;color:var(--text2)">
+            \${attendanceTypeMeta(a.type).icon} \${attendanceTypeMeta(a.type).label} · \${a.checkIn ? formatTime(a.checkIn) : '–'} → \${a.checkOut ? formatTime(a.checkOut) : '⏳ otevřeno'}
+            \${mins !== null ? \` · <b>\${Math.floor(mins/60)}h \${mins%60}m</b>\` : ''}
+            \${a.note ? \` · \${escapeHtml(a.note)}\` : ''}
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="padding:2px 8px"
+          onclick="adminEditAttendance('\${escapeHtml(userId)}','\${escapeHtml(a.id)}')">✏️</button>
+        <button class="btn btn-danger btn-sm" style="padding:2px 8px"
+          onclick="adminDeleteAttendance('\${escapeHtml(userId)}','\${escapeHtml(a.id)}')">🗑️</button>
+      </div>\`;
+  }).join('') || '<div style="text-align:center;color:var(--text2);padding:20px">Žádné záznamy</div>';
+
+  openModal(\`🕐 Docházka · \${u.name}\`, rows, [
+    { label: '✕ Zavřít', cls: 'btn-primary', action: 'closeModal()' },
+  ]);
+}
+
+function adminEditAttendance(userId, recordId) {
+  const ws  = USER_WORKSPACE[userId];
+  const rec = ws?.attendance?.find(a => a.id === recordId);
+  if (!rec) return;
+  const inT  = rec.checkIn  ? new Date(rec.checkIn).toTimeString().slice(0, 5)  : '';
+  const outT = rec.checkOut ? new Date(rec.checkOut).toTimeString().slice(0, 5) : '';
+  openModal('✏️ Upravit docházku', \`
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Den: <b>\${formatDate(rec.date)}</b></div>
+    <div class="input-group">
+      <div class="input-label">Typ záznamu</div>
+      <select class="input" id="att-type">
+        \${Object.entries(ATTENDANCE_TYPES).map(([value, meta]) => \`<option value="\${value}" \${value === (rec.type || 'work') ? 'selected' : ''}>\${meta.icon} \${meta.label}</option>\`).join('')}
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="input-group">
+        <div class="input-label">Příchod</div>
+        <input class="input" id="att-in"  type="time" value="\${inT}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Odchod</div>
+        <input class="input" id="att-out" type="time" value="\${outT}">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Poznámka</div>
+      <input class="input" id="att-note" value="\${escapeHtml(rec.note || '')}">
+    </div>
+  \`, [
+    { label: '✕ Zrušit',  cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '✔ Uložit',  cls: 'btn-primary', action: \`saveAttendanceEdit('\${userId}','\${recordId}')\` },
+  ]);
+}
+
+function saveAttendanceEdit(userId, recordId) {
+  const ws  = USER_WORKSPACE[userId];
+  const rec = ws?.attendance?.find(a => a.id === recordId);
+  if (!rec) return;
+  const inV  = document.getElementById('att-in')?.value;
+  const outV = document.getElementById('att-out')?.value;
+  rec.type = document.getElementById('att-type')?.value || 'work';
+  if (inV)  rec.checkIn  = new Date(rec.date + 'T' + inV  + ':00').toISOString();
+  if (outV) rec.checkOut = new Date(rec.date + 'T' + outV + ':00').toISOString();
+  else if (outV === '') rec.checkOut = null;
+  rec.note = document.getElementById('att-note')?.value?.trim() || '';
+  saveState();
+  closeModal();
+  showToast('✅ Záznam upraven');
+  renderAdmin();
+}
+
+function adminDeleteAttendance(userId, recordId) {
+  if (!confirm('Smazat tento záznam docházky?')) return;
+  const ws = USER_WORKSPACE[userId];
+  if (!ws) return;
+  ws.attendance = (ws.attendance || []).filter(a => a.id !== recordId);
+  saveState();
+  showToast('🗑️ Záznam smazán');
+  closeModal();
+  renderAdmin();
+}
+
+function exportTeamAttendanceCsv() {
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  const monthStr = monthStart.toISOString().slice(0, 7);
+  const rows = [['Uživatel', 'Login', 'Role', 'Datum', 'Typ', 'Příchod', 'Odchod', 'Minuty', 'Poznámka']];
+  (USERS || []).forEach(u => {
+    const ws = USER_WORKSPACE[u.id] || {};
+    (ws.attendance || []).filter(a => a.date >= monthStr + '-01').forEach(a => {
+      const mins = a.checkIn && a.checkOut
+        ? Math.round((new Date(a.checkOut) - new Date(a.checkIn)) / 60000)
+        : '';
+      rows.push([
+        u.name, u.login, ROLE_LABELS[u.role] || u.role, a.date,
+        attendanceTypeMeta(a.type).label,
+        a.checkIn ? formatTime(a.checkIn) : '',
+        a.checkOut ? formatTime(a.checkOut) : '',
+        mins,
+        a.note || '',
+      ]);
+    });
+  });
+  downloadCsv(\`dochazka-\${monthStr}.csv\`, rows);
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map(r => r.map(cell => {
+    const s = String(cell ?? '');
+    return /[",;\\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(';')).join('\\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function renderAdmin() {
+  if (!can('app_settings')) {
+    navigateTo('dashboard');
+    showToast('🚫 Nemáte oprávnění ke správě aplikace.');
+    return;
+  }
+  if (adminTab === 'lupanet' && !featureEnabled('featureLupaNet')) adminTab = 'settings';
+  if (adminTab === 'team_attendance' && !featureEnabled('featureAttendance')) adminTab = 'settings';
+  if (adminTab === 'settings' && adminGroup !== 'system') adminGroup = adminTabGroupId(adminTab);
+  normalizeAdminSelection();
+  const activeAdmin = activeAdminNav();
+  document.getElementById('page-admin').innerHTML = \`
+    <div class="admin-shell">
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar-title">
+          <span>⚙️</span>
+          <div>
+            <b>Správa aplikace</b>
+            <small>\${escapeHtml(activeAdmin.group?.label || 'Administrace')}</small>
+          </div>
+        </div>
+        \${renderAdminGroupTabs()}
+      </aside>
+
+      <main class="admin-content">
+        <div class="admin-content-head">
+          <div>
+            <div class="admin-eyebrow">\${escapeHtml(activeAdmin.group?.icon || '⚙️')} \${escapeHtml(activeAdmin.group?.label || 'Administrace')}</div>
+            <h2>\${escapeHtml(activeAdmin.tab.icon)} \${escapeHtml(activeAdmin.tab.label)}</h2>
+            <p>Administrace je na PC rozdělená do levé navigace a pracovní plochy, aby se nastavení lépe četlo a nebralo místo obsahu.</p>
+          </div>
+          <span class="badge badge-admin">ADMIN</span>
+        </div>
+
+        \${renderAdminCommandCenter()}
+
+        <div class="admin-section \${adminTab==='users'?'active':''}" id="adm-users">
+          \${renderAdminUsers()}
+        </div>
+        <div class="admin-section \${adminTab==='role_permissions'?'active':''}" id="adm-role-permissions">
+          \${renderAdminRolePermissions()}
+        </div>
+        <div class="admin-section \${adminTab==='login_logs'?'active':''}" id="adm-login-logs">
+          \${renderAdminLoginLogs()}
+        </div>
+        <div class="admin-section \${adminTab==='audit'?'active':''}" id="adm-audit">
+          \${renderAdminAudit()}
+        </div>
+        <div class="admin-section \${adminTab==='settings'?'active':''}" id="adm-settings">
+          \${renderAdminSettings()}
+        </div>
+        <div class="admin-section \${adminTab==='stations'?'active':''}" id="adm-stations">
+          \${renderAdminStations()}
+        </div>
+        <div class="admin-section \${adminTab==='orders_mgmt'?'active':''}" id="adm-orders">
+          \${renderAdminOrders()}
+        </div>
+        <div class="admin-section \${adminTab==='kpi_report'?'active':''}" id="adm-kpi">
+          \${renderKpiHtml()}
+        </div>
+        <div class="admin-section \${adminTab==='cloud'?'active':''}" id="adm-cloud">
+          \${renderAdminCloud()}
+        </div>
+        \${featureEnabled('featureLupaNet') ? \`<div class="admin-section \${adminTab==='lupanet'?'active':''}" id="adm-lupanet">
+          \${renderAdminLupaNet()}
+        </div>\` : ''}
+        <div class="admin-section \${adminTab==='ezop4'?'active':''}" id="adm-ezop4">
+          \${renderAdminEzop4()}
+        </div>
+        <div class="admin-section \${adminTab==='announcements'?'active':''}" id="adm-announcements">
+          \${renderAdminAnnouncements()}
+        </div>
+        \${featureEnabled('featureAttendance') ? \`<div class="admin-section \${adminTab==='team_attendance'?'active':''}" id="adm-team-attendance">
+          \${renderAdminTeamAttendance()}
+        </div>\` : ''}
+      </main>
+    </div>
+  \`;
+}
+
+function renderAdminCommandCenter() {
+  const operators = USERS.filter(user => user.role === 'operator');
+  const assignedOperators = operators.filter(user => Array.isArray(user.stationIds) && user.stationIds.length > 0).length;
+  const openIssues = ISSUES.filter(issue => issue.status !== 'closed').length;
+  const riskyLoads = stationLoadSummaries().filter(load => load.level !== 'ok').length;
+  const hiddenOperatorNav = APP_SETTINGS.hiddenNavByRole?.operator?.length || 0;
+  const mode = APP_SETTINGS.appDisplayMode || 'standard';
+  const cards = [
+    { label:'Uživatelé', value: USERS.length, desc:\`\${operators.length} operátorů\`, action:"switchAdminTab('users')", tone:'info' },
+    { label:'Přiřazení', value:\`\${assignedOperators}/\${operators.length || 0}\`, desc:'operátoři se stanovišti', action:"switchAdminTab('users')", tone: assignedOperators === operators.length ? 'ok' : 'warn' },
+    { label:'Problémy', value: openIssues, desc:'otevřená hlášení', action:"navigateTo('issues')", tone: openIssues ? 'warn' : 'ok' },
+    { label:'Přetížení', value: riskyLoads, desc:'pracoviště nad limitem', action:"navigateTo('queue')", tone: riskyLoads ? 'warn' : 'ok' },
+  ];
+  return \`<section class="admin-command-center">
+    <div class="admin-command-head">
+      <div>
+        <strong>Rychlý stav aplikace</strong>
+        <span>Režim: \${escapeHtml(mode)} · skryté záložky operátora: \${hiddenOperatorNav}</span>
+      </div>
+      <div class="admin-command-actions">
+        <button class="btn btn-ghost btn-sm" onclick="switchAdminTab('settings')">Nastavení</button>
+        <button class="btn btn-ghost btn-sm" onclick="switchAdminTab('role_permissions')">Oprávnění</button>
+        <button class="btn btn-primary btn-sm" onclick="navigateTo('queue')">Fronty</button>
+      </div>
+    </div>
+    <div class="admin-command-grid">
+      \${cards.map(card => \`<button class="admin-command-card \${card.tone}" onclick="\${card.action}">
+        <span>\${escapeHtml(card.label)}</span>
+        <strong>\${escapeHtml(String(card.value))}</strong>
+        <em>\${escapeHtml(card.desc)}</em>
+      </button>\`).join('')}
+    </div>
+  </section>\`;
+}
+
+function renderAdminRolePermissions() {
+  const roles = ['operator', 'tpv', 'dispatcher', 'management', 'admin'];
+  const activeOverrides = Object.entries(APP_SETTINGS.rolePermissionOverrides || {})
+    .filter(([role]) => roles.includes(role))
+    .flatMap(([role, actions]) => Object.entries(actions || {})
+      .filter(([action, value]) => ROLE_PERMISSION_ACTIONS.includes(action) && value === false)
+      .map(([action]) => ({ role, action })));
+  return \`
+    <div class="card" style="border-left:4px solid var(--gold)">
+      <div class="card-title">🛡️ Role a oprávnění</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Role jsou výchozí šablona. Konkrétnímu uživateli lze právo přidat nebo odebrat bez změny jeho role.
+        Aktuálně přihlášenému adminovi nejde odebrat správu uživatelů ani nastavení aplikace.
+      </div>
+      <div class="role-permission-legend">
+        <span><i class="perm-dot on"></i> povoleno</span>
+        <span><i class="perm-dot off"></i> vypnuto</span>
+        <span><i class="perm-dot none"></i> mimo roli</span>
+      </div>
+    </div>
+
+    \${renderUserPermissionEditor()}
+
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧩 Výchozí práva podle role</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Tato část nastavuje základ role. Uživatelská výjimka výše má při vyhodnocení přednost.
+      </div>
+    </div>
+    <div class="role-permission-list">
+      \${ROLE_PERMISSION_ACTIONS.map(action => \`
+        <div class="role-permission-row">
+          <div class="role-permission-name">
+            <strong>\${escapeHtml(ROLE_PERMISSION_LABELS[action] || action)}</strong>
+            <span>\${escapeHtml(action)}</span>
+          </div>
+          <div class="role-permission-cells">
+            \${roles.map(role => rolePermissionCellHtml(role, action)).join('')}
+          </div>
+        </div>
+      \`).join('')}
+    </div>
+
+    \${renderRoleNavVisibility()}
+
+    \${renderActiveUserPermissionOverrides()}
+
+    <div class="card">
+      <div class="card-title">📌 Aktivní omezení rolí</div>
+      \${activeOverrides.length === 0
+        ? \`<div style="font-size:13px;color:var(--text2)">Žádné roli teď není ručně vypnuté oprávnění.</div>\`
+        : activeOverrides.map(item => \`
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:13px;color:var(--text)">\${escapeHtml(ROLE_LABELS[item.role] || item.role)} · \${escapeHtml(ROLE_PERMISSION_LABELS[item.action] || item.action)}</span>
+            <button class="btn btn-ghost btn-sm" onclick="toggleRolePermission('\${item.role}','\${item.action}')">Vrátit</button>
+          </div>
+        \`).join('')}
+    </div>
+  \`;
+}
+
+function permissionUserList() {
+  const order = { operator: 1, dispatcher: 2, tpv: 3, management: 4, admin: 5 };
+  return [...USERS].sort((a, b) =>
+    (order[effectiveRoleForUser(a)] || 9) - (order[effectiveRoleForUser(b)] || 9) ||
+    String(a.name || a.login).localeCompare(String(b.name || b.login), 'cs')
+  );
+}
+
+function selectedPermissionUser() {
+  const users = permissionUserList();
+  if (!users.length) return null;
+  const selected = users.find(user => user.id === adminPermissionUserId);
+  if (selected) return selected;
+  const fallback = users.find(user => user.role === 'operator') || users.find(user => user.id !== currentUser?.id) || users[0];
+  adminPermissionUserId = fallback.id;
+  return fallback;
+}
+
+function selectPermissionUser(uid) {
+  if (!USERS.some(user => user.id === uid)) return;
+  adminPermissionUserId = uid;
+  renderAdmin();
+}
+
+function renderUserPermissionEditor() {
+  const users = permissionUserList();
+  const selected = selectedPermissionUser();
+  if (!selected) return '';
+  const selectedRole = effectiveRoleForUser(selected);
+  const overrideCount = Object.keys(APP_SETTINGS.userPermissionOverrides?.[selected.id] || {}).length;
+  return \`
+    <section class="user-permission-layout">
+      <div class="card user-permission-users">
+        <div class="card-title">👤 Vybrat uživatele</div>
+        <div class="user-permission-user-list">
+          \${users.map(user => {
+            const role = effectiveRoleForUser(user);
+            const count = Object.keys(APP_SETTINGS.userPermissionOverrides?.[user.id] || {}).length;
+            return \`<button class="user-permission-user-btn \${user.id === selected.id ? 'active' : ''}" onclick="selectPermissionUser('\${user.id}')">
+              <span>\${escapeHtml(user.avatar || '👤')}</span>
+              <b>\${escapeHtml(user.name || user.login)}</b>
+              <em>\${escapeHtml(user.login)} · \${escapeHtml(ROLE_LABELS[role] || role)}\${count ? \` · \${count} výj.\` : ''}</em>
+            </button>\`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="card user-permission-editor">
+        <div class="user-permission-head">
+          <div>
+            <span>\${escapeHtml(selected.avatar || '👤')}</span>
+            <div>
+              <strong>\${escapeHtml(selected.name || selected.login)}</strong>
+              <em>\${escapeHtml(selected.login)} · \${escapeHtml(ROLE_LABELS[selectedRole] || selectedRole)} · \${overrideCount ? \`\${overrideCount} výjimek\` : 'dle role'}</em>
+            </div>
+          </div>
+          <span class="role-badge role-\${selectedRole}">\${escapeHtml(ROLE_LABELS[selectedRole] || selectedRole)}</span>
+        </div>
+        <div class="user-permission-grid">
+          \${USER_PERMISSION_ACTIONS.map(action => userPermissionRowHtml(selected, action)).join('')}
+        </div>
+      </div>
+    </section>
+  \`;
+}
+
+function userPermissionRowHtml(user, action) {
+  const role = effectiveRoleForUser(user);
+  const roleDefault = roleBasePermissionAllowed(role, action);
+  const override = userPermissionOverride(user, action);
+  const effective = userEffectivePermission(user, action);
+  const protectedSelf = user.id === currentUser?.id && role === 'admin' && ['manage_users','app_settings'].includes(action);
+  const state = override === true ? 'allow' : override === false ? 'deny' : 'role';
+  const featureOff = !permissionFeatureEnabledForUser(user, action);
+  return \`
+    <div class="user-permission-row \${effective ? 'enabled' : 'disabled'}">
+      <div class="user-permission-name">
+        <strong>\${escapeHtml(ROLE_PERMISSION_LABELS[action] || action)}</strong>
+        <span>\${escapeHtml(action)} · role: \${roleDefault ? 'povoleno' : 'bez práva'}\${featureOff ? ' · funkce vypnutá' : ''}</span>
+      </div>
+      <div class="user-permission-actions">
+        \${userPermissionChoiceHtml(user.id, action, 'role', state, 'Dle role')}
+        \${userPermissionChoiceHtml(user.id, action, 'allow', state, 'Povoleno')}
+        \${userPermissionChoiceHtml(user.id, action, 'deny', state, 'Vypnuto', protectedSelf)}
+      </div>
+    </div>
+  \`;
+}
+
+function userPermissionChoiceHtml(uid, action, mode, state, label, disabled = false) {
+  return \`<button class="permission-choice \${state === mode ? 'active' : ''}" \${disabled ? 'disabled' : ''}
+    onclick="setUserPermissionOverride('\${uid}','\${action}','\${mode}')">\${escapeHtml(label)}</button>\`;
+}
+
+function setUserPermissionOverride(uid, action, mode) {
+  if (!can('app_settings')) return;
+  if (!USER_PERMISSION_ACTIONS.includes(action)) return;
+  const user = USERS.find(item => item.id === uid);
+  if (!user) return;
+  const role = effectiveRoleForUser(user);
+  if (user.id === currentUser?.id && role === 'admin' && ['manage_users','app_settings'].includes(action) && mode === 'deny') {
+    showToast('Aktuálnímu adminovi nelze odebrat správu.');
+    return;
+  }
+  if (!APP_SETTINGS.userPermissionOverrides) APP_SETTINGS.userPermissionOverrides = {};
+  if (!APP_SETTINGS.userPermissionOverrides[uid]) APP_SETTINGS.userPermissionOverrides[uid] = {};
+  const before = userPermissionOverride(user, action);
+  if (mode === 'role') {
+    delete APP_SETTINGS.userPermissionOverrides[uid][action];
+  } else {
+    APP_SETTINGS.userPermissionOverrides[uid][action] = mode === 'allow';
+  }
+  if (Object.keys(APP_SETTINGS.userPermissionOverrides[uid]).length === 0) {
+    delete APP_SETTINGS.userPermissionOverrides[uid];
+  }
+  writeAudit(
+    'user.permission_changed',
+    'app_settings',
+    \`user-permissions:\${uid}\`,
+    \`\${user.name || user.login}: \${ROLE_PERMISSION_LABELS[action] || action} → \${mode === 'role' ? 'dle role' : mode === 'allow' ? 'povoleno' : 'vypnuto'}\`,
+    { value: before },
+    { value: mode === 'role' ? undefined : mode === 'allow' },
+  );
+  saveState();
+  buildNav();
+  renderAdmin();
+  showToast('Oprávnění uživatele uloženo');
+}
+
+function renderActiveUserPermissionOverrides() {
+  const active = Object.entries(APP_SETTINGS.userPermissionOverrides || {})
+    .flatMap(([uid, actions]) => Object.entries(actions || {})
+      .filter(([action]) => USER_PERMISSION_ACTIONS.includes(action))
+      .map(([action, value]) => ({ uid, action, value })));
+  return \`
+    <div class="card">
+      <div class="card-title">📌 Aktivní výjimky uživatelů</div>
+      \${active.length === 0
+        ? \`<div style="font-size:13px;color:var(--text2)">Žádný uživatel teď nemá individuálně změněné oprávnění.</div>\`
+        : active.map(item => {
+          const user = USERS.find(u => u.id === item.uid);
+          return \`<div class="permission-active-row">
+            <span>\${escapeHtml(user?.name || item.uid)} · \${escapeHtml(ROLE_PERMISSION_LABELS[item.action] || item.action)} · <b>\${item.value ? 'povoleno' : 'vypnuto'}</b></span>
+            <button class="btn btn-ghost btn-sm" onclick="setUserPermissionOverride('\${item.uid}','\${item.action}','role')">Dle role</button>
+          </div>\`;
+        }).join('')}
+    </div>
+  \`;
+}
+
+function renderRoleNavVisibility() {
+  const roles = ['operator', 'tpv', 'dispatcher', 'management', 'admin'];
+  const activeHidden = Object.entries(APP_SETTINGS.hiddenNavByRole || {})
+    .filter(([role]) => roles.includes(role))
+    .flatMap(([role, items]) => (Array.isArray(items) ? items : [])
+      .filter(navId => ROLE_NAV_ITEMS.some(item => item.id === navId))
+      .filter(navId => !navRequiredPermission(navId))
+      .map(navId => ({ role, navId })));
+  return \`
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧭 Menu podle role</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Tohle pouze uklízí navigaci. Skryté položky nezmizí z aplikace; skutečné zákazy se řídí oprávněními výše.
+      </div>
+      <div class="role-permission-list">
+        \${ROLE_NAV_ITEMS.map(item => \`
+          <div class="role-permission-row">
+            <div class="role-permission-name">
+              <strong>\${item.icon} \${escapeHtml(item.label)}</strong>
+              <span>\${escapeHtml(item.id)}</span>
+            </div>
+            <div class="role-permission-cells">
+              \${roles.map(role => roleNavCellHtml(role, item)).join('')}
+            </div>
+          </div>
+        \`).join('')}
+      </div>
+      \${activeHidden.length === 0
+        ? \`<div style="font-size:12px;color:var(--text2)">Žádná položka menu není ručně skrytá.</div>\`
+        : \`<div style="font-size:12px;color:var(--text2);margin-bottom:8px">Skryté položky: \${
+            activeHidden.map(item => \`\${ROLE_LABELS[item.role] || item.role} · \${ROLE_NAV_ITEMS.find(nav => nav.id === item.navId)?.label || item.navId}\`).join(', ')
+          }</div>\`}
+    </div>
+  \`;
+}
+
+function roleNavCellHtml(role, item) {
+  const locked = item.lockedFor?.includes(role);
+  const hidden = navHiddenForRole(role, item.id);
+  const label = ROLE_LABELS[role] || role;
+  const required = navRequiredPermission(item.id);
+  if (required) {
+    const baseAllowed = BASE_ROLE_PERMISSIONS[required]?.includes(role) ?? false;
+    const effective = role === 'admin' || (baseAllowed && rolePermissionAllowed(role, required));
+    return \`<button class="role-permission-cell \${role === 'admin' ? 'locked' : effective ? 'enabled' : 'disabled'}" disabled title="Tato položka menu se řídí oprávněním: \${escapeHtml(ROLE_PERMISSION_LABELS[required] || required)}">
+      <span>\${escapeHtml(label)}</span><b>\${role === 'admin' ? 'Vždy' : effective ? 'Dle práva' : 'Bez práva'}</b>
+    </button>\`;
+  }
+  if (locked) {
+    return \`<button class="role-permission-cell locked" disabled title="Tuto položku menu nelze pro roli skrýt">
+      <span>\${escapeHtml(label)}</span><b>Vždy</b>
+    </button>\`;
+  }
+  return \`<button class="role-permission-cell \${hidden ? 'disabled' : 'enabled'}"
+    onclick="toggleRoleNav('\${role}','\${item.id}')"
+    title="\${hidden ? 'Kliknutím vrátit do menu' : 'Kliknutím skrýt v menu'}">
+    <span>\${escapeHtml(label)}</span><b>\${hidden ? 'Skryto' : 'Vidí'}</b>
+  </button>\`;
+}
+
+function toggleRoleNav(role, navId) {
+  if (!can('app_settings')) return;
+  const item = ROLE_NAV_ITEMS.find(nav => nav.id === navId);
+  if (!item) return;
+  const required = navRequiredPermission(navId);
+  if (required) {
+    showToast('Tuto položku řídí oprávnění: ' + (ROLE_PERMISSION_LABELS[required] || required));
+    return;
+  }
+  if (item.lockedFor?.includes(role)) {
+    showToast('Tuto položku menu nelze skrýt');
+    return;
+  }
+  if (!APP_SETTINGS.hiddenNavByRole) APP_SETTINGS.hiddenNavByRole = {};
+  const current = Array.isArray(APP_SETTINGS.hiddenNavByRole[role]) ? [...APP_SETTINGS.hiddenNavByRole[role]] : [];
+  const hidden = current.includes(navId);
+  APP_SETTINGS.hiddenNavByRole[role] = hidden
+    ? current.filter(id => id !== navId)
+    : [...current, navId];
+  if (APP_SETTINGS.hiddenNavByRole[role].length === 0) {
+    delete APP_SETTINGS.hiddenNavByRole[role];
+  }
+  writeAudit(
+    'nav.visibility_changed',
+    'app_settings',
+    'role-navigation',
+    \`\${ROLE_LABELS[role] || role}: \${item.label} \${hidden ? 'zobrazeno v menu' : 'skryto z menu'}\`
+  );
+  saveState();
+  buildNav();
+  renderAdmin();
+  showToast(hidden ? 'Položka menu obnovena' : 'Položka menu skryta');
+}
+
+function rolePermissionCellHtml(role, action) {
+  const baseAllowed = BASE_ROLE_PERMISSIONS[action]?.includes(role) ?? false;
+  const disabled = rolePermissionOverride(role, action) === false;
+  const effective = role === 'admin' || (baseAllowed && !disabled);
+  const label = ROLE_LABELS[role] || role;
+  if (role === 'admin') {
+    return \`<button class="role-permission-cell locked" disabled title="Admin má vždy kompletní práva">
+      <span>\${escapeHtml(label)}</span><b>Vždy</b>
+    </button>\`;
+  }
+  if (!baseAllowed) {
+    return \`<button class="role-permission-cell unavailable" disabled title="Tato role nemá právo v základním modelu">
+      <span>\${escapeHtml(label)}</span><b>—</b>
+    </button>\`;
+  }
+  return \`<button class="role-permission-cell \${effective ? 'enabled' : 'disabled'}"
+    onclick="toggleRolePermission('\${role}','\${action}')"
+    title="\${effective ? 'Kliknutím vypnout pro roli' : 'Kliknutím vrátit roli'}">
+    <span>\${escapeHtml(label)}</span><b>\${effective ? 'Zapnuto' : 'Vypnuto'}</b>
+  </button>\`;
+}
+
+function toggleRolePermission(role, action) {
+  if (!can('app_settings')) return;
+  if (role === 'admin') {
+    showToast('Admin má vždy kompletní práva');
+    return;
+  }
+  if (!BASE_ROLE_PERMISSIONS[action]?.includes(role)) {
+    showToast('Tato role nemá právo v základním modelu');
+    return;
+  }
+  if (!APP_SETTINGS.rolePermissionOverrides) APP_SETTINGS.rolePermissionOverrides = {};
+  if (!APP_SETTINGS.rolePermissionOverrides[role]) APP_SETTINGS.rolePermissionOverrides[role] = {};
+  const disabled = rolePermissionOverride(role, action) === false;
+  if (disabled) {
+    delete APP_SETTINGS.rolePermissionOverrides[role][action];
+    (ROLE_PERMISSION_NAV[action] || []).forEach(navId => {
+      if (!Array.isArray(APP_SETTINGS.hiddenNavByRole?.[role])) return;
+      APP_SETTINGS.hiddenNavByRole[role] = APP_SETTINGS.hiddenNavByRole[role].filter(id => id !== navId);
+      if (APP_SETTINGS.hiddenNavByRole[role].length === 0) delete APP_SETTINGS.hiddenNavByRole[role];
+    });
+  } else {
+    APP_SETTINGS.rolePermissionOverrides[role][action] = false;
+  }
+  if (Object.keys(APP_SETTINGS.rolePermissionOverrides[role]).length === 0) {
+    delete APP_SETTINGS.rolePermissionOverrides[role];
+  }
+  writeAudit(
+    'role.permission_changed',
+    'app_settings',
+    'role-permissions',
+    \`\${ROLE_LABELS[role] || role}: \${ROLE_PERMISSION_LABELS[action] || action} \${disabled ? 'zapnuto' : 'vypnuto'}\`
+  );
+  saveState();
+  buildNav();
+  renderAdmin();
+  showToast(disabled ? 'Oprávnění role obnoveno' : 'Oprávnění role vypnuto');
+}
+
+function renderAdminEzop4() {
+  const tableExport = window.EZOP4_TO_TABLES?.(currentState());
+  const authMode = ezop4AuthMode();
+  const authReady = Boolean(db && window.EZOP4_AUTH?.createSupabaseAuthPort);
+  const count = name => tableExport?.[name]?.length ?? 0;
+  const totalRows = tableExport
+    ? Object.values(tableExport).reduce((sum, rows) => sum + (Array.isArray(rows) ? rows.length : 0), 0)
+    : 0;
+  const sessionLockHours = Number(APP_SETTINGS?.lockTimeout) || 0;
+  const strictSupabaseAuth = authMode === 'supabase' && !demoFallbackAllowed();
+  const cards = [
+    ['Profily', count('profiles'), 'profiles'],
+    ['Zakázky', count('orders'), 'orders'],
+    ['Stanoviště zakázek', count('order_stations'), 'order_stations'],
+    ['Problémy', count('issues'), 'issues'],
+    ['Poznámky', count('production_notes'), 'production_notes'],
+  ];
+
+  return \`
+    <div class="card" style="border-left:4px solid var(--gold)">
+      <div class="card-title">🚀 Produkční základ Ezop4</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.55">
+        Aplikace zatím běží v kompatibilním režimu Ezop3, ale už obsahuje nové Supabase schema
+        pro tabulky, role, RLS a audit log. Tato obrazovka slouží ke kontrole připravenosti
+        a migraci současných dat do tabulkového formátu.
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      \${cards.map(([label, value, table]) => \`
+        <div class="stat-card">
+          <div class="stat-val">\${value}</div>
+          <div class="stat-lbl">\${label}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px">\${table}</div>
+        </div>
+      \`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧱 Databázová připravenost</div>
+      \${ezop4ChecklistRow('schema.sql', 'Tabulky pro zakázky, stanoviště, problémy, poznámky, audit a profily jsou připravené.', true)}
+      \${ezop4ChecklistRow('Supabase Auth + RLS', 'Schéma obsahuje role, přiřazená stanoviště operátorů a RLS omezení podle stanoviště.', true)}
+      \${ezop4ChecklistRow('Migrace app_state', 'Současná data lze převést na tabulkový JSON export.', Boolean(tableExport))}
+      \${ezop4ChecklistRow('Auth režim', authMode === 'supabase' ? (demoFallbackAllowed() ? 'Supabase Auth je zapnutý, ale nouzový demo fallback je povolený.' : 'Supabase Auth je zapnutý v přísném režimu bez demo hesla 1234.') : 'Aktivní je demo login. Supabase Auth lze zapnout níže.', strictSupabaseAuth)}
+      \${ezop4ChecklistRow('Automatické zamčení', sessionLockHours > 0 ? \`Relace se uzamkne po \${sessionLockHours} h neaktivity.\` : 'Automatické zamčení je vypnuté. Nastavte timeout v Admin → Nastavení.', sessionLockHours > 0)}
+      \${ezop4ChecklistRow('Audit log základ', 'Změny počtů, stavů, zakázek, programů, poznámek a problémů se zapisují do auditu.', true)}
+      \${ezop4ChecklistRow('Napojení UI na tabulky', 'Další krok: přepnout zakázky z app_state na orders/order_stations.', false)}
+    </div>
+
+    <div class="card" style="border-left:4px solid \${strictSupabaseAuth && sessionLockHours > 0 ? 'var(--green)' : 'var(--orange)'}">
+      <div class="card-title">🛡️ Bezpečnost relace</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">\${authMode === 'supabase' ? 'AUTH' : 'DEMO'}</div><div class="stat-lbl">Login režim</div></div>
+        <div class="stat-card"><div class="stat-val">\${demoFallbackAllowed() ? 'ON' : 'OFF'}</div><div class="stat-lbl">Demo fallback</div></div>
+        <div class="stat-card"><div class="stat-val">\${sessionLockHours > 0 ? \`\${sessionLockHours}h\` : 'OFF'}</div><div class="stat-lbl">Auto lock</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-top:10px">
+        Pro ostrý provoz má být aktivní Supabase Auth, nouzový demo fallback vypnutý a automatické zamčení zapnuté.
+      </div>
+    </div>
+
+    \${renderSecurityChecklist(authMode, strictSupabaseAuth, sessionLockHours)}
+
+    <div class="card">
+      <div class="card-title">🔐 Režim přihlášení</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Demo režim používá lokální uživatele a heslo 1234 pouze pro testování. Supabase režim
+        přihlašuje přes Supabase Auth a načítá roli z tabulky <b>profiles</b>. V ostrém režimu
+        není povolen automatický návrat na demo heslo.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn \${authMode === 'demo' ? 'btn-primary' : 'btn-ghost'}" onclick="setEzop4AuthModeFromAdmin('demo')">Demo login</button>
+        <button class="btn \${authMode === 'supabase' ? 'btn-primary' : 'btn-ghost'}" onclick="setEzop4AuthModeFromAdmin('supabase')">Supabase Auth</button>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:\${authReady ? 'var(--green)' : 'var(--orange)'}">
+        \${authReady ? '✅ Supabase klient je připravený.' : '⚠️ Supabase klient zatím není připojený.'}
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <label style="display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--text2);line-height:1.4">
+          <input type="checkbox" \${demoFallbackAllowed() ? 'checked' : ''} onchange="setDemoFallbackFromAdmin(this.checked)" style="margin-top:2px">
+          <span><b style="color:var(--text)">Nouzový demo fallback</b><br>Zapnout jen krátkodobě při výpadku Supabase. Vypnuté = bezpečnější ostrý provoz.</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📦 Export pro tabulkové Supabase</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px">
+        Export vytvoří jeden JSON soubor s tabulkami podle schema.sql. Neobsahuje hesla,
+        lokální přihlašovací logy ani hesla. profiles.json je šablona pro doplnění user_id ze Supabase Auth. Celkem připraveno:
+        <b style="color:var(--gold)">\${totalRows}</b> řádků.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="exportEzop4Tables()">📤 Stáhnout Ezop4 table export</button>
+        <button class="btn btn-ghost" onclick="showEzop4SchemaHelp()">🧾 Jak spustit schema.sql</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➡️ Doporučený další krok</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.55">
+        1. Spustit schema.sql v Supabase SQL Editoru.<br>
+        2. Vytvořit uživatele v Supabase Auth a doplnit tabulku profiles.<br>
+        3. Přepnout login na Supabase Auth.<br>
+        4. Přesunout zakázky a počty z app_state do tabulek.
+      </div>
+    </div>
+  \`;
+}
+
+function renderSecurityChecklist(authMode, strictSupabaseAuth, sessionLockHours) {
+  const disabledOverrides = Object.values(APP_SETTINGS.rolePermissionOverrides || {})
+    .reduce((sum, roleMap) => sum + Object.values(roleMap || {}).filter(v => v === false).length, 0);
+  const lastLogin = (LOGIN_LOGS || [])[0];
+  const operatorSafe =
+    !BASE_ROLE_PERMISSIONS.create_order.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.delete_order.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.manage_users.includes('operator') &&
+    !BASE_ROLE_PERMISSIONS.app_settings.includes('operator');
+  const adminOnly =
+    BASE_ROLE_PERMISSIONS.manage_users.length === 1 &&
+    BASE_ROLE_PERMISSIONS.manage_users.includes('admin') &&
+    BASE_ROLE_PERMISSIONS.app_settings.length === 1 &&
+    BASE_ROLE_PERMISSIONS.app_settings.includes('admin');
+  return \`
+    <div class="card" style="border-left:4px solid \${operatorSafe && adminOnly ? 'var(--green)' : 'var(--red)'}">
+      <div class="card-title">🔎 Bezpečnostní kontrola rolí</div>
+      \${ezop4ChecklistRow('Operátor bez správy a mazání', 'Operátor nemá vytváření zakázek, mazání, správu uživatelů ani nastavení aplikace.', operatorSafe)}
+      \${ezop4ChecklistRow('Admin-only nastavení', 'Správa uživatelů a nastavení aplikace jsou v základních právech pouze pro admina.', adminOnly)}
+      \${ezop4ChecklistRow('Role lze omezovat z aplikace', disabledOverrides ? \`Admin už vypnul \${disabledOverrides} oprávnění přes Role a práva.\` : 'Zatím nejsou vypnutá žádná dodatečná oprávnění rolí.', true)}
+      \${ezop4ChecklistRow('Produkční přihlášení', authMode === 'supabase' ? (strictSupabaseAuth ? 'Supabase Auth běží bez demo fallbacku.' : 'Supabase Auth je zapnutý, ale fallback na demo je stále povolený.') : 'Stále běží demo login. Pro ostrý provoz přepnout na Supabase Auth.', strictSupabaseAuth)}
+      \${ezop4ChecklistRow('Auto lock relace', sessionLockHours > 0 ? \`Relace se uzamkne po \${sessionLockHours} h neaktivity.\` : 'Doporučení: zapnout automatické zamčení v Nastavení.', sessionLockHours > 0)}
+      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-top:10px">
+        Poslední lokální login: \${lastLogin ? \`\${escapeHtml(lastLogin.login || lastLogin.userLogin || 'uživatel')} · \${formatDateTime(lastLogin.at || lastLogin.time || lastLogin.createdAt)}\` : 'zatím bez záznamu'}.
+      </div>
+    </div>
+  \`;
+}
+
+function ezop4ChecklistRow(title, text, done) {
+  return \`<div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
+    <div style="font-size:18px">\${done ? '✅' : '⏳'}</div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:800;color:var(--text)">\${title}</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.4">\${text}</div>
+    </div>
+  </div>\`;
+}
+
+function renderAdminAudit() {
+  const rows = auditRows().slice(0, 120);
+  const countAction = prefix => rows.filter(row => row.action.startsWith(prefix)).length;
+  return \`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--text2)">
+        Posledních \${rows.length} auditních událostí uložených lokálně v této instalaci.
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="clearAuditLogFromAdmin()">Vymazat audit</button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">\${auditRows().length}</div><div class="stat-lbl">Záznamů celkem</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">\${countAction('station.')}</div><div class="stat-lbl">Stanoviště</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">\${countAction('issue.')}</div><div class="stat-lbl">Problémy</div></div>
+    </div>
+
+    <div class="card" style="background:rgba(54,176,174,.08);border:1px solid rgba(54,176,174,.25)">
+      <div class="card-title">ℹ️ Co se audituje</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Zápis počtů, změny stavů, úpravy zakázky, program stanoviště, poznámky a problémy.
+        V Supabase Auth režimu se audit pokusí uložit také do tabulky <b>audit_logs</b>.
+      </div>
+    </div>
+
+    \${rows.length === 0
+      ? \`<div class="card" style="text-align:center;color:var(--text2);padding:26px">Zatím nejsou uložené žádné auditní události.</div>\`
+      : rows.map(auditLogHtml).join('')}
+  \`;
+}
+
+function auditLogHtml(row) {
+  const role = row.role ? ROLE_LABELS[row.role] : 'systém';
+  const actionLabel = {
+    'auth.mode_changed': 'Režim přihlášení',
+    'auth.demo_fallback_changed': 'Nouzový demo fallback',
+    'auth.login': 'Přihlášení',
+    'auth.session_locked': 'Relace uzamčena',
+    'role.permission_changed': 'Oprávnění role',
+    'nav.visibility_changed': 'Viditelnost menu',
+    'app.display_mode_changed': 'Režim aplikace',
+    'app.setting_changed': 'Nastavení aplikace',
+    'direct_message.sent': 'Přímá zpráva odeslána',
+    'direct_message.deleted': 'Přímá zpráva smazána',
+    'station.counts_saved': 'Počty uloženy',
+    'station.counts_reset': 'Počty reset',
+    'station.completed': 'Stanoviště hotovo',
+    'station.status_changed': 'Stav změněn',
+    'station.program_updated': 'Program upraven',
+    'order.info_updated': 'Zakázka upravena',
+    'order.blocked': 'Zakázka blokována',
+    'order.unblocked': 'Zakázka odblokována',
+    'order.deleted': 'Zakázka smazána',
+    'note.created': 'Poznámka přidána',
+    'note.deleted': 'Poznámka smazána',
+    'scrap.removed': 'Zmetek vyjmut',
+    'issue.created': 'Problém nahlášen',
+    'issue.resolved': 'Problém vyřešen',
+  }[row.action] || row.action;
+  return \`<div class="card" style="border-left:4px solid var(--teal)">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:var(--text)">\${escapeHtml(actionLabel)}</div>
+        <div style="font-size:11px;color:var(--text2)">\${escapeHtml(row.entityType)} · \${escapeHtml(row.entityId)}</div>
+      </div>
+      <span class="badge" style="background:rgba(54,176,174,.14);color:var(--teal)">\${escapeHtml(role)}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text);line-height:1.45;margin-bottom:8px">\${escapeHtml(row.summary)}</div>
+    <div style="font-size:11px;color:var(--text3)">
+      🕒 \${formatDateTime(row.at)} · 👤 \${escapeHtml(row.userName || 'Systém')}
+    </div>
+  </div>\`;
+}
+
+function renderAdminLupaNet() {
+  const api = window.EZOP4_LUPA_NET;
+  const config = api?.readLupaNetConfig?.() || {
+    enabled: false,
+    mode: 'disabled',
+    direction: 'export_progress',
+    apiBaseUrl: '',
+    companyCode: '',
+    orderNumberField: 'cislo_zakazky',
+    productCodeField: 'kod_vyrobku',
+  };
+  const readiness = api?.lupaNetReadiness?.(config) || [];
+  const readyCount = readiness.filter(item => item.ok).length;
+  const fieldMap = api?.LUPA_NET_FIELD_MAP || [];
+  return \`
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🔌 Připravenost na Lupa NET</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.55">
+        Veřejná dokumentace Lupa NET nepopisuje konkrétní API endpointy, proto je EZOP4 připravený
+        přes oddělený konektor. Jakmile dodavatel předá API/CSV specifikaci, doplní se pouze adaptér,
+        ne výrobní obrazovky.
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">\${readyCount}/\${readiness.length}</div><div class="stat-lbl">Kontrol připraveno</div></div>
+      <div class="stat-card"><div class="stat-val">\${ORDERS.length}</div><div class="stat-lbl">Zakázek pro export</div></div>
+      <div class="stat-card"><div class="stat-val">\${config.mode.toUpperCase()}</div><div class="stat-lbl">Režim</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚙️ Konfigurace propojení</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:13px;color:var(--text)">
+        <input type="checkbox" id="ln-enabled" \${config.enabled ? 'checked' : ''}>
+        Integrace Lupa NET je připravená k testování
+      </label>
+      <div class="input-group">
+        <div class="input-label">Režim</div>
+        <select class="input" id="ln-mode">
+          <option value="disabled" \${config.mode === 'disabled' ? 'selected' : ''}>Vypnuto</option>
+          <option value="csv" \${config.mode === 'csv' ? 'selected' : ''}>CSV/JSON soubory</option>
+          <option value="api" \${config.mode === 'api' ? 'selected' : ''}>API konektor</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <div class="input-label">Směr toku dat</div>
+        <select class="input" id="ln-direction">
+          <option value="export_progress" \${config.direction === 'export_progress' ? 'selected' : ''}>EZOP4 → Lupa NET: průběh výroby</option>
+          <option value="import_orders" \${config.direction === 'import_orders' ? 'selected' : ''}>Lupa NET → EZOP4: zakázky</option>
+          <option value="bidirectional" \${config.direction === 'bidirectional' ? 'selected' : ''}>Obousměrně</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <div class="input-label">URL Lupa NET konektoru / middleware</div>
+        <input class="input" id="ln-api-url" placeholder="např. https://intranet/lupanet-bridge" value="\${escapeHtml(config.apiBaseUrl || '')}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Kód firmy / střediska v Lupa NET</div>
+        <input class="input" id="ln-company-code" placeholder="doplní dodavatel Lupa NET" value="\${escapeHtml(config.companyCode || '')}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="input-group">
+          <div class="input-label">Pole čísla zakázky</div>
+          <input class="input" id="ln-order-field" value="\${escapeHtml(config.orderNumberField || 'cislo_zakazky')}">
+        </div>
+        <div class="input-group">
+          <div class="input-label">Pole kódu výrobku</div>
+          <input class="input" id="ln-product-field" value="\${escapeHtml(config.productCodeField || 'kod_vyrobku')}">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveLupaNetConfig()">💾 Uložit konfiguraci</button>
+        <button class="btn btn-ghost" onclick="exportLupaNetPackage()">📤 Stáhnout export pro Lupa NET</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">✅ Kontrola připravenosti</div>
+      \${readiness.map(item => ezop4ChecklistRow(item.label, item.detail, item.ok)).join('')}
+    </div>
+
+    <div class="card">
+      <div class="card-title">🧭 Mapování dat</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+        Toto je výchozí návrh polí pro dodavatele Lupa NET. Názvy lze změnit podle skutečné importní šablony/API.
+      </div>
+      <table class="tbl">
+        <thead><tr><th>EZOP4 pole</th><th>Lupa NET pole</th><th>Význam</th></tr></thead>
+        <tbody>
+          \${fieldMap.map(([source, target, label]) => \`
+            <tr><td>\${escapeHtml(source)}</td><td style="color:var(--gold)">\${escapeHtml(target)}</td><td>\${escapeHtml(label)}</td></tr>
+          \`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25)">
+      <div class="card-title">📌 Co potřebujeme od dodavatele Lupa NET</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.55">
+        1. Zda je podporované API, nebo jen import/export soubory.<br>
+        2. Přesné názvy polí pro zakázku, výrobek, množství, stav a sklad.<br>
+        3. Identifikátor firmy/střediska/skladu.<br>
+        4. Autentizaci konektoru a doporučenou periodu synchronizace.<br>
+        5. Pravidlo, zda se do Lupa NET posílají průběžné stavy, nebo až hotové kusy.
+      </div>
+    </div>
+  \`;
+}
+
+function renderAdminCloud() {
+  const url = localStorage.getItem('vyrobais_supabase_url') || DEFAULT_SUPABASE_URL;
+  const key = localStorage.getItem('vyrobais_supabase_key') || DEFAULT_SUPABASE_KEY;
+  const connected = db !== null;
+  return \`
+    <div class="card" style="background:\${connected?'rgba(34,197,94,.08)':'var(--card)'};border:1px solid \${connected?'var(--green)':'var(--border)'}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:24px">\${connected?'✅':'☁️'}</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:\${connected?'var(--green)':'var(--text)'}">
+            \${connected ? 'Připojeno k Supabase' : 'Cloud zatím nepřipojen'}
+          </div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">
+            \${connected
+              ? 'Data se synchronizují se sdílenou databází.'
+              : 'Aplikace ukládá data lokálně do prohlížeče. Pro sdílení mezi zařízeními a uživateli připojte Supabase.'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3)">
+      <div class="card-title">🔐 Bezpečnost cloud režimu</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Aktuální statická verze už neposílá do cloudu hesla, profily uživatelů ani logy přihlášení.
+        Pro ostrý provoz je ale potřeba serverová autorizace: Python/FastAPI backend nebo Supabase Auth + RLS podle rolí.
+        Účty vytvořené na GitHubu se do aplikace nepřenesou; GitHub je jen repozitář kódu.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔗 Konfigurace Supabase</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.5">
+        1. Vytvořte si projekt na <span style="color:var(--gold)">supabase.com</span> (zdarma)<br>
+        2. SQL Editor → spusťte schema.sql z GitHub repa<br>
+        3. Settings → API → zkopírujte URL a anon key níže
+      </div>
+
+      <div class="input-group">
+        <div class="input-label">Project URL</div>
+        <input class="input" id="cloud-url" placeholder="https://xxxxx.supabase.co" value="\${escapeHtml(url)}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Anon (public) key</div>
+        <input class="input" id="cloud-key" type="password" autocomplete="off" placeholder="eyJhbGciOiJI..." value="\${escapeHtml(key)}">
+        <div style="font-size:11px;color:var(--text2);margin-top:5px">
+          Vkládejte pouze anon/public key. Service role key nikdy nepatří do prohlížeče.
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveCloudConfig()">💾 Uložit a připojit</button>
+        \${connected ? \`<button class="btn btn-ghost" onclick="disconnectCloud()">Odpojit</button>\` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💾 Lokální data</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+        Data uložená v tomto prohlížeči (zakázky, problémy, poznámky, profily uživatelů bez hesel). Hesla jsou oddělená lokálně a neposílají se do cloudu ani exportu.
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="resetState()">🗑️ Vymazat lokální data</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportData()" style="margin-left:6px">📤 Export JSON</button>
+      <button class="btn btn-ghost btn-sm" onclick="cleanupAppMemoryFromAdmin()" style="margin-left:6px">🧹 Vyčistit dočasnou paměť</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📱 Instalovat jako aplikaci</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.6">
+        <b>Android / desktop Chrome:</b> ⋮ menu → "Instalovat aplikaci"<br>
+        <b>iOS Safari:</b> ↑ Sdílet → "Přidat na plochu"<br>
+        Po instalaci se VýrobaIS spouští jako samostatná aplikace.
+      </div>
+    </div>
+  \`;
+}
+
+function decodeJwtPayloadUnsafe(token) {
+  try {
+    const payload = String(token || '').split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function cloudConfigValidationError(url, key) {
+  let parsedUrl;
+  try { parsedUrl = new URL(url); }
+  catch { return 'Supabase URL není platná URL.'; }
+  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname);
+  if (parsedUrl.protocol !== 'https:' && !isLocal) {
+    return 'Pro cloud režim použijte HTTPS Supabase URL.';
+  }
+  if (!isLocal && !parsedUrl.hostname.endsWith('.supabase.co')) {
+    return 'URL nevypadá jako Supabase projekt. Zkontrolujte Settings → API → Project URL.';
+  }
+  const payload = decodeJwtPayloadUnsafe(key);
+  if (!payload) return 'Supabase key nevypadá jako platný JWT anon key.';
+  if (payload.role === 'service_role') {
+    return 'Service role key nesmí být uložený v prohlížeči. Použijte pouze anon/public key.';
+  }
+  if (payload.role && payload.role !== 'anon') {
+    return \`Očekávám anon/public key, ale klíč má roli "\${payload.role}".\`;
+  }
+  return '';
+}
+
+window.saveCloudConfig = function() {
+  const url = document.getElementById('cloud-url').value.trim();
+  const key = document.getElementById('cloud-key').value.trim();
+  if (!url || !key) { showToast('⚠️ Vyplňte URL i klíč'); return; }
+  const validationError = cloudConfigValidationError(url, key);
+  if (validationError) { showToast('⚠️ ' + validationError); return; }
+  localStorage.setItem('vyrobais_supabase_url', url);
+  localStorage.setItem('vyrobais_supabase_key', key);
+  showToast('✅ Uloženo, restartuji…');
+  setTimeout(() => location.reload(), 700);
+};
+
+window.disconnectCloud = function() {
+  localStorage.removeItem('vyrobais_supabase_url');
+  localStorage.removeItem('vyrobais_supabase_key');
+  showToast('Cloud odpojen, restartuji…');
+  setTimeout(() => location.reload(), 700);
+};
+
+window.exportData = function() {
+  const data = {
+    ...localState(),
+    LOGIN_LOGS: [],
+    exportedAt: new Date().toISOString(),
+    exportNote: 'Export neobsahuje hesla ani lokální přihlašovací logy.',
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = \`vyrobais-export-\${new Date().toISOString().slice(0,10)}.json\`;
+  a.click();
+  showToast('✅ Export stažen');
+};
+
+window.exportEzop4Tables = function() {
+  const tableExport = window.EZOP4_TO_TABLES?.(currentState());
+  if (!tableExport) {
+    showToast('⚠️ Migrační modul není načtený');
+    return;
+  }
+  const payload = {
+    format: 'ezop4-table-export',
+    version: window.__EZOP4_VERSION__ || '0.1.0',
+    exportedAt: new Date().toISOString(),
+    source: 'local app_state compatibility mode',
+    note: 'Export neobsahuje hesla, lokální přihlašovací logy ani demo profily uživatelů.',
+    tables: tableExport,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = \`ezop4-table-export-\${new Date().toISOString().slice(0,10)}.json\`;
+  a.click();
+  showToast('✅ Ezop4 table export stažen');
+};
+
+window.showEzop4SchemaHelp = function() {
+  openModal('Ezop4: spuštění schema.sql', \`
+    <div style="font-size:13px;color:var(--text2);line-height:1.6">
+      <b style="color:var(--text)">1.</b> Otevřete Supabase projekt.<br>
+      <b style="color:var(--text)">2.</b> V levém menu zvolte <b>SQL Editor</b> → <b>New query</b>.<br>
+      <b style="color:var(--text)">3.</b> Vložte obsah souboru <b>schema.sql</b> z projektu Ezop4.<br>
+      <b style="color:var(--text)">4.</b> Spusťte dotaz a potom vytvořte účty v <b>Authentication</b>.<br>
+      <b style="color:var(--text)">5.</b> Uživatelům přiřaďte role v tabulce <b>profiles</b>.
+    </div>
+    <div style="margin-top:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px;font-size:12px;color:var(--text2);line-height:1.45">
+      Ostrý provoz bude bezpečný až po přepnutí loginu na Supabase Auth a po čtení dat z tabulek místo kompatibilního app_state režimu.
+    </div>
+  \`, [
+    { label:'Rozumím', action:'closeModal()', cls:'btn-primary' },
+  ]);
+};
+
+window.setEzop4AuthModeFromAdmin = function(mode) {
+  const nextMode = mode === 'supabase' ? 'supabase' : 'demo';
+  const before = { mode: ezop4AuthMode() };
+  setEzop4AuthMode(nextMode);
+  writeAudit(
+    'auth.mode_changed',
+    'app_settings',
+    'ezop4-auth-mode',
+    \`Režim přihlášení změněn na \${nextMode === 'supabase' ? 'Supabase Auth' : 'Demo login'}\`,
+    before,
+    { mode: nextMode },
+  );
+  renderAdmin();
+  showToast(nextMode === 'supabase'
+    ? 'Supabase Auth režim zapnutý v přísném režimu.'
+    : 'Demo login režim zapnutý.');
+};
+
+window.setDemoFallbackFromAdmin = function(enabled) {
+  const before = { enabled: demoFallbackAllowed() };
+  setDemoFallbackAllowed(Boolean(enabled));
+  writeAudit(
+    'auth.demo_fallback_changed',
+    'app_settings',
+    'ezop4-demo-fallback',
+    \`Nouzový demo fallback \${enabled ? 'zapnut' : 'vypnut'}\`,
+    before,
+    { enabled: demoFallbackAllowed() },
+  );
+  renderAdmin();
+  showToast(enabled ? '⚠️ Nouzový demo fallback zapnutý' : '🔐 Nouzový demo fallback vypnutý');
+};
+
+window.saveLupaNetConfig = function() {
+  const api = window.EZOP4_LUPA_NET;
+  if (!api?.writeLupaNetConfig) {
+    showToast('⚠️ Modul Lupa NET není načtený');
+    return;
+  }
+  const config = {
+    enabled: Boolean(document.getElementById('ln-enabled')?.checked),
+    mode: document.getElementById('ln-mode')?.value || 'disabled',
+    direction: document.getElementById('ln-direction')?.value || 'export_progress',
+    apiBaseUrl: document.getElementById('ln-api-url')?.value.trim() || '',
+    companyCode: document.getElementById('ln-company-code')?.value.trim() || '',
+    orderNumberField: document.getElementById('ln-order-field')?.value.trim() || 'cislo_zakazky',
+    productCodeField: document.getElementById('ln-product-field')?.value.trim() || 'kod_vyrobku',
+    lastSyncAt: api.readLupaNetConfig?.().lastSyncAt,
+  };
+  api.writeLupaNetConfig(config);
+  writeAudit(
+    'integration.lupanet_config_saved',
+    'app_settings',
+    'lupanet',
+    \`Konfigurace Lupa NET uložena: \${config.mode}\`,
+    null,
+    { ...config, apiBaseUrl: config.apiBaseUrl ? '(nastaveno)' : '' },
+  );
+  renderAdmin();
+  showToast('Konfigurace Lupa NET uložena');
+};
+
+window.exportLupaNetPackage = function() {
+  const api = window.EZOP4_LUPA_NET;
+  if (!api?.buildLupaNetPackage) {
+    showToast('⚠️ Modul Lupa NET není načtený');
+    return;
+  }
+  const config = api.readLupaNetConfig?.();
+  const payload = api.buildLupaNetPackage(currentState(), config);
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = \`ezop4-lupanet-export-\${new Date().toISOString().slice(0,10)}.json\`;
+  a.click();
+  writeAudit(
+    'integration.lupanet_export_created',
+    'integration_export',
+    'lupanet',
+    \`Export pro Lupa NET vytvořen: \${payload.orders.length} zakázek\`,
+    null,
+    { orderCount: payload.orders.length, mode: payload.config.mode, direction: payload.config.direction },
+  );
+  showToast('✅ Export pro Lupa NET stažen');
+};
+
+window.cleanupAppMemoryFromAdmin = function() {
+  const stats = cleanupAppMemory({ persist: true, clearLoginGuard: true });
+  renderAdmin();
+  showToast(\`Vyčištěno: poznámky \${stats.removedNotes}, logy \${stats.removedLogs}, paměť výrobků \${stats.removedMemory}\`);
+};
+
+window.clearAuditLogFromAdmin = function() {
+  if (!confirm('Opravdu vymazat lokální audit v tomto prohlížeči?')) return;
+  clearAuditRows();
+  renderAdmin();
+  showToast('Audit log vymazán');
+};
+
+function switchAdminGroup(group) {
+  const found = adminGroups().find(item => item.id === group);
+  if (!found) return;
+  adminGroup = found.id;
+  adminTab = found.tabs[0]?.id || adminTab;
+  renderAdmin();
+}
+
+function switchAdminTab(tab) {
+  adminTab = tab;
+  adminGroup = adminTabGroupId(tab);
+  renderAdmin();
+}
+
+function accountModeNoticeHtml(context = 'admin') {
+  const authMode = ezop4AuthMode();
+  const connected = Boolean(db);
+  const isSupabase = authMode === 'supabase';
+  const color = isSupabase && connected ? 'var(--green)' : 'var(--amber)';
+  const title = isSupabase
+    ? connected ? 'Supabase Auth je zapnutý' : 'Supabase Auth je vybraný, ale cloud není připojený'
+    : 'Demo účty jsou lokální';
+  const body = isSupabase
+    ? 'Sdílené účty musí existovat v Supabase Authentication a zároveň v tabulce profiles. Lokální seznam níže je jen fallback/demo správa.'
+    : 'Uživatelé a hesla vytvořená zde platí jen v tomto prohlížeči/zařízení. Cloud sync je záměrně neposílá kvůli bezpečnosti.';
+  const extra = context === 'modal'
+    ? 'Pokud má účet fungovat na více počítačích, vytvořte ho v Supabase Auth + profiles, ne jen tady.'
+    : 'GitHub je pouze úložiště kódu a deploy, ne přihlašovací databáze aplikace.';
+  return \`<div class="card" style="background:\${color}14;border:1px solid \${color}55;margin-bottom:12px">
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <div style="font-size:22px">\${isSupabase ? '🔐' : '💻'}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:900;color:\${color};margin-bottom:4px">\${title}</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.45">\${body} \${extra}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          <span class="badge" style="background:\${color}22;color:\${color}">Login: \${isSupabase ? 'Supabase Auth' : 'Demo lokálně'}</span>
+          <span class="badge" style="background:\${connected ? 'rgba(34,197,94,.14)' : 'rgba(148,163,184,.14)'};color:\${connected ? 'var(--green)' : 'var(--text2)'}">\${connected ? 'Cloud připojen' : 'Bez cloudu'}</span>
+        </div>
+      </div>
+    </div>
+  </div>\`;
+}
+
+function renderAdminUsers() {
+  const operators = USERS.filter(user => user.role === 'operator');
+  const missingStation = operators.filter(user => !Array.isArray(user.stationIds) || user.stationIds.length === 0);
+  const adminRoles = USERS.filter(user => ['admin','dispatcher','tpv','management'].includes(user.role));
+  const filters = [
+    ['all', 'Všichni', USERS.length],
+    ['operators', 'Operátoři', operators.length],
+    ['missing_station', 'Bez stanoviště', missingStation.length],
+    ['admin_roles', 'Admin role', adminRoles.length],
+  ];
+  const filteredUsers = USERS.filter(user => {
+    if (adminUserFilter === 'operators') return user.role === 'operator';
+    if (adminUserFilter === 'missing_station') return user.role === 'operator' && (!Array.isArray(user.stationIds) || user.stationIds.length === 0);
+    if (adminUserFilter === 'admin_roles') return ['admin','dispatcher','tpv','management'].includes(user.role);
+    return true;
+  });
+  return \`\${accountModeNoticeHtml('admin')}
+  <div class="admin-users-head">
+    <div>
+      <div style="font-size:13px;color:var(--text2)">\${USERS.length} uživatelů v systému</div>
+      <div style="font-size:11px;color:\${missingStation.length ? 'var(--amber)' : 'var(--green)'};margin-top:4px">
+        \${missingStation.length ? \`\${missingStation.length} operátorů nemá přiřazené stanoviště\` : 'Všichni operátoři mají přiřazené stanoviště'}
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="newUserModal()">+ Přidat uživatele</button>
+  </div>
+  <div class="admin-user-filters">
+    \${filters.map(([id, label, count]) => \`<button class="\${adminUserFilter === id ? 'active' : ''}" onclick="setAdminUserFilter('\${id}')">
+      <span>\${count}</span><strong>\${label}</strong>
+    </button>\`).join('')}
+  </div>
+  \${filteredUsers.length ? filteredUsers.map(u => {
+    const stationIds = Array.isArray(u.stationIds) ? u.stationIds : [];
+    const noStations = u.role === 'operator' && stationIds.length === 0;
+    const stationChips = u.role === 'operator'
+      ? stationIds.map(id => {
+        const st = STATIONS.find(item => Number(item.id) === Number(id));
+        return \`<span>\${st?.icon || '🔧'} \${escapeHtml(st?.name || \`Stanoviště \${id}\`)}</span>\`;
+      }).join('')
+      : '<span>plný provozní přístup podle role</span>';
+    return \`
+    <div class="user-card \${noStations ? 'needs-attention' : ''}">
+      <div class="user-avatar" style="background:\${escapeHtml(u.color)}22;color:\${escapeHtml(u.color)}">\${escapeHtml(u.avatar)}</div>
+      <div class="user-info">
+        <div class="user-name">\${escapeHtml(u.name)}</div>
+        <div class="user-login" style="color:var(--text3)">Login: <b style="color:var(--text2)">\${escapeHtml(u.login)}</b> · Heslo: <b style="color:var(--text2)">skryté lokálně</b></div>
+        <div class="user-station-chips \${noStations ? 'warning' : ''}">
+          \${noStations ? '<span>⚠️ bez přiřazeného stanoviště</span>' : stationChips}
+        </div>
+      </div>
+      <span class="role-badge role-\${u.role}">\${ROLE_LABELS[u.role]}</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" title="Upravit uživatele" onclick="editUserModal('\${u.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" title="Smazat uživatele" onclick="deleteUserModal('\${u.id}')">🗑️</button>
+      </div>
+    </div>\`;
+  }).join('') : \`<div class="card" style="text-align:center;color:var(--text2);padding:24px">Žádný uživatel neodpovídá filtru.</div>\`}\`;
+}
+
+function setAdminUserFilter(filter) {
+  adminUserFilter = ['all','operators','missing_station','admin_roles'].includes(filter) ? filter : 'all';
+  renderAdmin();
+}
+
+function renderAdminLoginLogs() {
+  const okCount = LOGIN_LOGS.filter(log => log.success).length;
+  const failCount = LOGIN_LOGS.filter(log => !log.success).length;
+  const rows = LOGIN_LOGS.slice(0, 80);
+  return \`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+      <div style="font-size:13px;color:var(--text2)">
+        Admin vidí posledních \${rows.length} záznamů přihlášení uložených v této instalaci/prohlížeči.
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="clearLoginLogs()">Vymazat logy</button>
+    </div>
+
+    <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--text2);line-height:1.45">
+      Demo verze běží bez serveru, proto neumí sama zjistit interní IP adresu uživatele. V produkční interní síti by se stejný log ukládal serverově do databáze včetně IP adresy, případně jména zařízení.
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">\${okCount}</div><div class="stat-lbl">Úspěšná přihlášení</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">\${failCount}</div><div class="stat-lbl">Neúspěšné pokusy</div></div>
+      <div class="stat-card"><div class="stat-val">\${LOGIN_LOGS.length}</div><div class="stat-lbl">Záznamů celkem</div></div>
+    </div>
+
+    \${rows.length === 0
+      ? \`<div class="card" style="text-align:center;color:var(--text2);padding:26px">Zatím nejsou uložené žádné logy přihlášení.</div>\`
+      : rows.map(loginLogHtml).join('')}
+  \`;
+}
+
+function loginLogHtml(log) {
+  const source = log.source || {};
+  const statusColor = log.success ? 'var(--green)' : 'var(--red)';
+  const statusText = log.success ? 'Úspěšné přihlášení' : 'Neúspěšný pokus';
+  const role = log.role ? ROLE_LABELS[log.role] : 'bez role';
+  return \`<div class="card" style="border-left:4px solid \${statusColor}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:var(--text)">\${escapeHtml(log.name)}</div>
+        <div style="font-size:11px;color:var(--text2)">Login: <b>\${escapeHtml(log.login)}</b> · \${escapeHtml(role)}</div>
+      </div>
+      <span class="badge" style="background:\${log.success ? 'rgba(34,197,94,.14)' : 'rgba(239,68,68,.14)'};color:\${statusColor}">\${statusText}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:6px">
+      🕒 \${formatDateTime(log.at)}
+    </div>
+    <div style="background:var(--card2);border-radius:8px;padding:9px 10px;font-size:11px;color:var(--text2);line-height:1.45">
+      <div><b style="color:var(--text)">Odkud:</b> \${escapeHtml(source.host || '-')}</div>
+      <div><b style="color:var(--text)">Zařízení:</b> \${escapeHtml(source.device || '-')} · \${escapeHtml(source.screen || '-')}</div>
+      <div><b style="color:var(--text)">Jazyk / zóna:</b> \${escapeHtml(source.language || '-')} · \${escapeHtml(source.timezone || '-')}</div>
+      <div style="word-break:break-word"><b style="color:var(--text)">Prohlížeč:</b> \${escapeHtml(shortBrowser(source.browser || '-'))}</div>
+    </div>
+  </div>\`;
+}
+
+function clearLoginLogs() {
+  if (!confirm('Opravdu vymazat logy přihlášení v tomto prohlížeči?')) return;
+  LOGIN_LOGS = [];
+  saveLoginLogs();
+  renderAdmin();
+  showToast('Logy přihlášení vymazány');
+}
+
+function shortBrowser(ua) {
+  return ua.length > 140 ? ua.slice(0, 140) + '...' : ua;
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString('cs-CZ', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function renderAdminSettings() {
+  const displayMode = APP_SETTINGS.appDisplayMode || 'standard';
+  const displayModes = [
+    { id:'simple', label:'Jednoduchý provoz', desc:'Maximum věcí je sbalené, operátor má nejklidnější obrazovku.' },
+    { id:'standard', label:'Standard', desc:'Doporučený režim: kompaktní zobrazení a plné manažerské možnosti.' },
+    { id:'service', label:'Servisní režim', desc:'Vše je víc otevřené pro nastavování, testování a ladění.' },
+  ];
+  const generalSettings = Object.entries({
+    companyName:        { label:'Název firmy', desc:'Zobrazuje se v záhlaví aplikace', type:'text' },
+    lockTimeout:        { label:'Timeout zamčení (hod)', desc:'Po jaké době neaktivity se zamkne', type:'number' },
+    showKpiOperator:    { label:'KPI pro operátory', desc:'Operátoři vidí KPI záložku', type:'toggle' },
+    requireNoteOnIssue: { label:'Poznámka povinná u problému', desc:'Při nahlášení problému vyžadovat text', type:'toggle' },
+    notifyOnIssue:      { label:'Notifikovat při problému', desc:'Zasílat notifikace mistrovi', type:'toggle' },
+    shiftHours:         { label:'Délka směny (hod)', desc:'Pro výpočet KPI a kapacity', type:'number' },
+  });
+  const operatorBehaviorSettings = Object.entries({
+    operatorSimpleMode:           { label:'Jednoduchý režim operátora', desc:'Operátor vidí hlavně úkol, počty a stav; podpůrné karty jsou sbalené', type:'toggle' },
+    operatorDashboardFocusOnly:   { label:'Přehled jen pro moje stanoviště', desc:'Hlavní obrazovka operátora skryje celofiremní provozní panely a ukáže jen jeho práci', type:'toggle' },
+    operatorShowProductionOverview:{ label:'Operátor vidí provozní přehled', desc:'Zapne operátorovi širší přehled front, úzkých míst a rizik směny', type:'toggle' },
+    operatorHideOrderContext:     { label:'Skrýt další tok zakázky', desc:'Operátor neuvidí tlačítka na další stanoviště a zůstane soustředěný na svůj krok', type:'toggle' },
+  });
+  const operatorVisibilitySettings = Object.entries({
+    operatorShowOrderIdentifier:  { label:'Operátor vidí číslo a název zakázky', desc:'Vypnutí nahradí zakázku neutrálním textem Práce na stanovišti', type:'toggle' },
+    operatorShowCustomerContext:  { label:'Operátor vidí zákazníka', desc:'Zobrazí zákazníka v hlavičce stanoviště', type:'toggle' },
+    operatorShowDueContext:       { label:'Operátor vidí termín', desc:'Zobrazí plánovaný termín u aktuální práce', type:'toggle' },
+    operatorShowTechnologyContext:{ label:'Operátor vidí technologii', desc:'Zobrazí technologii, typ výroby a planžetu', type:'toggle' },
+    operatorShowNotesContext:     { label:'Operátor vidí počet poznámek', desc:'Zobrazí počet poznámek k aktuálnímu kroku', type:'toggle' },
+  });
+  const operatorPreview = [
+    ['Vlastní stanoviště', APP_SETTINGS.operatorDashboardFocusOnly !== false],
+    ['Širší provoz', APP_SETTINGS.operatorShowProductionOverview === true],
+    ['Číslo zakázky', APP_SETTINGS.operatorShowOrderIdentifier !== false],
+    ['Zákazník', APP_SETTINGS.operatorShowCustomerContext === true],
+    ['Termín', APP_SETTINGS.operatorShowDueContext !== false],
+    ['Technologie', APP_SETTINGS.operatorShowTechnologyContext !== false],
+    ['Poznámky', APP_SETTINGS.operatorShowNotesContext !== false],
+  ];
+  const featureSettings = Object.entries({
+    compactAdvancedUi:       { label:'Kompaktní obrazovky', desc:'Méně používané karty schovat do rozbalovacích sekcí', type:'toggle' },
+    featureProductMemory:    { label:'Programy a fotky výrobku', desc:'Programy strojů, fotka výrobku a paměť pro opakovanou výrobu', type:'toggle' },
+    featureAiSummary:        { label:'AI přehled zakázky', desc:'Stručné shrnutí zakázky a rizik', type:'toggle' },
+    featureReadiness:        { label:'Připravenost zakázky', desc:'Materiál, dokumentace, program a další semafory připravenosti', type:'toggle' },
+    featureOrderBlocking:    { label:'Blokování zakázek', desc:'Možnost dočasně zastavit zakázku kvůli materiálu nebo dokumentaci', type:'toggle' },
+    featureScrapManagement:  { label:'Správa zmetků', desc:'Vyjmutí zmetků a detailní práce s neshodnými kusy', type:'toggle' },
+    featureAttendance:       { label:'Docházka a můj prostor', desc:'Osobní pracovní prostor, docházka a předávky směn', type:'toggle' },
+    featureLupaNet:          { label:'Lupa NET integrace', desc:'Admin příprava exportů a propojení s Lupa NET', type:'toggle' },
+    featureMessenger:        { label:'Messenger', desc:'Přímé zprávy mezi uživateli a upozornění na nepřečtené zprávy', type:'toggle' },
+    messengerAllowDeleteOwn: { label:'Mazání vlastních zpráv', desc:'Uživatel může odstranit vlastní odeslané zprávy; admin může odstranit každou', type:'toggle' },
+    messengerMaxLength:      { label:'Max délka zprávy', desc:'Limit znaků pro jednu přímou zprávu', type:'number' },
+  });
+  const rowHtml = ([key, cfg]) => \`
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">\${cfg.label}</div>
+        <div class="settings-desc">\${cfg.desc}</div>
+      </div>
+      \${cfg.type === 'toggle'
+        ? \`<div class="toggle \${APP_SETTINGS[key]?'on':''}" onclick="toggleSetting('\${key}')"></div>\`
+        : \`<input class="input" style="width:140px" type="\${cfg.type}" value="\${APP_SETTINGS[key]}"
+             onchange="updateSetting('\${key}', this.value, '\${cfg.type}')">\`
+      }
+    </div>\`;
+  return \`
+    <div class="card" style="border-left:4px solid var(--gold)">
+      <div class="card-title">🎚️ Režim aplikace</div>
+      <div class="display-mode-grid">
+        \${displayModes.map(mode => \`
+          <button class="display-mode-card \${displayMode === mode.id ? 'active' : ''}" onclick="setAppDisplayMode('\${mode.id}')">
+            <strong>\${mode.label}</strong>
+            <span>\${mode.desc}</span>
+          </button>
+        \`).join('')}
+      </div>
+    </div>
+    \${renderRoleStartPageSettings()}
+    <div class="card">
+      <div class="card-title">⚙️ Základní nastavení</div>
+      \${generalSettings.map(rowHtml).join('')}
+    </div>
+    <div class="card operator-settings-card" style="border-left:4px solid var(--cyan)">
+      <div class="card-title">👷 Obrazovka operátora</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
+        Admin zde řídí, jestli operátor uvidí jen vlastní stanoviště, nebo i širší kontext výroby.
+      </div>
+      <div class="operator-settings-preview" aria-label="Aktuální viditelnost operátora">
+        \${operatorPreview.map(([label, enabled]) => \`
+          <span class="\${enabled ? 'on' : 'off'}">
+            <b>\${enabled ? '✓' : '–'}</b>\${escapeHtml(label)}
+          </span>
+        \`).join('')}
+      </div>
+      <div class="operator-preset-grid" aria-label="Rychlé předvolby operátora">
+        <button class="operator-preset-card" onclick="setOperatorViewPreset('focused')">
+          <strong>Soustředěný operátor</strong>
+          <span>Minimum informací, jen moje práce a nutné kroky.</span>
+        </button>
+        <button class="operator-preset-card" onclick="setOperatorViewPreset('balanced')">
+          <strong>Běžný provoz</strong>
+          <span>Doporučené nastavení pro výrobu a kontrolu termínů.</span>
+        </button>
+        <button class="operator-preset-card" onclick="setOperatorViewPreset('service')">
+          <strong>Servisní pohled</strong>
+          <span>Více kontextu pro zaučení, řešení problémů a dohled.</span>
+        </button>
+      </div>
+      <div class="operator-settings-grid">
+        <div class="operator-settings-group">
+          <div class="operator-settings-group-title">Chování obrazovky</div>
+          \${operatorBehaviorSettings.map(rowHtml).join('')}
+        </div>
+        <div class="operator-settings-group">
+          <div class="operator-settings-group-title">Informace ve frontě a stanovišti</div>
+          \${operatorVisibilitySettings.map(rowHtml).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--teal)">
+      <div class="card-title">🧩 Viditelnost funkcí</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
+        Funkce zůstanou v aplikaci, ale běžným uživatelům se nebudou zobrazovat. Admin je může kdykoliv znovu zapnout.
+      </div>
+      \${featureSettings.map(rowHtml).join('')}
+    </div>\`;
+}
+
+function toggleSetting(key) {
+  const before = APP_SETTINGS[key];
+  APP_SETTINGS[key] = !APP_SETTINGS[key];
+  saveSettingChange(key, before, APP_SETTINGS[key]);
+  renderAdmin();
+}
+
+function updateSetting(key, rawValue, type = 'text') {
+  const before = APP_SETTINGS[key];
+  let value = type === 'number' ? Number(rawValue) : rawValue;
+  if (key === 'messengerMaxLength') value = Math.max(50, Math.min(2000, Number(value) || 500));
+  APP_SETTINGS[key] = value;
+  saveSettingChange(key, before, value);
+  renderAdmin();
+}
+
+function saveSettingChange(key, before, after) {
+  if (before === after) return;
+  writeAudit(
+    'app.setting_changed',
+    'app_settings',
+    key,
+    \`\${key}: \${String(before)} → \${String(after)}\`,
+    { value: before },
+    { value: after }
+  );
+  saveState();
+  buildNav();
+  refreshTopbarUser();
+  showToast('Nastavení uloženo');
+}
+
+function setOperatorViewPreset(preset) {
+  if (!can('app_settings')) return;
+  const before = cloneForAudit({
+    operatorSimpleMode: APP_SETTINGS.operatorSimpleMode,
+    operatorDashboardFocusOnly: APP_SETTINGS.operatorDashboardFocusOnly,
+    operatorShowProductionOverview: APP_SETTINGS.operatorShowProductionOverview,
+    operatorHideOrderContext: APP_SETTINGS.operatorHideOrderContext,
+    operatorShowOrderIdentifier: APP_SETTINGS.operatorShowOrderIdentifier,
+    operatorShowCustomerContext: APP_SETTINGS.operatorShowCustomerContext,
+    operatorShowDueContext: APP_SETTINGS.operatorShowDueContext,
+    operatorShowTechnologyContext: APP_SETTINGS.operatorShowTechnologyContext,
+    operatorShowNotesContext: APP_SETTINGS.operatorShowNotesContext,
+  });
+  const presets = {
+    focused: {
+      operatorSimpleMode: true,
+      operatorDashboardFocusOnly: true,
+      operatorShowProductionOverview: false,
+      operatorHideOrderContext: true,
+      operatorShowOrderIdentifier: false,
+      operatorShowCustomerContext: false,
+      operatorShowDueContext: true,
+      operatorShowTechnologyContext: false,
+      operatorShowNotesContext: true,
+    },
+    balanced: {
+      operatorSimpleMode: true,
+      operatorDashboardFocusOnly: true,
+      operatorShowProductionOverview: false,
+      operatorHideOrderContext: true,
+      operatorShowOrderIdentifier: true,
+      operatorShowCustomerContext: false,
+      operatorShowDueContext: true,
+      operatorShowTechnologyContext: true,
+      operatorShowNotesContext: true,
+    },
+    service: {
+      operatorSimpleMode: false,
+      operatorDashboardFocusOnly: false,
+      operatorShowProductionOverview: true,
+      operatorHideOrderContext: false,
+      operatorShowOrderIdentifier: true,
+      operatorShowCustomerContext: true,
+      operatorShowDueContext: true,
+      operatorShowTechnologyContext: true,
+      operatorShowNotesContext: true,
+    },
+  };
+  const next = presets[preset];
+  if (!next) return;
+  Object.assign(APP_SETTINGS, next);
+  writeAudit(
+    'app.operator_view_preset_changed',
+    'app_settings',
+    'operator-view',
+    \`Předvolba operátora: \${preset}\`,
+    before,
+    cloneForAudit(next),
+  );
+  saveState();
+  renderAdmin();
+  showToast('Předvolba operátora uložena');
+}
+
+function setAppDisplayMode(mode) {
+  const valid = ['simple', 'standard', 'service'];
+  if (!valid.includes(mode)) return;
+  const before = APP_SETTINGS.appDisplayMode || 'standard';
+  APP_SETTINGS.appDisplayMode = mode;
+  if (mode === 'simple') {
+    APP_SETTINGS.compactAdvancedUi = true;
+    APP_SETTINGS.operatorSimpleMode = true;
+    APP_SETTINGS.operatorDashboardFocusOnly = true;
+    APP_SETTINGS.operatorShowProductionOverview = false;
+    APP_SETTINGS.operatorHideOrderContext = true;
+    APP_SETTINGS.operatorShowOrderIdentifier = true;
+    APP_SETTINGS.operatorShowCustomerContext = false;
+    APP_SETTINGS.operatorShowDueContext = true;
+    APP_SETTINGS.operatorShowTechnologyContext = true;
+    APP_SETTINGS.operatorShowNotesContext = true;
+  } else if (mode === 'standard') {
+    APP_SETTINGS.compactAdvancedUi = true;
+    APP_SETTINGS.operatorSimpleMode = true;
+    APP_SETTINGS.operatorDashboardFocusOnly = true;
+    APP_SETTINGS.operatorShowProductionOverview = false;
+    APP_SETTINGS.operatorHideOrderContext = true;
+    APP_SETTINGS.operatorShowOrderIdentifier = true;
+    APP_SETTINGS.operatorShowCustomerContext = false;
+    APP_SETTINGS.operatorShowDueContext = true;
+    APP_SETTINGS.operatorShowTechnologyContext = true;
+    APP_SETTINGS.operatorShowNotesContext = true;
+  } else if (mode === 'service') {
+    APP_SETTINGS.compactAdvancedUi = false;
+    APP_SETTINGS.operatorSimpleMode = false;
+    APP_SETTINGS.operatorDashboardFocusOnly = false;
+    APP_SETTINGS.operatorShowProductionOverview = true;
+    APP_SETTINGS.operatorHideOrderContext = false;
+    APP_SETTINGS.operatorShowOrderIdentifier = true;
+    APP_SETTINGS.operatorShowCustomerContext = true;
+    APP_SETTINGS.operatorShowDueContext = true;
+    APP_SETTINGS.operatorShowTechnologyContext = true;
+    APP_SETTINGS.operatorShowNotesContext = true;
+  }
+  writeAudit(
+    'app.display_mode_changed',
+    'app_settings',
+    'display-mode',
+    \`Režim aplikace změněn: \${before} → \${mode}\`
+  );
+  renderAdmin();
+  showToast('Režim aplikace uložen');
+}
+
+function renderAdminStations() {
+  return \`<div style="font-size:13px;color:var(--text2);margin-bottom:12px">Správa výrobních stanovišť</div>
+  \${STATIONS.map(st => \`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--card2);
+      border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px">
+      <span style="font-size:20px">\${st.icon}</span>
+      <span style="flex:1;font-size:13px;font-weight:600">\${st.id}. \${st.name}</span>
+      <button class="btn btn-ghost btn-sm" onclick="editStationModal(\${st.id})">✏️ Upravit</button>
+    </div>\`).join('')}\`;
+}
+
+function renderAdminOrders() {
+  return \`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="font-size:13px;color:var(--text2)">\${ORDERS.length} zakázek</div>
+    <button class="btn btn-primary btn-sm" onclick="newOrderModal()">+ Nová zakázka</button>
+  </div>
+  \${[...ORDERS].sort((a,b)=>a.number.localeCompare(b.number)).map(o => \`
+    <div class="admin-order-row" role="button" tabindex="0"
+      aria-label="Otevřít detail zakázky \${escapeHtml(o.number)}"
+      onclick="adminOrderRowOpen(event,'\${o.id}')"
+      onkeydown="adminOrderRowKeyOpen(event,'\${o.id}')"
+      style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--card2);
+      border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px">
+      <div style="font-family:'SF Mono',Menlo,monospace;font-size:14px;font-weight:800;color:var(--gold);min-width:62px">\${o.number}</div>
+      <div style="flex:1">
+        <div style="font-size:12px;color:var(--teal2);font-weight:600">\${o.customer}</div>
+        <div style="font-size:13px;font-weight:700">\${o.name}</div>
+        <div style="font-size:11px;color:var(--text2)">\${o.qty} ks · \${formatDate(o.due)}</div>
+      </div>
+      <span class="badge badge-\${o.priority}">\${priorityLabel(o.priority)}</span>
+      <button class="btn btn-ghost btn-sm" onclick="editOrderModal('\${o.id}')">✏️</button>
+      \${orderMoreButton(o.id)}
+    </div>\`).join('')}\`;
+}
+
+function adminOrderRowOpen(event, orderId) {
+  if (event?.target?.closest?.('button,a,input,select,textarea,[data-no-card-open]')) return;
+  openOrder(orderId);
+}
+
+function adminOrderRowKeyOpen(event, orderId) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  openOrder(orderId);
+}
+
+// ── MŮJ PROSTOR ──────────────────────────────────────
+let workspaceTab = 'notes';
+let workspaceAttendanceMonth = todayDateStr().slice(0, 7);
+
+const ATTENDANCE_TYPES = {
+  work:     { label: 'Práce',    icon: '🟢', color: 'var(--green)' },
+  doctor:   { label: 'Lékař',    icon: '🏥', color: 'var(--blue)' },
+  vacation: { label: 'Dovolená', icon: '🌤️', color: 'var(--gold)' },
+  absence:  { label: 'Volno',    icon: '⭕', color: 'var(--amber)' },
+  training: { label: 'Školení',  icon: '🎓', color: 'var(--purple)' },
+  other:    { label: 'Jiné',     icon: '📝', color: 'var(--text2)' },
+};
+
+function myWorkspace() {
+  const uid = currentUser?.id;
+  if (!uid) return { notes: [], myBoards: [], attendance: [] };
+  if (!USER_WORKSPACE[uid]) {
+    USER_WORKSPACE[uid] = { notes: [], myBoards: [], attendance: [] };
+  }
+  const ws = USER_WORKSPACE[uid];
+  if (!Array.isArray(ws.notes))      ws.notes      = [];
+  if (!Array.isArray(ws.myBoards))   ws.myBoards   = [];
+  if (!Array.isArray(ws.attendance)) ws.attendance = [];
+  return ws;
+}
+
+function renderWorkspace() {
+  const ws = myWorkspace();
+  const today = todayDateStr();
+  const todayRec = todayAttendance();
+  const todayMeta = attendanceTypeMeta(todayRec?.type);
+  const todayMins = attendanceMinutes(todayRec);
+  const monthEntries = ws.attendance.filter(a => a.date.slice(0, 7) === today.slice(0, 7));
+  const monthMinutes = monthEntries
+    .filter(a => !a.type || a.type === 'work')
+    .reduce((sum, a) => sum + (attendanceMinutes(a) || 0), 0);
+  const tabs = [
+    { id: 'notes',      label: '📝 Poznámky'  },
+    { id: 'boards',     label: '🔢 Moje kusy' },
+    { id: 'attendance', label: '🕐 Docházka'  },
+  ];
+  document.getElementById('page-workspace').innerHTML = \`
+    <div class="workspace-shell">
+      <div class="workspace-head">
+        <div>
+          <div class="app-shift-label"><span>📒</span><strong>Osobní provoz</strong></div>
+          <h2>Můj prostor</h2>
+          <p>Poznámky, vlastní počty kusů a docházkový kalendář na jednom místě.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="exportMyWorkspaceCsv()">📥 Export CSV</button>
+      </div>
+      <div class="workspace-command">
+        <div class="workspace-today-card" style="border-color:\${todayMeta.color};">
+          <span style="color:\${todayMeta.color}">\${todayRec ? todayMeta.icon : '📅'}</span>
+          <div>
+            <strong>\${todayRec ? todayMeta.label : 'Dnes nezapsáno'}</strong>
+            <em>\${todayRec ? \`\${attendanceRangeLabel(todayRec)}\${todayMins !== null ? \` · \${Math.floor(todayMins / 60)}h \${todayMins % 60}m\` : ''}\` : 'Zapiš práci, lékaře, volno nebo školení.'}</em>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('\${today}')">\${todayRec ? 'Upravit den' : 'Zapsat den'}</button>
+        </div>
+        <div class="workspace-stat-grid">
+          <div><span>\${ws.notes.length}</span><strong>Poznámky</strong></div>
+          <div><span>\${ws.myBoards.length}</span><strong>Moje kusy</strong></div>
+          <div><span>\${monthEntries.length}</span><strong>Dny v měsíci</strong></div>
+          <div><span>\${Math.floor(monthMinutes / 60)}h</span><strong>Odpracováno</strong></div>
+        </div>
+      </div>
+      <div class="workspace-tabs">
+        \${tabs.map(t => \`
+          <button class="workspace-tab \${workspaceTab === t.id ? 'active' : ''}"
+            onclick="switchWorkspaceTab('\${t.id}')">\${t.label}</button>
+        \`).join('')}
+      </div>
+      <div id="workspace-content" class="workspace-content"></div>
+    </div>
+  \`;
+  renderWorkspaceContent();
+}
+
+function exportMyWorkspaceCsv() {
+  const ws = myWorkspace();
+  const stamp = new Date().toISOString().slice(0, 10);
+
+  if (workspaceTab === 'notes') {
+    const rows = [['Kategorie', 'Text', 'Vytvořeno']];
+    [...ws.notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .forEach(n => rows.push([NOTE_CATEGORIES[n.category] || n.category, n.text, formatDateTime(n.createdAt)]));
+    downloadCsv(\`moje-poznamky-\${stamp}.csv\`, rows);
+    return;
+  }
+  if (workspaceTab === 'boards') {
+    const rows = [['Zakázka', 'Výrobek', 'OK', 'Oprava', 'Zmetek', 'Poznámka', 'Zaznamenáno']];
+    [...ws.myBoards].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))
+      .forEach(b => rows.push([b.orderNumber, b.orderName, b.qtyOk, b.qtyRework, b.qtyScrap, b.note || '', formatDateTime(b.recordedAt)]));
+    downloadCsv(\`moje-kusy-\${stamp}.csv\`, rows);
+    return;
+  }
+  if (workspaceTab === 'attendance') {
+    const rows = [['Datum', 'Typ', 'Příchod', 'Odchod', 'Minuty', 'Poznámka']];
+    [...ws.attendance].sort((a, b) => b.date.localeCompare(a.date)).forEach(a => {
+      const mins = attendanceMinutes(a);
+      rows.push([
+        a.date,
+        attendanceTypeMeta(a.type).label,
+        a.checkIn ? formatTime(a.checkIn) : '',
+        a.checkOut ? formatTime(a.checkOut) : '',
+        mins !== null ? mins : '',
+        a.note || '',
+      ]);
+    });
+    downloadCsv(\`moje-dochazka-\${stamp}.csv\`, rows);
+    return;
+  }
+}
+
+function switchWorkspaceTab(tab) {
+  workspaceTab = tab;
+  renderWorkspace();
+}
+
+function openWorkspace(tab = 'notes') {
+  workspaceTab = tab || 'notes';
+  navigateTo('workspace');
+}
+
+function renderWorkspaceContent() {
+  const el = document.getElementById('workspace-content');
+  if (!el) return;
+  if      (workspaceTab === 'notes')      el.innerHTML = renderWorkspaceNotes();
+  else if (workspaceTab === 'boards')     el.innerHTML = renderWorkspaceBoards();
+  else if (workspaceTab === 'attendance') el.innerHTML = renderWorkspaceAttendance();
+}
+
+// ── POZNÁMKY ──────────────────────────────────────────
+const NOTE_CATEGORIES = { general: 'Obecné', product: 'Výrobek', other: 'Jiné' };
+
+function renderWorkspaceNotes() {
+  const notes = [...myWorkspace().notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const catColors = { general: 'var(--blue,#60a5fa)', product: 'var(--gold)', other: 'var(--text2)' };
+  return \`
+    <div class="workspace-list-head">
+      <div>
+        <strong>Poznámky směny</strong>
+        <span>Rychlé osobní zápisy k výrobě, výrobku nebo předání.</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openAddNoteModal()">＋ Nová poznámka</button>
+    </div>
+    \${notes.length === 0 ? \`
+      <div class="workspace-empty">
+        <div>📝</div>
+        <strong>Zatím žádné poznámky</strong>
+        <span>Přidej krátký zápis k výrobku, stroji nebo další směně.</span>
+      </div>\` : notes.map(n => \`
+      <article class="workspace-note">
+        <div class="workspace-note-head">
+          <span style="color:\${catColors[n.category] || 'var(--text2)'}">
+            \${NOTE_CATEGORIES[n.category] || n.category}
+          </span>
+          <button class="btn btn-ghost btn-sm workspace-delete"
+            onclick="deleteWorkspaceNote('\${escapeHtml(n.id)}')">🗑️</button>
+        </div>
+        <p>\${escapeHtml(n.text)}</p>
+        <em>\${formatDateTime(n.createdAt)}</em>
+      </article>\`).join('')}
+  \`;
+}
+
+function openAddNoteModal() {
+  openModal('📝 Nová poznámka', \`
+    <div class="input-group">
+      <div class="input-label">Kategorie</div>
+      <select class="input" id="note-cat">
+        \${Object.entries(NOTE_CATEGORIES).map(([v, l]) => \`<option value="\${v}">\${l}</option>\`).join('')}
+      </select>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Text poznámky</div>
+      <textarea class="input" id="note-text" rows="5" placeholder="Napiš cokoliv…"
+        style="resize:vertical;min-height:100px"></textarea>
+    </div>
+  \`, [
+    { label: '✕ Zrušit', cls: 'btn-ghost', action: 'closeModal()' },
+    { label: '✔ Uložit', cls: 'btn-primary', action: 'saveWorkspaceNote()' },
+  ]);
+}
+
+function saveWorkspaceNote() {
+  const text = document.getElementById('note-text')?.value?.trim();
+  if (!text) { showToast('⚠️ Poznámka je prázdná'); return; }
+  const cat  = document.getElementById('note-cat')?.value || 'general';
+  const ws   = myWorkspace();
+  ws.notes.push({ id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), text, category: cat, createdAt: new Date().toISOString() });
+  saveState();
+  closeModal();
+  showToast('✅ Poznámka uložena');
+  renderWorkspaceContent();
+}
+
+function deleteWorkspaceNote(id) {
+  const ws = myWorkspace();
+  ws.notes = ws.notes.filter(n => n.id !== id);
+  saveState();
+  showToast('🗑️ Poznámka smazána');
+  renderWorkspaceContent();
+}
+
+// ── MOJE KUSY ─────────────────────────────────────────
+function renderWorkspaceBoards() {
+  const boards = [...myWorkspace().myBoards].sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+  return \`
+    <div class="workspace-list-head">
+      <div>
+        <strong>Moje kusy</strong>
+        <span>Vlastní rychlý záznam OK, oprav a zmetků bez zásahu do workflow zakázky.</span>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openAddBoardsModal()">＋ Přidat záznam</button>
+    </div>
+    \${boards.length === 0 ? \`
+      <div class="workspace-empty">
+        <div>🔢</div>
+        <strong>Zatím žádné záznamy</strong>
+        <span>Přidej osobní počet kusů pro rychlé předání nebo kontrolu směny.</span>
+      </div>\` : boards.map(b => \`
+      <article class="workspace-board">
+        <div class="workspace-board-head">
+          <div>
+            <strong>\${escapeHtml(b.orderNumber)} · \${escapeHtml(b.orderName)}</strong>
+            <em>\${formatDateTime(b.recordedAt)}</em>
+          </div>
+          <button class="btn btn-ghost btn-sm workspace-delete"
+            onclick="deleteWorkspaceBoard('\${escapeHtml(b.id)}')">🗑️</button>
+        </div>
+        <div class="workspace-board-counts">
+          <span style="color:var(--green)">✅ OK <b>\${b.qtyOk}</b></span>
+          <span style="color:var(--amber)">🔧 Oprava <b>\${b.qtyRework}</b></span>
+          <span style="color:var(--red)">❌ Zmetek <b>\${b.qtyScrap}</b></span>
+        </div>
+        \${b.note ? \`<p>\${escapeHtml(b.note)}</p>\` : ''}
+      </article>\`).join('')}
+  \`;
+}
+
+function openAddBoardsModal() {
+  const orderOpts = ORDERS.filter(o => o.stations?.length > 0).map(o =>
+    \`<option value="\${escapeHtml(o.id)}">\${escapeHtml(o.number)} · \${escapeHtml(o.name)}</option>\`
+  ).join('');
+  if (!orderOpts) { showToast('⚠️ Žádné aktivní zakázky'); return; }
+  openModal('🔢 Moje kusy', \`
+    <div class="input-group">
+      <div class="input-label">Zakázka</div>
+      <select class="input" id="board-order">\${orderOpts}</select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <div class="input-group">
+        <div class="input-label">✅ OK</div>
+        <input class="input" id="board-ok" type="number" min="0" value="0">
+      </div>
+      <div class="input-group">
+        <div class="input-label">🔧 Oprava</div>
+        <input class="input" id="board-rework" type="number" min="0" value="0">
+      </div>
+      <div class="input-group">
+        <div class="input-label">❌ Zmetek</div>
+        <input class="input" id="board-scrap" type="number" min="0" value="0">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Poznámka (volitelné)</div>
+      <input class="input" id="board-note" placeholder="např. ranní směna, stroj č.2…">
+    </div>
+  \`, [
+    { label: '✕ Zrušit',  cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '✔ Uložit',  cls: 'btn-primary',  action: 'saveWorkspaceBoard()' },
+  ]);
+}
+
+function saveWorkspaceBoard() {
+  const orderId = document.getElementById('board-order')?.value;
+  const order   = ORDERS.find(o => o.id === orderId);
+  if (!order) { showToast('⚠️ Vyberte zakázku'); return; }
+  const qtyOk    = Math.max(0, parseInt(document.getElementById('board-ok')?.value)    || 0);
+  const qtyRework = Math.max(0, parseInt(document.getElementById('board-rework')?.value) || 0);
+  const qtyScrap  = Math.max(0, parseInt(document.getElementById('board-scrap')?.value)  || 0);
+  if (qtyOk + qtyRework + qtyScrap === 0) { showToast('⚠️ Zadej alespoň jeden nenulový počet'); return; }
+  const note = document.getElementById('board-note')?.value?.trim() || '';
+  const ws   = myWorkspace();
+  ws.myBoards.push({
+    id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), orderId, orderNumber: order.number, orderName: order.name,
+    qtyOk, qtyRework, qtyScrap, note, recordedAt: new Date().toISOString(),
+  });
+  saveState();
+  closeModal();
+  showToast('✅ Záznam uložen');
+  renderWorkspaceContent();
+}
+
+function deleteWorkspaceBoard(id) {
+  const ws = myWorkspace();
+  ws.myBoards = ws.myBoards.filter(b => b.id !== id);
+  saveState();
+  showToast('🗑️ Záznam smazán');
+  renderWorkspaceContent();
+}
+
+// ── DOCHÁZKA ──────────────────────────────────────────
+function todayDateStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function todayAttendance() {
+  const today = todayDateStr();
+  return myWorkspace().attendance.find(a => a.date === today) || null;
+}
+
+function attendanceTypeMeta(type) {
+  return ATTENDANCE_TYPES[type] || ATTENDANCE_TYPES.work;
+}
+
+function attendanceMinutes(record) {
+  if (!record?.checkIn || !record?.checkOut) return null;
+  return Math.max(0, Math.round((new Date(record.checkOut) - new Date(record.checkIn)) / 60000));
+}
+
+function attendanceTimeValue(iso) {
+  if (!iso) return '';
+  return new Date(iso).toTimeString().slice(0, 5);
+}
+
+function attendanceDateTimeIso(date, time) {
+  if (!date || !time) return null;
+  return new Date(date + 'T' + time + ':00').toISOString();
+}
+
+function attendanceRecordForDate(date) {
+  return myWorkspace().attendance.find(a => a.date === date) || null;
+}
+
+function attendanceRangeLabel(record) {
+  if (!record?.checkIn && !record?.checkOut) return 'bez času';
+  return \`\${record.checkIn ? formatTime(record.checkIn) : '—'} → \${record.checkOut ? formatTime(record.checkOut) : '—'}\`;
+}
+
+function monthLabel(monthStr) {
+  return new Date(monthStr + '-01T12:00:00').toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+}
+
+function renderWorkspaceAttendance() {
+  const ws = myWorkspace();
+  const today = todayDateStr();
+  const todayRec = todayAttendance();
+  const monthStart = new Date(workspaceAttendanceMonth + '-01T12:00:00');
+  const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  const firstOffset = (monthStart.getDay() + 6) % 7;
+  const entries = new Map(ws.attendance.map(a => [a.date, a]));
+  const monthEntries = [...ws.attendance]
+    .filter(a => a.date.slice(0, 7) === workspaceAttendanceMonth)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const totalMinutes = monthEntries
+    .filter(a => !a.type || a.type === 'work')
+    .reduce((sum, a) => sum + (attendanceMinutes(a) || 0), 0);
+  const doctorCount = monthEntries.filter(a => a.type === 'doctor').length;
+  const workDays = monthEntries.filter(a => !a.type || a.type === 'work').length;
+  const todayMeta = attendanceTypeMeta(todayRec?.type);
+  const todayMins = attendanceMinutes(todayRec);
+  const cells = [];
+  for (let i = 0; i < firstOffset; i++) cells.push('<div class="attendance-day muted"></div>');
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = \`\${workspaceAttendanceMonth}-\${String(day).padStart(2, '0')}\`;
+    const rec = entries.get(date);
+    const meta = attendanceTypeMeta(rec?.type);
+    const isToday = date === today;
+    cells.push(\`
+      <button class="attendance-day \${rec ? 'has-entry' : ''} \${isToday ? 'today' : ''}" type="button"
+        onclick="openAttendanceEntryModal('\${date}')">
+        <span>\${day}</span>
+        \${rec ? \`<b style="color:\${meta.color}">\${meta.icon}</b><em>\${rec.type === 'work' || !rec.type ? attendanceRangeLabel(rec) : meta.label}</em>\` : '<em>+</em>'}
+      </button>\`);
+  }
+
+  return \`
+    <div class="attendance-hero">
+      <div>
+        <div class="card-title">Docházkový kalendář</div>
+        <h3>\${monthLabel(workspaceAttendanceMonth)}</h3>
+        <p>Zapiš příchod, odchod, lékaře nebo jinou absenci přímo do dne v kalendáři.</p>
+      </div>
+      <div class="attendance-current" style="border-color:\${todayMeta.color};">
+        <span style="color:\${todayMeta.color}">\${todayRec ? todayMeta.icon : '📅'}</span>
+        <div>
+          <strong>\${todayRec ? todayMeta.label : 'Dnes nezapsáno'}</strong>
+          <em>\${todayRec ? \`\${attendanceRangeLabel(todayRec)}\${todayMins !== null ? \` · \${Math.floor(todayMins / 60)}h \${todayMins % 60}m\` : ''}\` : 'Klikni na Dnes zapsat a doplň záznam.'}</em>
+        </div>
+      </div>
+      <div class="attendance-actions">
+        <button class="btn btn-ghost btn-sm" onclick="changeAttendanceMonth(-1)">←</button>
+        <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('\${today}')">Dnes zapsat</button>
+        <button class="btn btn-ghost btn-sm" onclick="changeAttendanceMonth(1)">→</button>
+      </div>
+    </div>
+    <div class="attendance-summary">
+      <div><span>Odpracováno</span><strong>\${Math.floor(totalMinutes / 60)}h \${totalMinutes % 60}m</strong></div>
+      <div><span>Pracovní dny</span><strong>\${workDays}</strong></div>
+      <div><span>Lékař</span><strong>\${doctorCount}</strong></div>
+      <div><span>Dnes</span><strong>\${todayRec ? attendanceTypeMeta(todayRec.type).label : 'nezapsáno'}</strong></div>
+    </div>
+    <div class="attendance-layout">
+      <div class="attendance-main">
+        <div class="attendance-calendar">
+          \${['Po','Út','St','Čt','Pá','So','Ne'].map(d => \`<div class="attendance-weekday">\${d}</div>\`).join('')}
+          \${cells.join('')}
+        </div>
+      </div>
+      <aside class="attendance-side card">
+        <div class="card-title">Typy záznamů</div>
+        <div class="attendance-legend">
+          \${Object.values(ATTENDANCE_TYPES).map(meta => \`<span style="color:\${meta.color}">\${meta.icon} \${meta.label}</span>\`).join('')}
+        </div>
+        <div class="card-title">Záznamy v měsíci</div>
+        \${monthEntries.length ? monthEntries.map(a => {
+          const meta = attendanceTypeMeta(a.type);
+          const mins = attendanceMinutes(a);
+          return \`<div class="attendance-row" onclick="openAttendanceEntryModal('\${a.date}')">
+            <span style="color:\${meta.color}">\${meta.icon}</span>
+            <div><strong>\${formatDate(a.date)} · \${meta.label}</strong><em>\${attendanceRangeLabel(a)}\${mins !== null ? \` · \${Math.floor(mins/60)}h \${mins%60}m\` : ''}\${a.note ? \` · \${escapeHtml(a.note)}\` : ''}</em></div>
+          </div>\`;
+        }).join('') : \`<div class="app-empty">V tomto měsíci zatím není žádný záznam.</div>\`}
+      </aside>
+    </div>
+  \`;
+}
+
+function changeAttendanceMonth(delta) {
+  const d = new Date(workspaceAttendanceMonth + '-01T12:00:00');
+  d.setMonth(d.getMonth() + delta);
+  workspaceAttendanceMonth = d.toISOString().slice(0, 7);
+  renderWorkspaceContent();
+}
+
+function openAttendanceEntryModal(date = todayDateStr()) {
+  const rec = attendanceRecordForDate(date);
+  const type = rec?.type || 'work';
+  const checkIn = attendanceTimeValue(rec?.checkIn) || (date === todayDateStr() ? new Date().toTimeString().slice(0, 5) : '');
+  const checkOut = attendanceTimeValue(rec?.checkOut);
+  openModal(\`📅 Docházka · \${formatDate(date)}\`, \`
+    <div class="input-group">
+      <div class="input-label">Typ záznamu</div>
+      <select class="input" id="att-type">
+        \${Object.entries(ATTENDANCE_TYPES).map(([value, meta]) => \`<option value="\${value}" \${value === type ? 'selected' : ''}>\${meta.icon} \${meta.label}</option>\`).join('')}
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="input-group">
+        <div class="input-label">Příchod / od</div>
+        <input class="input" id="att-in" type="time" value="\${checkIn}">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Odchod / do</div>
+        <input class="input" id="att-out" type="time" value="\${checkOut}">
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Poznámka</div>
+      <input class="input" id="att-note" value="\${escapeHtml(rec?.note || '')}" placeholder="např. lékař 9:00–11:00, práce z domu...">
+    </div>
+  \`, [
+    ...(rec ? [{ label: '🗑️ Smazat', cls: 'btn-danger', action: \`deleteAttendanceEntry('\${rec.id}')\` }] : []),
+    { label: '✕ Zrušit', cls: 'btn-ghost', action: 'closeModal()' },
+    { label: '✔ Uložit', cls: 'btn-primary', action: \`saveAttendanceEntry('\${date}', '\${rec?.id || ''}')\` },
+  ]);
+}
+
+function saveAttendanceEntry(date, recordId = '') {
+  const ws = myWorkspace();
+  let rec = recordId ? ws.attendance.find(a => a.id === recordId) : null;
+  if (!rec) {
+    rec = { id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), date, checkIn: null, checkOut: null };
+    ws.attendance.push(rec);
+  }
+  rec.date = date;
+  rec.type = document.getElementById('att-type')?.value || 'work';
+  const inV = document.getElementById('att-in')?.value || '';
+  const outV = document.getElementById('att-out')?.value || '';
+  rec.checkIn = attendanceDateTimeIso(date, inV);
+  rec.checkOut = attendanceDateTimeIso(date, outV);
+  rec.note = document.getElementById('att-note')?.value?.trim() || '';
+  saveState();
+  closeModal();
+  showToast('✅ Docházka uložena');
+  refreshAfterWorkspaceMutation();
+}
+
+function deleteAttendanceEntry(recordId) {
+  const ws = myWorkspace();
+  ws.attendance = ws.attendance.filter(a => a.id !== recordId);
+  saveState();
+  closeModal();
+  showToast('🗑️ Záznam docházky smazán');
+  refreshAfterWorkspaceMutation();
+}
+
+function workspaceCheckIn() {
+  const ws    = myWorkspace();
+  const today = todayDateStr();
+  if (ws.attendance.find(a => a.date === today)) return;
+  ws.attendance.push({ id: 'ws' + Date.now() + Math.random().toString(36).slice(2,6), date: today, type: 'work', checkIn: new Date().toISOString(), checkOut: null, note: '' });
+  saveState();
+  showToast('🟢 Příchod zaznamenán');
+  refreshAfterWorkspaceMutation();
+}
+
+function workspaceCheckOut(options = {}) {
+  const ws  = myWorkspace();
+  const rec = ws.attendance.find(a => a.date === todayDateStr());
+  if (!rec || rec.checkOut) return;
+  rec.type = rec.type || 'work';
+  rec.checkOut = new Date().toISOString();
+  saveState();
+  showToast('🔴 Odchod zaznamenán');
+  refreshAfterWorkspaceMutation();
+  if (!options.skipHandoverPrompt) openShiftHandoverPrompt();
+}
+
+// ── PŘEDÁNÍ SMĚNY ────────────────────────────────────
+function openShiftHandoverPrompt() {
+  if (!currentUser) return;
+  openModal('🔄 Předání směny (volitelné)', \`
+    <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5">
+      Krátká zpráva pro další směnu – co se dělalo, kde stojíš, na co dát pozor.
+      Můžeš nechat prázdné a kliknout Přeskočit.
+    </div>
+    <textarea class="input" id="handover-text" rows="5"
+      placeholder="např. „Stencil 3/0042 – dokončeno 80 ks, zbytek na stolu u stanice 2. Dnešní pasta dochází."
+      style="resize:vertical;min-height:120px"></textarea>
+  \`, [
+    { label: '⏭️ Přeskočit', cls: 'btn-ghost',   action: 'closeModal()' },
+    { label: '✔ Předat',     cls: 'btn-primary', action: 'saveShiftHandover()' },
+  ]);
+  setTimeout(() => document.getElementById('handover-text')?.focus(), 50);
+}
+
+function saveShiftHandover() {
+  const text = document.getElementById('handover-text')?.value?.trim();
+  if (!text) { closeModal(); return; }
+  SHIFT_HANDOVERS.push({
+    id: 'sh' + Date.now() + Math.random().toString(36).slice(2,6),
+    userId: currentUser.id,
+    userName: currentUser.name,
+    role: currentUser.role,
+    text,
+    createdAt: new Date().toISOString(),
+    viewedBy: [currentUser.id],
+  });
+  saveState();
+  closeModal();
+  showToast('✅ Předání uloženo pro další směnu');
+}
+
+function unseenHandovers(limit = 5) {
+  const uid = currentUser?.id;
+  if (!uid) return [];
+  return SHIFT_HANDOVERS
+    .filter(h => !Array.isArray(h.viewedBy) || !h.viewedBy.includes(uid))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+}
+
+function markHandoverSeen(id) {
+  const h = SHIFT_HANDOVERS.find(x => x.id === id);
+  if (!h || !currentUser) return;
+  if (!Array.isArray(h.viewedBy)) h.viewedBy = [];
+  if (!h.viewedBy.includes(currentUser.id)) h.viewedBy.push(currentUser.id);
+  saveState();
+  if (document.getElementById('page-dashboard')?.classList.contains('active')) renderDashboard();
+}
+
+function shiftHandoverWidgetHtml() {
+  const list = unseenHandovers(5);
+  if (list.length === 0) return '';
+  return \`
+    <div class="card" style="border-left:3px solid var(--blue,#60a5fa);margin-bottom:10px">
+      <div class="card-title">🔄 Předání z poslední směny</div>
+      \${list.map(h => \`
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);position:relative">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+            <div style="font-size:12px;color:var(--text);font-weight:700">
+              \${escapeHtml(h.userName)} <span style="color:var(--text3);font-weight:400">· \${ROLE_LABELS[h.role] || h.role}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:11px;color:var(--text3)">\${formatDateTime(h.createdAt)}</span>
+              <button class="btn btn-ghost btn-sm" style="padding:2px 6px;font-size:11px"
+                title="Označit jako přečtené"
+                onclick="markHandoverSeen('\${escapeHtml(h.id)}')">✓</button>
+            </div>
+          </div>
+          <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.45">\${escapeHtml(h.text)}</div>
+        </div>\`).join('')}
+    </div>\`;
+}
+
+function refreshAfterWorkspaceMutation() {
+  if (document.getElementById('page-dashboard')?.classList.contains('active')) renderDashboard();
+  if (document.getElementById('page-workspace')?.classList.contains('active')) renderWorkspaceContent();
+  refreshAttendanceIndicator();
+}
+
+// ── GLOBÁLNÍ VYHLEDÁVÁNÍ (Cmd/Ctrl + K) ───────────────
+let _globalSearchSelectedIdx = 0;
+let _globalSearchResults = [];
+
+function globalSearch(q) {
+  const query = String(q || '').toLowerCase().trim();
+  if (!query) return [];
+  const results = [];
+
+  visibleOrders().forEach(o => {
+    const haystack = \`\${o.number} \${o.name} \${o.customer || ''} \${o.purchaseOrderNumber || ''} \${o.stencilNumber || ''}\`.toLowerCase();
+    if (haystack.includes(query)) {
+      results.push({
+        type: 'order',
+        icon: '📋',
+        label: \`\${o.number} · \${o.name}\`,
+        sublabel: o.customer || 'Bez zákazníka',
+        action: \`closeGlobalSearch(); openOrder('\${o.id.replace(/'/g, "\\\\'")}')\`,
+      });
+    }
+  });
+
+  visibleIssues().filter(i => !i.resolved).forEach(i => {
+    if ((i.description || '').toLowerCase().includes(query) ||
+        (i.reportedBy || '').toLowerCase().includes(query)) {
+      const order = ORDERS.find(o => o.id === i.orderId);
+      results.push({
+        type: 'issue',
+        icon: '⚠️',
+        label: (i.description || '').slice(0, 60),
+        sublabel: \`\${order ? order.number + ' · ' : ''}\${i.reportedBy || ''}\`,
+        action: \`closeGlobalSearch(); navigateTo('issues')\`,
+      });
+    }
+  });
+
+  PROD_NOTES.forEach(n => {
+    if ((n.text || '').toLowerCase().includes(query)) {
+      const order = ORDERS.find(o => o.id === n.orderId);
+      if (order && !orderVisibleToCurrentUser(order)) return;
+      results.push({
+        type: 'note',
+        icon: '📝',
+        label: (n.text || '').slice(0, 60),
+        sublabel: \`\${order ? order.number + ' · ' : ''}\${n.author || ''}\`,
+        action: order ? \`closeGlobalSearch(); openOrder('\${order.id.replace(/'/g, "\\\\'")}')\` : 'closeGlobalSearch()',
+      });
+    }
+  });
+
+  (USERS || []).forEach(u => {
+    const haystack = \`\${u.name} \${u.login}\`.toLowerCase();
+    if (haystack.includes(query)) {
+      results.push({
+        type: 'user',
+        icon: u.avatar || '👤',
+        label: u.name,
+        sublabel: \`\${u.login} · \${ROLE_LABELS[u.role] || u.role}\`,
+        action: \`closeGlobalSearch(); \${can('app_settings') ? "switchAdminTab('users');navigateTo('admin')" : "navigateTo('profile')"}\`,
+      });
+    }
+  });
+
+  const ws = myWorkspace();
+  ws.notes.forEach(n => {
+    if ((n.text || '').toLowerCase().includes(query)) {
+      results.push({
+        type: 'mynote',
+        icon: '📒',
+        label: n.text.slice(0, 60),
+        sublabel: \`Moje poznámka · \${NOTE_CATEGORIES[n.category] || n.category}\`,
+        action: \`closeGlobalSearch(); navigateTo('workspace'); switchWorkspaceTab('notes')\`,
+      });
+    }
+  });
+
+  return results.slice(0, 30);
+}
+
+function openGlobalSearch() {
+  _globalSearchSelectedIdx = 0;
+  _globalSearchResults = [];
+  openModal('🔎 Hledat napříč aplikací', \`
+    <input class="input" id="gs-input" placeholder="Zakázka, problém, poznámka, uživatel…"
+      style="font-size:15px;padding:12px"
+      oninput="updateGlobalSearchResults(this.value)"
+      onkeydown="handleGlobalSearchKey(event)">
+    <div id="gs-hint" style="font-size:11px;color:var(--text3);margin-top:6px">
+      Tipy: čísla zakázek, jména, klíčová slova z poznámek · Šipky = pohyb · Enter = otevřít · Esc = zavřít
+    </div>
+    <div id="gs-results" style="margin-top:12px;max-height:50vh;overflow-y:auto"></div>
+  \`, [
+    { label: '✕ Zavřít', cls: 'btn-ghost', action: 'closeGlobalSearch()' },
+  ]);
+  setTimeout(() => document.getElementById('gs-input')?.focus(), 50);
+}
+
+function closeGlobalSearch() {
+  closeModal();
+  _globalSearchResults = [];
+}
+
+function updateGlobalSearchResults(q) {
+  _globalSearchResults = globalSearch(q);
+  _globalSearchSelectedIdx = 0;
+  renderGlobalSearchResults();
+}
+
+function renderGlobalSearchResults() {
+  const el = document.getElementById('gs-results');
+  if (!el) return;
+  if (_globalSearchResults.length === 0) {
+    el.innerHTML = \`<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Začni psát pro vyhledávání…</div>\`;
+    return;
+  }
+  el.innerHTML = _globalSearchResults.map((r, i) => \`
+    <div class="gs-row" data-idx="\${i}"
+      style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:8px;cursor:pointer;
+             \${i === _globalSearchSelectedIdx ? 'background:rgba(212,160,23,.15);border:1px solid var(--gold)' : 'border:1px solid transparent'}"
+      onclick="runGlobalSearchResult(\${i})"
+      onmouseenter="_globalSearchSelectedIdx=\${i};renderGlobalSearchResults()">
+      <div style="font-size:20px">\${r.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escapeHtml(r.label)}</div>
+        <div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escapeHtml(r.sublabel || '')}</div>
+      </div>
+      <span class="role-badge" style="font-size:9px;text-transform:uppercase">\${r.type}</span>
+    </div>\`).join('');
+}
+
+function runGlobalSearchResult(index) {
+  const result = _globalSearchResults[Number(index)];
+  if (!result) return;
+  runGlobalSearchAction(result.action);
+}
+
+function globalSearchArg(value) {
+  return String(value || '').replace(/\\\\'/g, "'").replace(/\\\\\\\\/g, "\\\\");
+}
+
+function runGlobalSearchAction(action) {
+  const commands = String(action || '')
+    .split(';')
+    .map(cmd => cmd.trim())
+    .filter(Boolean);
+
+  commands.forEach(command => {
+    if (command === 'closeGlobalSearch()') {
+      closeGlobalSearch();
+      return;
+    }
+
+    let match = command.match(/^openOrder\\('([^']*)'\\)$/);
+    if (match) {
+      openOrder(globalSearchArg(match[1]));
+      return;
+    }
+
+    match = command.match(/^navigateTo\\('([^']*)'\\)$/);
+    if (match) {
+      navigateTo(globalSearchArg(match[1]));
+      return;
+    }
+
+    match = command.match(/^switchAdminTab\\('([^']*)'\\)$/);
+    if (match) {
+      switchAdminTab(globalSearchArg(match[1]));
+      return;
+    }
+
+    match = command.match(/^switchWorkspaceTab\\('([^']*)'\\)$/);
+    if (match) {
+      switchWorkspaceTab(globalSearchArg(match[1]));
+    }
+  });
+}
+
+function handleGlobalSearchKey(e) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _globalSearchSelectedIdx = Math.min(_globalSearchSelectedIdx + 1, _globalSearchResults.length - 1);
+    renderGlobalSearchResults();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _globalSearchSelectedIdx = Math.max(_globalSearchSelectedIdx - 1, 0);
+    renderGlobalSearchResults();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const r = _globalSearchResults[_globalSearchSelectedIdx];
+    if (r) runGlobalSearchAction(r.action);
+  } else if (e.key === 'Escape') {
+    closeGlobalSearch();
+  }
+}
+
+// Cmd+K / Ctrl+K opens global search
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    if (!currentUser) return;
+    e.preventDefault();
+    openGlobalSearch();
+  }
+});
+
+// ── TOPBAR ATTENDANCE INDICATOR ───────────────────────
+function refreshAttendanceIndicator() {
+  const el = document.getElementById('tbar-attendance');
+  if (!el || !currentUser) return;
+  const rec = todayAttendance();
+  const meta = attendanceTypeMeta(rec?.type);
+  if (rec && rec.type && rec.type !== 'work') {
+    el.style.display = '';
+    el.textContent = \`\${meta.icon} \${meta.label}\`;
+    el.style.background = 'rgba(125,214,210,.12)';
+    el.style.color = meta.color;
+    el.title = \`\${meta.label} · klikni pro Můj prostor\`;
+  } else if (rec?.checkIn && !rec.checkOut) {
+    el.style.display = '';
+    el.textContent = '🟢 ' + formatTime(rec.checkIn);
+    el.style.background = 'rgba(34,197,94,.18)';
+    el.style.color = 'var(--green)';
+    el.title = 'Přihlášen od ' + formatTime(rec.checkIn) + ' · klikni pro Můj prostor';
+  } else if (rec?.checkIn && rec?.checkOut) {
+    el.style.display = '';
+    el.textContent = '✅ Hotovo';
+    el.style.background = 'rgba(153,153,153,.15)';
+    el.style.color = 'var(--text2)';
+    el.title = 'Dnešní směna ukončena';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── DASHBOARD WIDGET ──────────────────────────────────
+function dashboardWorkspaceWidgetHtml() {
+  if (!currentUser) return '';
+  const ws       = myWorkspace();
+  const todayRec = todayAttendance();
+  const todayMeta = attendanceTypeMeta(todayRec?.type);
+  const todayMins = attendanceMinutes(todayRec);
+  const noteCount  = ws.notes.length;
+  const boardCount = ws.myBoards.length;
+  const monthCount = ws.attendance.filter(a => a.date.slice(0, 7) === todayDateStr().slice(0, 7)).length;
+
+  return \`
+    <div class="workspace-banner">
+      <div class="workspace-banner-main workspace-banner-clickable" role="button" tabindex="0"
+        onclick="openWorkspace('notes')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWorkspace('notes')}">
+        <span class="workspace-banner-icon">📒</span>
+        <div>
+          <div class="workspace-banner-title">Můj prostor</div>
+          <div class="workspace-banner-sub">
+            📝 \${noteCount} pozn. · 🔢 \${boardCount} zázn. · 📅 \${monthCount} dní v kalendáři
+          </div>
+        </div>
+      </div>
+      <div class="workspace-banner-status workspace-banner-clickable" style="border-color:\${todayMeta.color};"
+        role="button" tabindex="0" onclick="openWorkspace('attendance')"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWorkspace('attendance')}">
+        <span style="color:\${todayMeta.color}">\${todayRec ? todayMeta.icon : '📅'}</span>
+        <div>
+          <strong>\${todayRec ? todayMeta.label : 'Dnes nezapsáno'}</strong>
+          <em>\${todayRec ? \`\${attendanceRangeLabel(todayRec)}\${todayMins !== null ? \` · \${Math.floor(todayMins/60)}h \${todayMins%60}m\` : ''}\` : 'Zapiš práci, lékaře nebo volno'}</em>
+        </div>
+      </div>
+      <div class="workspace-banner-actions">
+        <button class="btn btn-primary btn-sm" onclick="openAttendanceEntryModal('\${todayDateStr()}')">📅 Zapsat den</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWorkspace('attendance')">Kalendář</button>
+        <button class="btn btn-ghost btn-sm" onclick="openWorkspace('notes')">Moje práce</button>
+      </div>
+    </div>\`;
+}
+
+// ── HELPERS (workspace) ───────────────────────────────
+function formatTime(iso) {
+  if (!iso) return '–';
+  return new Date(iso).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── PROFILE ───────────────────────────────────────────
+function renderProfile() {
+  const u = currentUser;
+  const passkey = passkeyForCurrentUser();
+  const passkeyAvailable = passkeySupported();
+  const startOptions = startPageOptions();
+  const selectedStartPage = preferredStartPage();
+  document.getElementById('page-profile').innerHTML = \`
+    <div style="padding:12px 0 8px;font-size:16px;font-weight:800;color:var(--gold)">👤 Profil</div>
+    <div class="card" style="text-align:center;padding:28px">
+      <div style="font-size:48px;margin-bottom:10px">\${escapeHtml(u.avatar)}</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">\${escapeHtml(u.name)}</div>
+      <span class="role-badge role-\${u.role}" style="font-size:12px">\${ROLE_LABELS[u.role]}</span>
+      <div style="margin-top:14px;font-size:12px;color:var(--text2)">Login: <b>\${escapeHtml(u.login)}</b></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔐 Biometrie / Passkey</div>
+      <div class="profile-passkey">
+        <div>
+          <strong>\${passkey ? 'Zapnuto na tomto zařízení' : 'Není zapnuto'}</strong>
+          <span>
+            \${passkey
+              ? \`Vytvořeno \${escapeHtml(formatDateTime(passkey.createdAt))}. Přihlášení použije Face ID, Touch ID, Windows Hello nebo PIN zařízení.\`
+              : passkeyAvailable
+                ? 'Po zapnutí se budete moct přihlásit bez hesla na tomto telefonu nebo počítači.'
+                : 'Tento prohlížeč nebo adresa nepodporuje WebAuthn. Použijte HTTPS, localhost a podporované zařízení.'}
+          </span>
+        </div>
+        \${passkey
+          ? \`<button class="btn btn-ghost" onclick="removeCurrentUserPasskey()">Vypnout</button>\`
+          : \`<button class="btn btn-teal" \${passkeyAvailable ? '' : 'disabled'} onclick="registerCurrentUserPasskey()">Zapnout biometrii</button>\`}
+      </div>
+      <div class="profile-passkey-note">
+        Otisk prstu ani obličej se do aplikace neukládá. EZOP4 si lokálně pamatuje jen ID passkey pro tento prohlížeč.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌓 Vzhled aplikace</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+        Volba se uloží pro tento prohlížeč.
+      </div>
+      <div class="display-mode-grid theme-mode-grid">
+        \${[
+          { id:'dark', label:'Tmavý režim', desc:'Doporučený pro výrobu, směny a dotykové obrazovky.' },
+          { id:'light', label:'Světlý režim', desc:'Čitelný na denním světle a v kanceláři.' },
+        ].map(mode => \`
+          <button class="display-mode-card \${getAppTheme() === mode.id ? 'active' : ''}" onclick="setAppTheme('\${mode.id}')">
+            <strong>\${mode.label}</strong>
+            <span>\${mode.desc}</span>
+          </button>
+        \`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏁 Spuštění aplikace</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">
+        Vyberte stránku, která se otevře hned po přihlášení na tomto zařízení.
+      </div>
+      <select class="input" onchange="updateStartPagePreference(this.value)">
+        \${startOptions.map(item => \`
+          <option value="\${escapeHtml(item.id)}" \${item.id === selectedStartPage ? 'selected' : ''}>\${escapeHtml(item.label)}</option>
+        \`).join('')}
+      </select>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">
+        Výchozí návrh: operátor → Zakázky, mistr/vedení → Problémy.
+      </div>
+    </div>
+
+    \${u.role === 'admin' ? \`
+    <div class="card">
+      <div class="card-title">🔐 Oprávnění role</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px">
+        Kompletní seznam oprávnění je dostupný jen adminovi.
+      </div>
+      \${[
+        ['view_orders','Zobrazení zakázek'],
+        ['edit_qty','Zadávání počtů kusů'],
+        ['change_status','Změna stavu stanoviště'],
+        ['create_order','Vytváření zakázek'],
+        ['delete_order','Mazání zakázek'],
+        ['manage_order_stations','Správa a pořadí stanovišť'],
+        ['edit_order_info','Úprava údajů zakázky'],
+        ['edit_product_memory','Programy a fotky výrobku'],
+        ['manage_scrap','Správa zmetků'],
+        ['block_order','Blokování zakázek'],
+        ['view_kpi','Přístup ke KPI'],
+        ['manage_users','Správa uživatelů'],
+        ['app_settings','Nastavení aplikace'],
+      ].map(([action, label]) => \`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:13px;color:var(--text)">\${label}</span>
+          <span style="font-size:13px">\${can(action) ? '✅' : '🚫'}</span>
+        </div>\`).join('')}
+    </div>
+    \` : ''}
+
+    <div style="margin-top:8px">
+      <button class="btn btn-danger" style="width:100%" onclick="doLogout()">🚪 Odhlásit se</button>
+    </div>
+  \`;
+}
+
+// ── MODALS ────────────────────────────────────────────
+function openModal(title, body, actions) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-actions').innerHTML = actions.map(a =>
+    \`<button class="btn \${a.cls}" onclick="\${a.action}">\${a.label}</button>\`
+  ).join('');
+  document.getElementById('modal-overlay').classList.add('visible');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('visible');
+}
+
+// ── HISTORICKÉ ÚDAJE PRO AUTOCOMPLETE ────────────────
+function knownCustomers() {
+  return [...new Set(ORDERS.map(o => o.customer).filter(Boolean))].sort();
+}
+function knownProducts(customer) {
+  return [...new Set(
+    ORDERS.filter(o => !customer || o.customer === customer).map(o => o.name).filter(Boolean)
+  )].sort();
+}
+
+function refreshProductDatalist(customerValue) {
+  const dl = document.getElementById('dl-products');
+  if (!dl) return;
+  const products = knownProducts(customerValue);
+  // Build options safely via DOM API to prevent XSS
+  dl.replaceChildren(...products.map(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    return opt;
+  }));
+}
+
+function productKey(customer, name) {
+  return \`\${String(customer || '').trim().toLowerCase()}::\${String(name || '').trim().toLowerCase()}\`;
+}
+
+function productMemoryForOrder(order) {
+  if (!order) return null;
+  const key = productKey(order.customer, order.name);
+  if (!key.replace('::', '')) return null;
+  PRODUCT_MEMORY[key] = PRODUCT_MEMORY[key] || {
+    customer: order.customer || '',
+    name: order.name || '',
+    stationPrograms: {},
+    photoDataUrl: '',
+    reusableNotes: [],
+    updatedAt: '',
+  };
+  PRODUCT_MEMORY[key].reusableNotes = Array.isArray(PRODUCT_MEMORY[key].reusableNotes)
+    ? PRODUCT_MEMORY[key].reusableNotes.map(normalizeReusableProductNote).filter(Boolean)
+    : [];
+  return PRODUCT_MEMORY[key];
+}
+
+function applyProductMemoryToOrder(order) {
+  const memory = productMemoryForOrder(order);
+  if (!order || !memory || order.productionType !== 'repeat') return;
+  order.stationPrograms = { ...(memory.stationPrograms || {}), ...(order.stationPrograms || {}) };
+  if (!order.productPhotoDataUrl && memory.photoDataUrl) order.productPhotoDataUrl = memory.photoDataUrl;
+}
+
+function updateProductMemory(order) {
+  const memory = productMemoryForOrder(order);
+  if (!order || !memory) return;
+  memory.customer = order.customer || memory.customer || '';
+  memory.name = order.name || memory.name || '';
+  memory.stationPrograms = { ...(memory.stationPrograms || {}), ...(order.stationPrograms || {}) };
+  memory.reusableNotes = Array.isArray(memory.reusableNotes)
+    ? memory.reusableNotes.map(normalizeReusableProductNote).filter(Boolean)
+    : [];
+  if (order.productPhotoDataUrl) memory.photoDataUrl = order.productPhotoDataUrl;
+  memory.updatedAt = new Date().toISOString();
+}
+
+function normalizeAppData() {
+  PROD_NOTES = PROD_NOTES.map(normalizeProductionNote).filter(Boolean);
+  Object.values(PRODUCT_MEMORY || {}).forEach(memory => {
+    if (!memory || typeof memory !== 'object') return;
+    memory.stationPrograms = memory.stationPrograms || {};
+    memory.reusableNotes = Array.isArray(memory.reusableNotes)
+      ? memory.reusableNotes.map(normalizeReusableProductNote).filter(Boolean)
+      : [];
+  });
+  ORDERS.forEach(order => {
+    order.purchaseOrderNumber ??= '';
+    order.stencilNumber = normalizeLegacyStencilNumber(order.stencilNumber || '');
+    order.stationPrograms = order.stationPrograms || {};
+    order.productPhotoDataUrl ??= '';
+    order.documents = Array.isArray(order.documents) ? order.documents : [];
+    order.readiness = normalizeOrderReadiness(order);
+    if (order.blocked && typeof order.blocked === 'object') {
+      order.blocked.active = !!order.blocked.active;
+      order.blocked.category = BLOCK_CATEGORIES[order.blocked.category] ? order.blocked.category : 'other';
+      order.blocked.reason = String(order.blocked.reason || '');
+    }
+    order.stations = Array.isArray(order.stations) ? order.stations : [];
+    order.stations.forEach(st => {
+      st.stId = Number(st.stId);
+      st.status ||= 'waiting';
+      st.qtyOk = positiveQty(st.qtyOk);
+      st.qtyRework = positiveQty(st.qtyRework);
+      st.qtyScrap = positiveQty(st.qtyScrap);
+      st.qtyReceived = positiveQty(st.qtyReceived);
+      st.queueRank = positiveQty(st.queueRank);
+      st.workerUserId = String(st.workerUserId || '');
+      st.workerLogin = String(st.workerLogin || '');
+      st.workerName = String(st.workerName || '');
+      st.workerRole = ROLE_LABELS[st.workerRole] ? st.workerRole : '';
+      st.workStartedAt = st.workStartedAt || null;
+      st.workPausedAt = st.workPausedAt || null;
+      st.workPauseReason = String(st.workPauseReason || '');
+      st.workCompletedAt = st.workCompletedAt || null;
+    });
+    syncOrderStationFlow(order);
+    syncMaterialReadinessFromWarehouse(order, { touch: false });
+    applyProductMemoryToOrder(order);
+  });
+}
+
+const PROD_TYPES = {
+  new:      { label:'Nová výroba',   icon:'🆕', color:'#22c55e' },
+  repeat:   { label:'Opakovaná',     icon:'🔁', color:'#3b82f6' },
+  revision: { label:'Revize výrobku',icon:'📝', color:'#f59e0b' },
+};
+
+let pendingDocs = [];   // dočasné dokumenty pro nový formulář
+const DEFAULT_STATIONS = [1,2,3,4,5,6,7,8,9];
+let pickedStations = DEFAULT_STATIONS.slice();
+
+function newOrderModal() {
+  if (!can('create_order')) {
+    showToast('🚫 Nemáte oprávnění vytvořit zakázku.');
+    return;
+  }
+  pendingDocs = [];
+  pickedStations = DEFAULT_STATIONS.slice();
+  const today = new Date().toISOString().slice(0,10);
+
+  openModal('Nová zakázka', \`
+    <div style="background:var(--card2);border:1px solid var(--gold);border-radius:10px;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Číslo zakázky</div>
+        <div style="font-size:20px;font-weight:800;color:var(--gold);font-family:'SF Mono',Menlo,monospace;letter-spacing:1.5px">\${NEXT_ORDER_CODE}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Datum objednání</div>
+        <div style="font-size:13px;color:var(--text);font-weight:600">\${formatDate(today)} (dnes)</div>
+      </div>
+    </div>
+
+    <datalist id="dl-customers">\${knownCustomers().map(c=>\`<option value="\${escapeHtml(c)}">\`).join('')}</datalist>
+    <datalist id="dl-products">\${knownProducts().map(p=>\`<option value="\${escapeHtml(p)}">\`).join('')}</datalist>
+
+    <div class="input-group">
+      <div class="input-label">Zákazník</div>
+      <input class="input" id="nm-customer" list="dl-customers" placeholder="začněte psát…"
+        oninput="refreshProductDatalist(this.value)">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Číslo objednávky</div>
+      <input class="input" id="nm-po" placeholder="volitelné, např. OBJ-2026-001">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Název výrobku</div>
+      <input class="input" id="nm-name" list="dl-products" placeholder="např. Řídicí deska RD-100">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="input-group">
+        <div class="input-label">Počet kusů</div>
+        <input class="input" id="nm-qty" type="number" min="1" placeholder="100">
+      </div>
+      <div class="input-group">
+        <div class="input-label">Termín dodání</div>
+        <input class="input" id="nm-due" type="date">
+      </div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Priorita</div>
+      <select class="input" id="nm-priority">
+        <option value="low">Nízká</option>
+        <option value="normal" selected>Normální</option>
+        <option value="high">Vysoká</option>
+        <option value="urgent">Urgentní</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Technologie pájení</div>
+      <div style="display:flex;gap:8px" id="nm-tech-row">
+        <button type="button" class="action-btn" data-tech="bezolovo" onclick="pickTech('bezolovo')"
+          style="flex:1;justify-content:center;border-color:var(--gold);color:var(--gold);background:rgba(212,160,23,.12)">⚡ BEZOLOVO</button>
+        <button type="button" class="action-btn" data-tech="olovo" onclick="pickTech('olovo')"
+          style="flex:1;justify-content:center">🔧 OLOVO</button>
+      </div>
+      <input type="hidden" id="nm-tech" value="bezolovo">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Typ výroby</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="nm-pt-row">
+        \${Object.entries(PROD_TYPES).map(([k,v],i) => \`
+          <button type="button" class="action-btn" data-pt="\${k}" onclick="pickProdType('\${k}')"
+            style="flex:1;min-width:90px;justify-content:center;
+              \${i===0?\`border-color:\${v.color};color:\${v.color};background:\${v.color}22\`:''}">\${v.icon} \${v.label}</button>
+        \`).join('')}
+      </div>
+      <input type="hidden" id="nm-pt" value="new">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">Číslo planžety (stencil)</div>
+      <input class="input" id="nm-stencil" placeholder="např. 3/0001" inputmode="numeric" pattern="\\\\d+/\\\\d{4}">
+      <div style="font-size:10px;color:var(--text3);margin-top:5px">
+        Formát: číslo lomítko čtyři číslice, např. 3/0001.
+      </div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">🏭 Stanoviště výroby (\${pickedStations.length}/\${STATIONS.length})</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:6px">
+        Vyberte, kterými stanovišti zakázka projde. Defaultně všechna.
+      </div>
+      <div id="nm-stations" style="display:flex;flex-wrap:wrap;gap:6px">
+        \${STATIONS.map(st => {
+          const on = pickedStations.includes(st.id);
+          return \`<button type="button" class="action-btn" data-st="\${st.id}"
+            onclick="toggleStation(\${st.id})"
+            style="font-size:11px;padding:6px 10px;\${on?'border-color:var(--gold);color:var(--gold);background:rgba(212,160,23,.12)':''}">
+            \${st.icon} \${st.name}
+          </button>\`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">📎 Dokumenty k výrobku</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+        \${[
+          ['bom',     '📊 BOM'],
+          ['drawing', '📐 Osazovací výkres'],
+          ['procedure','🧾 Výrobní postup'],
+          ['paste',   '🎯 GBR data pasty'],
+          ['other',   '📄 Ostatní'],
+        ].map(([k,l]) => \`
+          <label class="action-btn" style="cursor:pointer;font-size:11px;justify-content:center">
+            \${l}
+            <input type="file" style="display:none"
+              accept=".pdf,.xlsx,.xls,.csv,.zip,.gbr,.gbx,.txt,.docx,.dwg,image/*"
+              onchange="handleDocPick('\${k}', this.files[0])">
+          </label>\`).join('')}
+      </div>
+      <div id="nm-doc-list" style="font-size:11px;color:var(--text2)">
+        Zatím žádné dokumenty nepřipojeny.
+      </div>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Vytvořit zakázku', action:'createOrder()', cls:'btn-primary' },
+  ]);
+
+  // Předvyplnit termín na +14 dní
+  const due = new Date(); due.setDate(due.getDate()+14);
+  document.getElementById('nm-due').value = due.toISOString().slice(0,10);
+}
+
+function toggleStation(stId) {
+  if (pickedStations.includes(stId)) {
+    pickedStations = pickedStations.filter(x => x !== stId);
+  } else {
+    pickedStations = [...pickedStations, stId].sort((a,b) => a-b);
+  }
+  // Re-render station picker block in place
+  const wrap = document.getElementById('nm-stations');
+  if (wrap) {
+    wrap.innerHTML = STATIONS.map(st => {
+      const on = pickedStations.includes(st.id);
+      return \`<button type="button" class="action-btn" data-st="\${st.id}"
+        onclick="toggleStation(\${st.id})"
+        style="font-size:11px;padding:6px 10px;\${on?'border-color:var(--gold);color:var(--gold);background:rgba(212,160,23,.12)':''}">
+        \${st.icon} \${st.name}
+      </button>\`;
+    }).join('');
+    const lbl = wrap.previousElementSibling?.previousElementSibling;
+    if (lbl) lbl.textContent = \`🏭 Stanoviště výroby (\${pickedStations.length}/\${STATIONS.length})\`;
+  }
+}
+
+function pickTech(tech) {
+  document.getElementById('nm-tech').value = tech;
+  document.querySelectorAll('#nm-tech-row [data-tech]').forEach(btn => {
+    const active = btn.dataset.tech === tech;
+    if (active) {
+      btn.style.borderColor = 'var(--gold)';
+      btn.style.color = 'var(--gold)';
+      btn.style.background = 'rgba(212,160,23,.12)';
+    } else {
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.style.background = '';
+    }
+  });
+}
+
+function pickProdType(pt) {
+  document.getElementById('nm-pt').value = pt;
+  document.querySelectorAll('#nm-pt-row [data-pt]').forEach(btn => {
+    const k = btn.dataset.pt;
+    if (k === pt) {
+      const c = PROD_TYPES[k].color;
+      btn.style.borderColor = c;
+      btn.style.color = c;
+      btn.style.background = c + '22';
+    } else {
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.style.background = '';
+    }
+  });
+}
+
+function handleDocPick(kind, file) {
+  if (!file) return;
+  pendingDocs.push({ name:file.name, type:kind, size:file.size });
+  renderPendingDocs();
+}
+
+function renderPendingDocs() {
+  const el = document.getElementById('nm-doc-list');
+  if (!el) return;
+  if (pendingDocs.length === 0) {
+    el.innerHTML = '<span style="color:var(--text3)">Zatím žádné dokumenty nepřipojeny.</span>';
+    return;
+  }
+  el.innerHTML = pendingDocs.map((d,i) => \`
+    <div style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:4px">
+      <span style="font-size:14px">\${docIcon(d.type)}</span>
+      <span style="flex:1;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">\${escapeHtml(d.name)}</span>
+      <span style="font-size:10px;color:var(--text3)">\${(d.size/1024).toFixed(0)} kB</span>
+      <button class="btn btn-ghost btn-sm" style="padding:2px 8px" onclick="pendingDocs.splice(\${i},1);renderPendingDocs()">✕</button>
+    </div>\`).join('');
+}
+
+function docIcon(t) {
+  return { bom:'📊', drawing:'📐', procedure:'🧾', paste:'🎯', other:'📄' }[t] || '📎';
+}
+function docTypeLabel(t) {
+  return { bom:'BOM', drawing:'Osaz. výkres', procedure:'Výrobní postup', paste:'GBR pasta', other:'Dokument' }[t] || t;
+}
+
+function createOrder() {
+  const name = document.getElementById('nm-name').value.trim();
+  const customer = document.getElementById('nm-customer').value.trim();
+  const stencil = document.getElementById('nm-stencil').value.trim();
+  if (!customer) { showToast('⚠️ Vyplňte zákazníka'); return; }
+  if (!name)     { showToast('⚠️ Vyplňte název výrobku'); return; }
+  if (!validStencilNumber(stencil)) { showToast('⚠️ Číslo planžety musí být ve formátu 3/0001'); return; }
+  const num = String(NEXT_ORDER_CODE++);
+  const order = {
+    id: 'o' + Date.now(),
+    number: num,
+    name,
+    customer,
+    purchaseOrderNumber: document.getElementById('nm-po').value.trim(),
+    priority: document.getElementById('nm-priority').value,
+    qty: parseInt(document.getElementById('nm-qty').value) || 1,
+    due: document.getElementById('nm-due').value || '',
+    orderDate: new Date().toISOString().slice(0,10),
+    technology: document.getElementById('nm-tech').value,
+    productionType: document.getElementById('nm-pt').value,
+    stencilNumber: stencil,
+    stationPrograms: {},
+    productPhotoDataUrl: '',
+    documents: [...pendingDocs],
+    readiness: {},
+    stations: pickedStations.map(stId => ({
+      stId, status:'waiting', qtyOk:0, qtyRework:0, qtyScrap:0, qtyReceived:0,
+    })),
+  };
+  applyProductMemoryToOrder(order);
+  order.readiness = normalizeOrderReadiness(order);
+  ORDERS.push(order);
+  pendingDocs = [];
+  pickedStations = DEFAULT_STATIONS.slice();
+  closeModal();
+  showToast('✅ Zakázka č. ' + num + ' vytvořena');
+  renderOrders();
+}
+
+function editOrderModal(orderId) {
+  editOrderInfoModal(orderId);
+  return;
+  const o = ORDERS.find(x=>x.id===orderId);
+  if (!o) return;
+  openModal('Upravit zakázku', \`
+    <div class="input-group">
+      <div class="input-label">Název</div>
+      <input class="input" id="eo-name" value="\${o.name}">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Zákazník</div>
+      <input class="input" id="eo-customer" value="\${o.customer}">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Priorita</div>
+      <select class="input" id="eo-priority">
+        \${['low','normal','high','urgent'].map(p=>\`<option value="\${p}" \${o.priority===p?'selected':''}>\${priorityLabel(p)}</option>\`).join('')}
+      </select>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Uložit', action:\`saveEditOrder('\${orderId}')\`, cls:'btn-primary' },
+  ]);
+}
+
+function saveEditOrder(id) {
+  const o = ORDERS.find(x=>x.id===id);
+  if (!o) return;
+  o.name = document.getElementById('eo-name').value;
+  o.customer = document.getElementById('eo-customer').value;
+  o.priority = document.getElementById('eo-priority').value;
+  closeModal(); showToast('✅ Zakázka uložena'); renderAdmin();
+}
+
+function stationAccessEditorHtml(prefix, selectedIds = []) {
+  const selected = new Set((selectedIds || []).map(Number));
+  return \`<div class="input-group">
+    <div class="input-label">Přiřazená stanoviště pro operátora</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+      \${STATIONS.map(st => \`
+        <label style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:9px 10px;font-size:12px;color:var(--text)">
+          <input type="checkbox" class="\${prefix}-station" value="\${st.id}" \${selected.has(st.id) ? 'checked' : ''}>
+          <span>\${st.icon} \${escapeHtml(st.name)}</span>
+        </label>
+      \`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-top:6px">
+      Platí hlavně pro roli Operátor. Mistr, TPV, vedení a admin vidí všechna stanoviště.
+    </div>
+  </div>\`;
+}
+
+function readStationAccess(prefix) {
+  return [...document.querySelectorAll(\`.\${prefix}-station:checked\`)]
+    .map(input => Number(input.value))
+    .filter(id => Number.isFinite(id) && id > 0);
+}
+
+function newUserModal() {
+  openModal('Nový uživatel', \`
+    \${accountModeNoticeHtml('modal')}
+    <div class="input-group">
+      <div class="input-label">Celé jméno</div>
+      <input class="input" id="nu-name" placeholder="Jan Novák">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Login (uživatelské jméno)</div>
+      <input class="input" id="nu-login" placeholder="jnovak">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Dočasné heslo</div>
+      <input class="input" id="nu-pass" type="password" placeholder="min. 8 znaků" autocomplete="new-password">
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">
+        Pro nové lokální účty nepoužívejte demo heslo 1234. Heslo se uloží lokálně jako hash a neposílá se do GitHubu ani do cloudu.
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Role</div>
+      <select class="input" id="nu-role">
+        \${Object.entries(ROLE_LABELS).map(([r,l])=>\`<option value="\${r}">\${l}</option>\`).join('')}
+      </select>
+    </div>
+    \${stationAccessEditorHtml('nu')}
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Vytvořit', action:'createUser()', cls:'btn-primary' },
+  ]);
+}
+
+async function createUser() {
+  const name = document.getElementById('nu-name').value.trim();
+  const login = normalizeLogin(document.getElementById('nu-login').value);
+  if (!name || !login) { showToast('⚠️ Vyplňte jméno a login'); return; }
+  if (USERS.find(u=>normalizeLogin(u.login)===login)) { showToast('⚠️ Login již existuje'); return; }
+  const role = document.getElementById('nu-role').value;
+  const colors = { admin:'#ef4444', dispatcher:'#3b82f6', tpv:'#a855f7', management:'#22c55e', operator:'#6b7280' };
+  const password = document.getElementById('nu-pass').value;
+  const passwordError = localPasswordPolicyError(password);
+  if (passwordError) { showToast('⚠️ ' + passwordError); return; }
+  USERS.push({
+    id: 'u' + Date.now(), login,
+    role, name, avatar: '👤', color: colors[role],
+    stationIds: role === 'operator' ? readStationAccess('nu') : [],
+  });
+  await setUserPassword(login, password);
+  autoSave();
+  closeModal(); showToast('✅ Uživatel ' + login + ' vytvořen'); renderAdmin();
+}
+
+function editUserModal(uid) {
+  const u = USERS.find(x=>x.id===uid);
+  if (!u) return;
+  openModal('Upravit uživatele: ' + u.name, \`
+    <div class="input-group">
+      <div class="input-label">Jméno</div>
+      <input class="input" id="eu-name" value="\${escapeHtml(u.name)}">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Login</div>
+      <input class="input" id="eu-login" value="\${escapeHtml(u.login)}">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Nové heslo</div>
+      <input class="input" id="eu-pass" type="password" placeholder="nechte prázdné pro zachování" autocomplete="new-password">
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">Heslo se nezobrazuje zpět a zůstává jen v lokálním úložišti zařízení.</div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">Role</div>
+      <select class="input" id="eu-role">
+        \${Object.entries(ROLE_LABELS).map(([r,l])=>\`<option value="\${r}" \${u.role===r?'selected':''}>\${l}</option>\`).join('')}
+      </select>
+    </div>
+    \${stationAccessEditorHtml('eu', userStationIds(u))}
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Uložit', action:\`saveEditUser('\${uid}')\`, cls:'btn-primary' },
+  ]);
+}
+
+async function saveEditUser(uid) {
+  const u = USERS.find(x=>x.id===uid);
+  if (!u) return;
+  const oldLogin = normalizeLogin(u.login);
+  const newLogin = normalizeLogin(document.getElementById('eu-login').value);
+  if (!newLogin) { showToast('⚠️ Login nesmí být prázdný'); return; }
+  if (USERS.some(x => x.id !== uid && normalizeLogin(x.login) === newLogin)) {
+    showToast('⚠️ Login již existuje');
+    return;
+  }
+  const newPassword = document.getElementById('eu-pass').value;
+  if (newPassword) {
+    const passwordError = localPasswordPolicyError(newPassword);
+    if (passwordError) { showToast('⚠️ ' + passwordError); return; }
+  }
+  u.name  = document.getElementById('eu-name').value;
+  u.login = newLogin;
+  if (newLogin && oldLogin !== newLogin && USER_PASSWORDS[oldLogin] && !USER_PASSWORDS[newLogin]) {
+    USER_PASSWORDS[newLogin] = USER_PASSWORDS[oldLogin];
+    delete USER_PASSWORDS[oldLogin];
+    saveUserPasswords();
+  }
+  if (newPassword) {
+    await setUserPassword(newLogin, newPassword);
+  }
+  u.role  = document.getElementById('eu-role').value;
+  u.stationIds = u.role === 'operator' ? readStationAccess('eu') : [];
+  autoSave();
+  closeModal(); showToast('✅ Uživatel uložen'); renderAdmin();
+}
+
+function deleteUserModal(uid) {
+  const u = USERS.find(x=>x.id===uid);
+  if (!u) return;
+  if (currentUser?.id === uid) {
+    showToast('⚠️ Nelze smazat právě přihlášeného uživatele');
+    return;
+  }
+  if (u.role === 'admin' && USERS.filter(x => x.role === 'admin').length <= 1) {
+    showToast('⚠️ Nelze smazat posledního admina');
+    return;
+  }
+
+  openModal('Smazat uživatele', \`
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--red);margin-bottom:6px">Tato akce odebere přístup</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Smazat uživatele <b style="color:var(--text)">\${escapeHtml(u.name)}</b>
+        s loginem <b style="color:var(--text)">\${escapeHtml(u.login)}</b>?
+      </div>
+    </div>
+    <div class="card" style="background:var(--card2);box-shadow:none">
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">
+        Lokální heslo bude odstraněno. Historické login záznamy a audit zůstanou zachované.
+      </div>
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'🗑️ Smazat uživatele', action:\`deleteUser('\${uid}')\`, cls:'btn-danger' },
+  ]);
+}
+
+function deleteUser(uid) {
+  const u = USERS.find(x=>x.id===uid);
+  if (!u) return;
+  if (currentUser?.id === uid) {
+    showToast('⚠️ Nelze smazat právě přihlášeného uživatele');
+    return;
+  }
+  if (u.role === 'admin' && USERS.filter(x => x.role === 'admin').length <= 1) {
+    showToast('⚠️ Nelze smazat posledního admina');
+    return;
+  }
+
+  const login = normalizeLogin(u.login);
+  USERS = USERS.filter(x => x.id !== uid);
+  if (login && USER_PASSWORDS[login]) {
+    delete USER_PASSWORDS[login];
+    saveUserPasswords();
+  }
+  ISSUES.forEach(issue => {
+    issue.targetUserIds = (issue.targetUserIds || []).filter(id => id !== uid);
+    issue.targetLogins = (issue.targetLogins || []).filter(item => normalizeLogin(item) !== login);
+  });
+  writeAudit(
+    'user.deleted',
+    'user',
+    uid,
+    \`\${u.login} · uživatel smazán\`,
+    { id: u.id, login: u.login, role: u.role, name: u.name },
+    null,
+  );
+  autoSave();
+  closeModal();
+  renderAdmin();
+  showToast('🗑️ Uživatel smazán');
+}
+
+function editStationModal(stId) {
+  const st = STATIONS.find(x=>x.id===stId);
+  if (!st) return;
+  openModal('Upravit stanoviště', \`
+    <div class="input-group">
+      <div class="input-label">Název</div>
+      <input class="input" id="est-name" value="\${st.name}">
+    </div>
+    <div class="input-group">
+      <div class="input-label">Ikona (emoji)</div>
+      <input class="input" id="est-icon" value="\${st.icon}">
+    </div>
+  \`, [
+    { label:'Zrušit', action:'closeModal()', cls:'btn-ghost' },
+    { label:'Uložit', action:\`saveStation(\${stId})\`, cls:'btn-primary' },
+  ]);
+}
+
+function saveStation(stId) {
+  const st = STATIONS.find(x=>x.id===stId);
+  if (!st) return;
+  st.name = document.getElementById('est-name').value;
+  st.icon = document.getElementById('est-icon').value;
+  closeModal(); showToast('✅ Stanoviště uloženo'); renderAdmin();
+}
+
+// ── UTILS ─────────────────────────────────────────────
+function priorityLabel(p) {
+  return { low:'Nízká', normal:'Normální', high:'Vysoká', urgent:'Urgentní' }[p] || p;
+}
+
+function formatDate(d) {
+  if (!d) return '-';
+  try { return new Date(d).toLocaleDateString('cs-CZ', { day:'numeric', month:'short' }); }
+  catch { return d; }
+}
+
+let toastTimer;
+function showToast(msg, options = {}) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  // Bezne akce ukladaji stav, ale systemove sync hlasky nesmi spoustet dalsi cloud zapis.
+  if (!options.skipSave) autoSave();
+}
+
+// ── CLOSE ON BG CLICK ─────────────────────────────────
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById('numpad-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeNumpad();
+});
+
+function isInteractiveSwipeTarget(target) {
+  return Boolean(target?.closest?.('input, textarea, select, button, a, [contenteditable="true"], .qty-field, .numpad-box, .modal-box'));
+}
+
+document.addEventListener('touchstart', function(e) {
+  if (!currentUser || window.innerWidth > 700 || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  if (t.clientX > 28 || isInteractiveSwipeTarget(e.target)) return;
+  mobileSwipe = {
+    startX: t.clientX,
+    startY: t.clientY,
+    active: true,
+    moved: false,
+  };
+}, { passive: true });
+
+document.addEventListener('touchmove', function(e) {
+  if (!mobileSwipe?.active || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  const dx = t.clientX - mobileSwipe.startX;
+  const dy = Math.abs(t.clientY - mobileSwipe.startY);
+  if (dx > 24 && dy < 55) {
+    mobileSwipe.moved = true;
+    e.preventDefault();
+  }
+}, { passive: false });
+
+document.addEventListener('touchend', function(e) {
+  if (!mobileSwipe?.active) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - mobileSwipe.startX;
+  const dy = Math.abs(t.clientY - mobileSwipe.startY);
+  mobileSwipe = null;
+  if (dx > 86 && dy < 70) mobileBackStep();
+}, { passive: true });
+`;window.__EZOP4_VERSION__="0.1.0";window.EZOP_DEFAULTS=Yn;window.EZOP_FLOW=it;window.EZOP4_TO_TABLES=ut;window.EZOP4_AUTH=St;window.EZOP4_AUDIT=ct;window.EZOP4_LUPA_NET=Ot;window.EZOP4_AI=Tt;const jn=document.querySelector("#root");if(!jn)throw new Error("Missing #root element");jn.innerHTML=qn;const Me=document.createElement("script");Me.dataset.ezopRuntime="legacy-compatible";Me.textContent=na;document.body.appendChild(Me);const De=document.createElement("script");De.dataset.ezopRuntime="ux-bridge";De.textContent=`
+  window.__ezopBridge = {
+    user: function() { return typeof currentUser !== 'undefined' ? currentUser : null; },
+    page: function() { return typeof currentPage !== 'undefined' ? currentPage : ''; },
+    stations: function() { return typeof STATIONS !== 'undefined' ? STATIONS : []; },
+    orders: function() { return typeof ORDERS !== 'undefined' ? ORDERS : []; },
+    issues: function() { return typeof ISSUES !== 'undefined' ? ISSUES : []; },
+    users: function() { return typeof USERS !== 'undefined' ? USERS : []; },
+    openOrder: function(orderId) { return typeof openOrder !== 'undefined' ? openOrder(orderId) : null; }
+  };
+`;document.body.appendChild(De);ea();
