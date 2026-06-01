@@ -1264,13 +1264,6 @@ function watchAuth() {
     if (key !== lastUserKey) {
       lastUserKey = key;
       renderFab();
-      if (u) {
-        // krátké uvítání po přihlášení
-        setTimeout(() => {
-          if (loadState().feedbackCount === 0) maybeShowWhatsNew();
-          else maybeShowWhatsNew();
-        }, 800);
-      }
     }
   };
   setInterval(tick, 1500);
